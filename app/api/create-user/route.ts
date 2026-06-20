@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { full_name, email, password, role, wing, start_date, end_date } = await req.json()
+    const { full_name, email, password, role, wing, start_date, end_date, roll_no, university } = await req.json()
 
     if (!email || !password || !full_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -31,7 +31,13 @@ export async function POST(req: NextRequest) {
     // The trigger auto-creates a profile row with role='student' default — update it to the real role
     const { error: profileUpdateError } = await adminClient
       .from('profiles')
-      .update({ role, wing: wing || null, full_name })
+      .update({ 
+        role, 
+        wing: wing || null, 
+        full_name,
+        roll_no: roll_no || null,
+        university: university || null
+      })
       .eq('id', newUser.user.id)
 
     if (profileUpdateError) return NextResponse.json({ error: profileUpdateError.message }, { status: 400 })
@@ -81,6 +87,14 @@ export async function POST(req: NextRequest) {
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; width: 40%;">Name</td>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${full_name}</td>
                     </tr>
+                    ${roll_no ? `<tr>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Roll Number</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${roll_no}</td>
+                    </tr>` : ''}
+                    ${university ? `<tr style="background: #f0fdf4;">
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">University / College</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${university}</td>
+                    </tr>` : ''}
                     ${wing ? `<tr>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Wing / Department</td>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${wing}</td>

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 
 export default function CreateUserPage() {
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '' })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -21,7 +21,7 @@ export default function CreateUserPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: `User created! Login: ${form.email} / ${form.password}` })
-        setForm({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '' })
+        setForm({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '' })
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create user' })
       }
@@ -77,18 +77,35 @@ export default function CreateUserPage() {
           </div>
 
           {form.role === 'student' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Internship start</label>
-                <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
+                  <input value={form.roll_no} onChange={e => setForm({ ...form, roll_no: e.target.value })}
+                    placeholder="e.g. 2021CSE045"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">University / College</label>
+                  <input value={form.university} onChange={e => setForm({ ...form, university: e.target.value })}
+                    placeholder="e.g. IIT Kharagpur"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Internship end</label>
-                <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Internship start</label>
+                  <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Internship end</label>
+                  <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {message && (
