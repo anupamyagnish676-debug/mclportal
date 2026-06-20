@@ -101,7 +101,20 @@ export default function StudentAssignmentsPage() {
                   </button>
                 </div>
               ) : (
-                <a href={submitted.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">View your submission →</a>
+                <div className="space-y-2 mt-3 pt-3 border-t border-gray-150">
+                  <a href={submitted.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-block">
+                    View your submission →
+                  </a>
+                  
+                  {submitted.grade && (
+                    <div className="mt-2 bg-green-50/50 border border-green-100 rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-green-800 uppercase tracking-wider">Grade Awarded: {submitted.grade}</p>
+                      {submitted.feedback && (
+                        <p className="text-xs text-gray-600 mt-1 italic">"{submitted.feedback}"</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               {msg[a.id] && <p className="text-green-600 text-xs mt-1">{msg[a.id]}</p>}
             </div>

@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import ProjectReportUpload from './ProjectReportUpload'
+
+export const revalidate = 0
 
 export default async function StudentDashboard() {
   const supabase = await createClient()
@@ -23,7 +26,7 @@ export default async function StudentDashboard() {
   }
 
   return (
-    <div>
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Student Dashboard</h1>
       <p className="text-gray-500 text-sm mb-8">Welcome to your MCL internship portal</p>
 
@@ -32,40 +35,52 @@ export default async function StudentDashboard() {
       )}
 
       {internship ? (
-        <>
-          <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-            <h2 className="font-semibold text-gray-800 mb-3">Internship details</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-gray-400">Mentor</p><p className="font-medium">{internship.mentor?.full_name || 'Not assigned yet'}</p></div>
-              <div><p className="text-gray-400">Period</p><p className="font-medium">{internship.start_date} → {internship.end_date}</p></div>
-              <div><p className="text-gray-400">Status</p>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${internship.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {internship.is_active ? 'Active' : 'Completed'}
-                </span>
-              </div>
-              {internship.certificate_url && (
-                <div><p className="text-gray-400">Certificate</p>
-                  <a href={internship.certificate_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Download →</a>
+        <div className="grid md:grid-cols-5 gap-6">
+          {/* Details & Report Upload (Left Column) */}
+          <div className="md:col-span-3 space-y-6">
+            <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+              <h2 className="font-semibold text-gray-800 mb-3">Internship Details</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><p className="text-gray-400 text-xs">Mentor</p><p className="font-semibold text-gray-800 mt-0.5">{internship.mentor?.full_name || 'Not assigned yet'}</p></div>
+                <div><p className="text-gray-400 text-xs">Period</p><p className="font-semibold text-gray-800 mt-0.5">{internship.start_date} → {internship.end_date}</p></div>
+                <div><p className="text-gray-400 text-xs">Status</p>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mt-1 ${internship.is_active ? 'bg-green-150 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {internship.is_active ? 'Active' : 'Completed'}
+                  </span>
                 </div>
-              )}
+                {internship.certificate_url && (
+                  <div><p className="text-gray-400 text-xs">Certificate</p>
+                    <a href={internship.certificate_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs font-semibold block mt-1">Download Certificate →</a>
+                  </div>
+                )}
+              </div>
             </div>
+
+            <ProjectReportUpload
+              internshipId={internship.id}
+              currentReportUrl={internship.project_report_url}
+            />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Stats Overview (Right Column) */}
+          <div className="md:col-span-2 space-y-4">
             {[
               { label: 'Days Present', value: presentDays, icon: '📅', color: 'text-green-700 bg-green-50' },
               { label: 'Assignments',  value: totalAssignments, icon: '📝', color: 'text-blue-700 bg-blue-50' },
               { label: 'Submitted',    value: submitted, icon: '✅', color: 'text-purple-700 bg-purple-50' },
             ].map(s => (
-              <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${s.color}`}>{s.icon}</div>
-                <div><p className="text-xl font-bold text-gray-900">{s.value}</p><p className="text-xs text-gray-500">{s.label}</p></div>
+              <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${s.color}`}>{s.icon}</div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+                </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
+        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400 shadow-sm">
           No internship record found. Please contact your training office.
         </div>
       )}
