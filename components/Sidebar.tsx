@@ -65,9 +65,7 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
     <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col fixed left-0 top-0 z-10">
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-white text-sm font-bold">M</span>
-          </div>
+          <img src="/mcl-logo.jpg" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg" />
           <div>
             <p className="text-sm font-bold text-gray-900 leading-tight">MCL Portal</p>
             <span className={clsx('text-xs px-1.5 py-0.5 rounded font-medium capitalize', roleBadge[role])}>{role}</span>

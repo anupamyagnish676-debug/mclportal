@@ -68,9 +68,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-gray-100">
       <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-            <span className="text-white text-2xl font-bold">M</span>
-          </div>
+          <img src="/mcl-logo.jpg" alt="MCL Logo" className="h-16 mx-auto mb-4 object-contain rounded-lg" />
           <h1 className="text-2xl font-bold text-gray-900">MCL Internship Portal</h1>
           <p className="text-gray-400 text-sm mt-1">Mahanadi Coalfields Limited</p>
         </div>
