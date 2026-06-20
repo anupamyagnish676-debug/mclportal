@@ -8,11 +8,12 @@ type NavItem = { label: string; href: string; icon: string }
 
 const navByRole: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard',    href: '/admin',              icon: '🏠' },
-    { label: 'Applications', href: '/admin/applications', icon: '📋' },
-    { label: 'Interns',      href: '/admin/interns',      icon: '👥' },
+    { label: 'Dashboard',     href: '/admin',              icon: '🏠' },
+    { label: 'Applications',  href: '/admin/applications', icon: '📋' },
+    { label: 'Interns',       href: '/admin/interns',      icon: '👥' },
     { label: 'Assign Mentor', href: '/admin/assign-mentor', icon: '🔗' },
-    { label: 'Create User',  href: '/admin/create-user',  icon: '➕' },
+    { label: 'Create User',   href: '/admin/create-user',  icon: '➕' },
+    { label: 'Settings',      href: '/admin/settings',     icon: '⚙️' },
   ],
   mentor: [
     { label: 'Dashboard',    href: '/mentor',                    icon: '🏠' },
@@ -20,6 +21,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Assignments',  href: '/mentor/assignments',        icon: '📝' },
     { label: 'Materials',    href: '/mentor/materials',           icon: '📂' },
     { label: 'Approve Cert', href: '/mentor/approve-certificate', icon: '🎓' },
+    { label: 'Settings',     href: '/mentor/settings',            icon: '⚙️' },
   ],
   student: [
     { label: 'Dashboard',   href: '/student',             icon: '🏠' },
@@ -27,10 +29,12 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Assignments', href: '/student/assignments', icon: '📝' },
     { label: 'Materials',   href: '/student/materials',   icon: '📂' },
     { label: 'Certificate', href: '/student/certificate', icon: '🎓' },
+    { label: 'Settings',    href: '/student/settings',    icon: '⚙️' },
   ],
   employee: [
     { label: 'Dashboard',  href: '/employee',        icon: '🏠' },
     { label: 'Review LoR', href: '/employee/review', icon: '📋' },
+    { label: 'Settings',   href: '/employee/settings',icon: '⚙️' },
   ],
 }
 
