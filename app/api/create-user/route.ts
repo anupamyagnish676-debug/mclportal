@@ -132,13 +132,31 @@ export async function POST(req: NextRequest) {
 
     if (profileUpdateError) return NextResponse.json({ error: profileUpdateError.message }, { status: 400 })
 
+    let nextSerialStr = '42'
     if (role === 'student' && start_date && end_date) {
+      // Automatically calculate the next serial number
+      const { data: existingInternships } = await adminClient
+        .from('internships')
+        .select('serial_no')
+
+      let maxSerial = 41 // Start at 41 so the first student gets 42
+      if (existingInternships && existingInternships.length > 0) {
+        const serials = existingInternships
+          .map(i => parseInt(i.serial_no || ''))
+          .filter(val => !isNaN(val))
+        if (serials.length > 0) {
+          maxSerial = Math.max(...serials)
+        }
+      }
+      const nextSerial = maxSerial + 1
+      nextSerialStr = nextSerial.toString()
+
       const { error: internshipError } = await adminClient.from('internships').insert({
         student_id: newUser.user.id,
         start_date,
         end_date,
         is_active: true,
-        serial_no: serial_no || null
+        serial_no: nextSerialStr
       })
       if (internshipError) return NextResponse.json({ error: internshipError.message }, { status: 400 })
     }
@@ -172,7 +190,7 @@ export async function POST(req: NextRequest) {
               wing: wing || 'N/A',
               startDate: start_date || 'N/A',
               endDate: end_date || 'N/A',
-              serialNo: serial_no || '42'
+              serialNo: nextSerialStr
             })
             
             attachmentsList.push({
