@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 type Intern = {
   id: string
@@ -22,6 +23,7 @@ type Stats = {
 
 export default function ApproveCertificatePage() {
   const supabase = createClient()
+  const router = useRouter()
   const [interns, setInterns] = useState<Intern[]>([])
   const [stats, setStats] = useState<Record<string, Stats>>({})
   const [loading, setLoading] = useState(true)
@@ -112,6 +114,7 @@ export default function ApproveCertificatePage() {
     } else {
       setMessage({ type: 'success', text: 'Certificate approved! Admin can now issue it.' })
       setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: true } : i))
+      router.refresh()
     }
     setTimeout(() => setMessage({ type: '', text: '' }), 4000)
   }
@@ -132,6 +135,7 @@ export default function ApproveCertificatePage() {
     } else {
       setMessage({ type: 'success', text: 'Approval revoked.' })
       setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: false } : i))
+      router.refresh()
     }
     setTimeout(() => setMessage({ type: '', text: '' }), 4000)
   }

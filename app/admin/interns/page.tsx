@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import InternActions from './InternActions'
 import Link from 'next/link'
 
+export const revalidate = 0
+
 export default async function InternsPage({
   searchParams,
 }: {

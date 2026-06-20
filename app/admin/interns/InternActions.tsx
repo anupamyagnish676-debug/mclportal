@@ -33,6 +33,7 @@ export default function InternActions({
       setError(updateError.message)
     } else {
       setActive(!active)
+      router.refresh()
     }
     setLoading(false)
   }
@@ -51,6 +52,7 @@ export default function InternActions({
         setError(data.error || 'Failed to generate certificate')
       } else {
         setCertIssued(true)
+        router.refresh()
       }
     } catch (err: any) {
       setError(err.message)

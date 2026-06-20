@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import ApplicationActions from './ApplicationActions'
 
+export const revalidate = 0
+
 export default async function ApplicationsPage() {
   const supabase = await createClient()
 

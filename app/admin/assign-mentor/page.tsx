@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import AssignMentorForm from './AssignMentorForm'
 
+export const revalidate = 0
+
 export default async function AssignMentorPage() {
   const supabase = await createClient()
 
