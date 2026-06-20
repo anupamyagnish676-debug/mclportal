@@ -102,20 +102,26 @@ export default function ApproveCertificatePage() {
     setSaving(internshipId)
     setMessage({ type: '', text: '' })
 
-    const { error } = await supabase
-      .from('internships')
-      .update({ certificate_approved: true })
-      .eq('id', internshipId)
+    try {
+      const res = await fetch('/api/approve-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ internshipId, approved: true })
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage({ type: 'error', text: `Failed: ${data.error || 'Failed to approve certificate'}` })
+      } else {
+        setMessage({ type: 'success', text: 'Certificate approved! Admin can now issue it.' })
+        setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: true } : i))
+        router.refresh()
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `Failed: ${err.message}` })
+    }
 
     setSaving(null)
-
-    if (error) {
-      setMessage({ type: 'error', text: `Failed: ${error.message}` })
-    } else {
-      setMessage({ type: 'success', text: 'Certificate approved! Admin can now issue it.' })
-      setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: true } : i))
-      router.refresh()
-    }
     setTimeout(() => setMessage({ type: '', text: '' }), 4000)
   }
 
@@ -123,20 +129,26 @@ export default function ApproveCertificatePage() {
     setSaving(internshipId)
     setMessage({ type: '', text: '' })
 
-    const { error } = await supabase
-      .from('internships')
-      .update({ certificate_approved: false })
-      .eq('id', internshipId)
+    try {
+      const res = await fetch('/api/approve-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ internshipId, approved: false })
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage({ type: 'error', text: `Failed: ${data.error || 'Failed to revoke approval'}` })
+      } else {
+        setMessage({ type: 'success', text: 'Approval revoked.' })
+        setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: false } : i))
+        router.refresh()
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `Failed: ${err.message}` })
+    }
 
     setSaving(null)
-
-    if (error) {
-      setMessage({ type: 'error', text: `Failed: ${error.message}` })
-    } else {
-      setMessage({ type: 'success', text: 'Approval revoked.' })
-      setInterns(prev => prev.map(i => i.id === internshipId ? { ...i, certificate_approved: false } : i))
-      router.refresh()
-    }
     setTimeout(() => setMessage({ type: '', text: '' }), 4000)
   }
 
