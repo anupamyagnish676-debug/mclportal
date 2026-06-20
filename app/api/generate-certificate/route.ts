@@ -3,6 +3,46 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import nodemailer from 'nodemailer'
+import fs from 'fs'
+import path from 'path'
+
+// Helper function to wrap text
+function wrapText(text: string, maxWidth: number, size: number, font: any) {
+  const words = text.split(' ')
+  const lines = []
+  let currentLine = ''
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word
+    const testWidth = font.widthOfTextAtSize(testLine, size)
+    if (testWidth > maxWidth) {
+      lines.push(currentLine)
+      currentLine = word
+    } else {
+      currentLine = testLine
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine)
+  }
+  return lines
+}
+
+// Helper to format dates professionally
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return 'N/A'
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  } catch (e) {
+    return dateStr
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const { data: internship, error: fetchError } = await adminClient
       .from('internships')
-      .select('*, student:profiles!internships_student_id_fkey(full_name, email), mentor:profiles!internships_mentor_id_fkey(full_name)')
+      .select('*, student:profiles!internships_student_id_fkey(full_name, email, university, wing), mentor:profiles!internships_mentor_id_fkey(full_name)')
       .eq('id', internshipId)
       .maybeSingle()
 
@@ -31,21 +71,161 @@ export async function POST(req: NextRequest) {
 
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
 
-    page.drawRectangle({ x: 20, y: 20, width: width - 40, height: height - 40, borderColor: rgb(0.09, 0.53, 0.27), borderWidth: 3 })
-    page.drawRectangle({ x: 28, y: 28, width: width - 56, height: height - 56, borderColor: rgb(0.09, 0.53, 0.27), borderWidth: 1 })
+    // 1. Draw Cream Background
+    page.drawRectangle({
+      x: 20,
+      y: 20,
+      width: width - 40,
+      height: height - 40,
+      color: rgb(0.99, 0.98, 0.95)
+    })
 
-    page.drawText('MAHANADI COALFIELDS LIMITED', { x: 180, y: height - 80, size: 24, font: boldFont, color: rgb(0.09, 0.53, 0.27) })
-    page.drawText('A Subsidiary of Coal India Limited', { x: 280, y: height - 108, size: 12, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('CERTIFICATE OF INTERNSHIP', { x: 230, y: height - 160, size: 20, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-    page.drawText('This is to certify that', { x: 290, y: height - 220, size: 14, font: regularFont, color: rgb(0.3, 0.3, 0.3) })
-    page.drawText(studentName || internship.student?.full_name || 'Intern', { x: 260, y: height - 260, size: 22, font: boldFont, color: rgb(0.09, 0.53, 0.27) })
-    page.drawText('has successfully completed the internship training at', { x: 200, y: height - 300, size: 13, font: regularFont, color: rgb(0.3, 0.3, 0.3) })
-    page.drawText('Mahanadi Coalfields Limited', { x: 270, y: height - 330, size: 15, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-    page.drawText(`from  ${internship.start_date}  to  ${internship.end_date}`, { x: 295, y: height - 365, size: 13, font: regularFont, color: rgb(0.3, 0.3, 0.3) })
-    page.drawText(`Mentor: ${internship.mentor?.full_name || 'N/A'}`, { x: 80, y: 80, size: 11, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('Training & Development Department', { x: 570, y: 80, size: 10, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('Mahanadi Coalfields Limited', { x: 590, y: 65, size: 10, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    // 2. Draw Premium Outer Green Border
+    page.drawRectangle({
+      x: 20,
+      y: 20,
+      width: width - 40,
+      height: height - 40,
+      borderColor: rgb(0.06, 0.35, 0.18),
+      borderWidth: 8
+    })
+
+    // 3. Draw Premium Inner Gold Border
+    page.drawRectangle({
+      x: 34,
+      y: 34,
+      width: width - 68,
+      height: height - 68,
+      borderColor: rgb(0.76, 0.6, 0.21),
+      borderWidth: 2
+    })
+
+    // 4. Load & Draw Logos
+    const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo.jpg')
+    const coalIndiaLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo.png')
+
+    let mclLogoImg: any = null
+    let coalIndiaLogoImg: any = null
+
+    try {
+      if (fs.existsSync(mclLogoPath)) {
+        const mclLogoBytes = fs.readFileSync(mclLogoPath)
+        mclLogoImg = await pdfDoc.embedJpg(mclLogoBytes)
+      }
+    } catch (e) {
+      console.error('Failed to embed MCL logo:', e)
+    }
+
+    try {
+      if (fs.existsSync(coalIndiaLogoPath)) {
+        const coalIndiaLogoBytes = fs.readFileSync(coalIndiaLogoPath)
+        coalIndiaLogoImg = await pdfDoc.embedPng(coalIndiaLogoBytes)
+      }
+    } catch (e) {
+      console.error('Failed to embed Coal India logo:', e)
+    }
+
+    // Draw Left Logo (MCL)
+    if (mclLogoImg) {
+      page.drawImage(mclLogoImg, {
+        x: 65,
+        y: height - 120,
+        width: 70,
+        height: 70,
+      })
+    }
+
+    // Draw Right Logo (Coal India or fallback to MCL)
+    const rightImg = coalIndiaLogoImg || mclLogoImg
+    if (rightImg) {
+      page.drawImage(rightImg, {
+        x: width - 135,
+        y: height - 120,
+        width: 70,
+        height: 70,
+      })
+    }
+
+    // Helper to draw centered text
+    const drawCenteredText = (text: string, y: number, size: number, font: any, color = rgb(0.2, 0.2, 0.2)) => {
+      const textWidth = font.widthOfTextAtSize(text, size)
+      page.drawText(text, {
+        x: (width - textWidth) / 2,
+        y,
+        size,
+        font,
+        color
+      })
+    }
+
+    // 5. Draw Header Text
+    const titleText = 'MAHANADI COALFIELDS LIMITED'
+    const subText = 'A Subsidiary of Coal India Limited'
+    const certTitle = 'CERTIFICATE OF COMPLETION'
+
+    drawCenteredText(titleText, height - 75, 22, boldFont, rgb(0.06, 0.35, 0.18))
+    drawCenteredText(subText, height - 95, 11, regularFont, rgb(0.4, 0.4, 0.4))
+
+    // Divider Line
+    page.drawLine({
+      start: { x: 150, y: height - 110 },
+      end: { x: width - 150, y: height - 110 },
+      color: rgb(0.76, 0.6, 0.21),
+      thickness: 1.5
+    })
+
+    drawCenteredText(certTitle, height - 145, 18, boldFont, rgb(0.2, 0.2, 0.2))
+
+    // 6. Metadata (Serial No & Issue Date)
+    const serialNo = internship.serial_no || 'N/A'
+    const issueDate = formatDate(new Date().toISOString().split('T')[0])
+    page.drawText(`Serial No: MCL/HRD/INT/${serialNo}`, { x: 50, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(`Date of Issue: ${issueDate}`, { x: width - 200, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+
+    // 7. Dynamic Paragraph & Student Details
+    const student = studentName || internship.student?.full_name || 'Intern'
+    const university = internship.student?.university || 'their respective institution'
+    const wing = internship.student?.wing || internship.wing || 'Training Wing'
+    const startDate = formatDate(internship.start_date)
+    const endDate = formatDate(internship.end_date)
+    const projectTitle = internship.project_title || 'N/A'
+    const projectDate = formatDate(internship.project_submitted_at)
+    const mentorName = internship.mentor?.full_name || 'N/A'
+
+    // Structured Centered Text Layout
+    drawCenteredText('This is to certify that', 385, 13, regularFont, rgb(0.4, 0.4, 0.4))
+    drawCenteredText(student.toUpperCase(), 350, 22, boldFont, rgb(0.06, 0.35, 0.18))
+    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 315, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(`${wing} department at Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 290, 13, boldFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('They have submitted a final project report titled', 255, 12, regularFont, rgb(0.2, 0.2, 0.2))
+
+    // Dynamically wrap project title if it is too long
+    const wrappedTitle = wrapText(`“${projectTitle}”`, 620, 12, italicFont)
+    let titleY = 225
+    for (const titleLine of wrappedTitle) {
+      drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
+      titleY -= 16
+    }
+
+    const nextY = titleY - 10
+    drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
+
+    // 8. Signatures Section at the Bottom
+    // Left Side - Mentor
+    page.drawLine({ start: { x: 80, y: 75 }, end: { x: 230, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    page.drawText('Project Mentor', { x: 120, y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    const mentorLabel = `(${mentorName})`
+    const mentorLabelWidth = regularFont.widthOfTextAtSize(mentorLabel, 9)
+    page.drawText(mentorLabel, { x: 155 - mentorLabelWidth / 2, y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+
+    // Right Side - GM (HRD)
+    page.drawLine({ start: { x: 612, y: 75 }, end: { x: 762, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    page.drawText('General Manager (HRD)', { x: 622, y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    const coLabel = 'Mahanadi Coalfields Limited'
+    const coLabelWidth = regularFont.widthOfTextAtSize(coLabel, 9)
+    page.drawText(coLabel, { x: 687 - coLabelWidth / 2, y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     const pdfBytes = await pdfDoc.save()
     const pdfBuffer = Buffer.from(pdfBytes)

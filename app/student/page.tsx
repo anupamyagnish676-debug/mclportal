@@ -59,6 +59,7 @@ export default async function StudentDashboard() {
             <ProjectReportUpload
               internshipId={internship.id}
               currentReportUrl={internship.project_report_url}
+              currentProjectTitle={internship.project_title}
             />
           </div>
 
