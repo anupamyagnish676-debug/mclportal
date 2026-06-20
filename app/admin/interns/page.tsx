@@ -1,8 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import InternActions from './InternActions'
+import Link from 'next/link'
 
-export default async function InternsPage() {
+export default async function InternsPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string }
+}) {
   const supabase = await createClient()
+  const activeTab = searchParams.tab === 'completed' ? 'completed' : 'active'
 
   const { data: internships, error } = await supabase
     .from('internships')
@@ -12,6 +18,15 @@ export default async function InternsPage() {
       mentor:profiles!internships_mentor_id_fkey(full_name)
     `)
     .order('start_date', { ascending: false })
+
+  // Filter interns based on the active tab
+  const filteredInternships = (internships || []).filter((i: any) => {
+    if (activeTab === 'active') {
+      return i.is_active === true
+    } else {
+      return i.is_active === false
+    }
+  })
 
   return (
     <div>
@@ -24,9 +39,35 @@ export default async function InternsPage() {
         </div>
       )}
 
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <Link
+          href="/admin/interns?tab=active"
+          className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
+            activeTab === 'active'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Active Interns ({ (internships || []).filter(i => i.is_active).length })
+        </Link>
+        <Link
+          href="/admin/interns?tab=completed"
+          className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Completed Interns ({ (internships || []).filter(i => !i.is_active).length })
+        </Link>
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {!internships?.length ? (
-          <div className="p-8 text-center text-gray-400">No internships found</div>
+        {!filteredInternships.length ? (
+          <div className="p-12 text-center text-gray-400 text-sm">
+            {activeTab === 'active' ? 'No active internships found' : 'No completed internships found'}
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
@@ -39,7 +80,7 @@ export default async function InternsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {internships.map((i: any) => (
+              {filteredInternships.map((i: any) => (
                 <tr key={i.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{i.student?.full_name}</p>
@@ -49,12 +90,13 @@ export default async function InternsPage() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{i.start_date} → {i.end_date}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${i.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {i.is_active ? 'Active' : 'Inactive'}
+                      {i.is_active ? 'Active' : 'Completed'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <InternActions
                       internshipId={i.id}
+                      studentId={i.student_id}
                       studentEmail={i.student?.email}
                       studentName={i.student?.full_name}
                       isActive={i.is_active}

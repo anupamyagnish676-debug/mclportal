@@ -1,17 +1,20 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 export default function InternActions({
-  internshipId, studentEmail, studentName, isActive, hasCertificate, mentorApproved
+  internshipId, studentId, studentEmail, studentName, isActive, hasCertificate, mentorApproved
 }: {
   internshipId: string
+  studentId: string
   studentEmail: string
   studentName: string
   isActive: boolean
   hasCertificate: boolean
   mentorApproved: boolean
 }) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [active, setActive] = useState(isActive)
   const [certIssued, setCertIssued] = useState(hasCertificate)
@@ -55,9 +58,37 @@ export default function InternActions({
     setLoading(false)
   }
 
+  async function deleteStudent() {
+    const confirmDelete = window.confirm(
+      `Warning: Are you sure you want to permanently delete student "${studentName}"?\n\nThis will permanently delete their account, profile, attendance logs, and assignment submissions from the database.`
+    )
+    if (!confirmDelete) return
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, internshipId }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to delete student')
+      } else {
+        router.refresh()
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during deletion')
+    }
+    setLoading(false)
+  }
+
   return (
     <div>
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap items-center">
         <button onClick={toggleAccess} disabled={loading}
           className={`px-2 py-1 text-xs rounded-lg disabled:opacity-50 ${
             active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'
@@ -72,12 +103,19 @@ export default function InternActions({
             </button>
           ) : (
             <span className="px-2 py-1 text-xs bg-yellow-50 text-yellow-600 rounded-lg" title="Mentor must approve before certificate can be issued">
-              ⏳ Awaiting Mentor Approval
+              ⏳ Awaiting Approval
             </span>
           )
         ) : (
           <span className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">Cert Issued ✓</span>
         )}
+        <button
+          onClick={deleteStudent}
+          disabled={loading}
+          className="px-2 py-1 text-xs bg-red-600 text-white hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Deleting...' : 'Delete'}
+        </button>
       </div>
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
