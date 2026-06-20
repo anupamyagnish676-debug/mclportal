@@ -49,12 +49,18 @@ export async function POST(req: NextRequest) {
     // Send joining/reporting letter email for students
     if (role === 'student') {
       try {
-        if (process.env.RESEND_API_KEY) {
-          const { Resend } = await import('resend')
-          const resend = new Resend(process.env.RESEND_API_KEY)
+        if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+          const nodemailer = await import('nodemailer')
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.GMAIL_USER,
+              pass: process.env.GMAIL_PASS,
+            },
+          })
 
-          await resend.emails.send({
-            from: 'MCL Internship Portal <onboarding@resend.dev>',
+          await transporter.sendMail({
+            from: `"MCL Internship Portal" <${process.env.GMAIL_USER}>`,
             to: email,
             subject: 'Internship Joining / Reporting Letter — Mahanadi Coalfields Limited',
             html: `
@@ -108,13 +114,12 @@ export async function POST(req: NextRequest) {
               </div>
             `,
           })
-          console.log(`[CREATE-USER] Joining letter sent to ${email}`)
+          console.log(`[CREATE-USER] Joining letter sent via Gmail SMTP to ${email}`)
         } else {
-          console.log(`[CREATE-USER] RESEND_API_KEY not set — skipping email for ${email}`)
+          console.log(`[CREATE-USER] GMAIL credentials not set — skipping email for ${email}`)
         }
       } catch (emailErr: any) {
-        // Don't fail user creation if email fails
-        console.error(`[CREATE-USER] Email failed for ${email}:`, emailErr.message)
+        console.error(`[CREATE-USER] Gmail SMTP failed for ${email}:`, emailErr.message)
       }
     }
 
