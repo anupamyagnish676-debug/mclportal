@@ -44,6 +44,17 @@ function formatDate(dateStr: string | null) {
   }
 }
 
+// Helper to sanitize text for standard PDF fonts (WinAnsi encoding)
+function sanitizeText(text: string | null | undefined): string {
+  if (!text) return ''
+  return String(text)
+    .replace(/[\u2018\u2019]/g, "'") // Smart single quotes
+    .replace(/[\u201C\u201D]/g, '"') // Smart double quotes
+    .replace(/[\u2013\u2014]/g, '-') // En-dash and em-dash
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Strip accents
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -184,15 +195,17 @@ export async function POST(req: NextRequest) {
     page.drawText(`Serial No: MCL/HRD/INT/${serialNo}`, { x: 50, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
     page.drawText(`Date of Issue: ${issueDate}`, { x: width - 200, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
+
+
     // 7. Dynamic Paragraph & Student Details
-    const student = studentName || internship.student?.full_name || 'Intern'
-    const university = internship.student?.university || 'their respective institution'
-    const wing = internship.student?.wing || internship.wing || 'Training Wing'
-    const startDate = formatDate(internship.start_date)
-    const endDate = formatDate(internship.end_date)
-    const projectTitle = internship.project_title || 'N/A'
-    const projectDate = formatDate(internship.project_submitted_at)
-    const mentorName = internship.mentor?.full_name || 'N/A'
+    const student = sanitizeText(studentName || internship.student?.full_name || 'Intern')
+    const university = sanitizeText(internship.student?.university || 'their respective institution')
+    const wing = sanitizeText(internship.student?.wing || internship.wing || 'Training Wing')
+    const startDate = sanitizeText(formatDate(internship.start_date))
+    const endDate = sanitizeText(formatDate(internship.end_date))
+    const projectTitle = sanitizeText(internship.project_title || 'N/A')
+    const projectDate = sanitizeText(formatDate(internship.project_submitted_at))
+    const mentorName = sanitizeText(internship.mentor?.full_name || 'N/A')
 
     // Structured Centered Text Layout
     drawCenteredText('This is to certify that', 385, 13, regularFont, rgb(0.4, 0.4, 0.4))
@@ -202,7 +215,7 @@ export async function POST(req: NextRequest) {
     drawCenteredText('They have submitted a final project report titled', 255, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Dynamically wrap project title if it is too long
-    const wrappedTitle = wrapText(`“${projectTitle}”`, 620, 12, italicFont)
+    const wrappedTitle = wrapText(`"${projectTitle}"`, 620, 12, italicFont)
     let titleY = 225
     for (const titleLine of wrappedTitle) {
       drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
