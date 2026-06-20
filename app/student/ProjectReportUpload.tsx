@@ -52,20 +52,17 @@ export default function ProjectReportUpload({
       }
 
       const fileUrl = signedData.signedUrl
-      const today = new Date().toISOString().split('T')[0]
 
-      // 3. Update 'internships' table
-      const { error: dbErr } = await supabase
-        .from('internships')
-        .update({ 
-          project_report_url: fileUrl,
-          project_title: projectTitle,
-          project_submitted_at: today
-        })
-        .eq('id', internshipId)
+      // 3. Update 'internships' table via secure backend API
+      const res = await fetch('/api/submit-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ internshipId, fileUrl, projectTitle })
+      })
+      const data = await res.json()
 
-      if (dbErr) {
-        setError(dbErr.message)
+      if (!res.ok) {
+        setError(data.error || 'Failed to submit report details to database.')
       } else {
         setReportUrl(fileUrl)
         setSuccess('Final project report uploaded successfully!')
