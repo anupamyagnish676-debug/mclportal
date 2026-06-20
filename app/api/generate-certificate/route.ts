@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import nodemailer from 'nodemailer'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const { data: internship, error: fetchError } = await adminClient
       .from('internships')
-      .select('*, student:profiles!internships_student_id_fkey(full_name), mentor:profiles!internships_mentor_id_fkey(full_name)')
+      .select('*, student:profiles!internships_student_id_fkey(full_name, email), mentor:profiles!internships_mentor_id_fkey(full_name)')
       .eq('id', internshipId)
       .maybeSingle()
 
@@ -68,6 +69,61 @@ export async function POST(req: NextRequest) {
       .eq('id', internshipId)
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+    // Send the generated certificate via email to the student
+    const studentEmail = internship.student?.email
+    const internName = internship.student?.full_name || studentName || 'Intern'
+
+    if (studentEmail && process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_PASS,
+          },
+        })
+
+        await transporter.sendMail({
+          from: `"MCL Internship Portal" <${process.env.GMAIL_USER}>`,
+          to: studentEmail,
+          subject: 'MCL Internship Certificate Issued!',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+              <div style="background: #166534; padding: 24px 32px; color: #fff;">
+                <h1 style="margin: 0; font-size: 20px;">Mahanadi Coalfields Limited</h1>
+                <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.8;">A Subsidiary of Coal India Limited</p>
+              </div>
+              <div style="padding: 32px; color: #374151;">
+                <h2 style="color: #166534; margin-top: 0;">Congratulations on completing your Internship!</h2>
+                <p>Dear <strong>${internName}</strong>,</p>
+                <p>We are pleased to inform you that your official **Certificate of Internship** has been approved and issued by the Admin.</p>
+                <p>We have **attached your Certificate PDF** directly to this email for your records.</p>
+                <p>Alternatively, you can view and download it at any time by logging into the internship portal.</p>
+                <p>We wish you the very best in your future career endeavors!</p>
+                <br/>
+                <p style="margin: 0;">Regards,</p>
+                <p style="margin: 4px 0;"><strong>Training & Development Department</strong></p>
+                <p style="margin: 4px 0; color: #6b7280;">Mahanadi Coalfields Limited</p>
+              </div>
+              <div style="background: #f9fafb; padding: 12px 32px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="margin: 0; font-size: 11px; color: #9ca3af;">This is an automated email from the MCL Internship Portal. Please do not reply.</p>
+              </div>
+            </div>
+          `,
+          attachments: [
+            {
+              filename: `${internName.replace(/\s+/g, '_')}_MCL_Internship_Certificate.pdf`,
+              content: pdfBuffer,
+              contentType: 'application/pdf'
+            }
+          ]
+        })
+        console.log(`[GENERATE-CERTIFICATE] Certificate emailed to ${studentEmail}`)
+      } catch (emailErr: any) {
+        console.error(`[GENERATE-CERTIFICATE] Failed to email certificate to ${studentEmail}:`, emailErr.message)
+      }
+    }
 
     return NextResponse.json({ success: true, certificateUrl: signedUrlData.signedUrl })
   } catch (err: any) {

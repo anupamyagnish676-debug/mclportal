@@ -2,7 +2,7 @@
 import { useState } from 'react'
 
 export default function CreateUserPage() {
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '', serial_no: '' })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -21,7 +21,7 @@ export default function CreateUserPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: `User created! Login: ${form.email} / ${form.password}` })
-        setForm({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '' })
+        setForm({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '', serial_no: '' })
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create user' })
       }
@@ -91,6 +91,13 @@ export default function CreateUserPage() {
                     placeholder="e.g. IIT Kharagpur"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Internship Serial Number</label>
+                <input value={form.serial_no} onChange={e => setForm({ ...form, serial_no: e.target.value })}
+                  placeholder="e.g. 42"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
