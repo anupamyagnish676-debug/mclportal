@@ -49,7 +49,12 @@ export default function ApproveCertificatePage() {
       return
     }
 
-    setInterns(data || [])
+    const formattedData = (data || []).map((i: any) => ({
+      ...i,
+      student: Array.isArray(i.student) ? i.student[0] : i.student
+    }))
+
+    setInterns(formattedData)
 
     // Fetch stats for each intern
     const statsMap: Record<string, Stats> = {}
