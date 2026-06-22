@@ -22,7 +22,11 @@ export default function ForgotPasswordPage() {
       })
 
       if (resetErr) {
-        setError(resetErr.message)
+        if (resetErr.message === '{}' || resetErr.status === 504) {
+          setError('Email server timeout. Please check your Supabase Custom SMTP configuration, or disable Custom SMTP in settings to use the default Supabase mailer.')
+        } else {
+          setError(resetErr.message)
+        }
       } else {
         setStatus('Password reset link sent! Please check your email inbox.')
       }
