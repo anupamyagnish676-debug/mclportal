@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 
 export const revalidate = 0 // always fetch fresh data
 
 export default async function PublicVerificationPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: internship } = await supabase
     .from('internships')
