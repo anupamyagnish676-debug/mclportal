@@ -3,3 +3,134 @@
 @tailwind utilities;
 
 body { background-color: #f9fafb; }
+
+/* Premium Login Page Enhancements */
+
+@keyframes login-kenburns {
+  0% {
+    transform: scale(1.05) translate(0px, 0px);
+  }
+  50% {
+    transform: scale(1.12) translate(15px, -10px);
+  }
+  100% {
+    transform: scale(1.05) translate(0px, 0px);
+  }
+}
+
+@keyframes login-float-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(60px, -40px) scale(1.2);
+    opacity: 0.4;
+  }
+}
+
+@keyframes login-float-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1.1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(-50px, 60px) scale(0.95);
+    opacity: 0.25;
+  }
+}
+
+@keyframes login-particle-1 {
+  0% {
+    transform: translateY(105vh) translateX(0) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.4;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-5vh) translateX(80px) scale(1.2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes login-particle-2 {
+  0% {
+    transform: translateY(105vh) translateX(30px) scale(0.8) rotate(45deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.5;
+  }
+  85% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-5vh) translateX(-40px) scale(1) rotate(405deg);
+    opacity: 0;
+  }
+}
+
+@keyframes login-particle-3 {
+  0% {
+    transform: translateY(105vh) translateX(-20px) scale(0.5) rotate(90deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.3;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-5vh) translateX(60px) scale(1.4) rotate(450deg);
+    opacity: 0;
+  }
+}
+
+.animate-kenburns {
+  animation: login-kenburns 35s ease-in-out infinite;
+}
+
+.animate-float-1 {
+  animation: login-float-1 20s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: login-float-2 25s ease-in-out infinite;
+}
+
+.animate-particle-1 {
+  animation: login-particle-1 22s linear infinite;
+}
+
+.animate-particle-2 {
+  animation: login-particle-2 28s linear infinite;
+  animation-delay: -7s;
+}
+
+.animate-particle-3 {
+  animation: login-particle-3 34s linear infinite;
+  animation-delay: -15s;
+}
+
+/* Cybernetic Grid Overlay */
+.bg-premium-grid {
+  background-image: 
+    linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 80%);
+}
+
+.bg-dot-matrix {
+  background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  mask-image: radial-gradient(circle at center, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at center, black, transparent 75%);
+}
+
