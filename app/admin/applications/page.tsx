@@ -112,6 +112,9 @@ export default async function ApplicationsPage() {
                         lorUrl={app.lor_url}
                         currentStatus={app.status}
                         isAdminGlobal={isAdminGlobal}
+                        rollNo={app.roll_no}
+                        university={app.university}
+                        area={app.referrer?.area}
                       />
                     </td>
                   </tr>
