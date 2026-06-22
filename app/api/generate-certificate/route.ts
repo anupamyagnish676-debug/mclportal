@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import nodemailer from 'nodemailer'
 import fs from 'fs'
 import path from 'path'
+import QRCode from 'qrcode'
 
 // Helper function to wrap text
 function wrapText(text: string, maxWidth: number, size: number, font: any) {
@@ -61,8 +62,16 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, full_name, signature_data')
+      .eq('id', user.id)
+      .maybeSingle()
+
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
+
+    const adminName = sanitizeText(profile?.full_name || 'Admin Coordinator')
+    const adminSignatureData = profile?.signature_data
 
     const { internshipId, studentName } = await req.json()
     const adminClient = createAdminClient()
@@ -93,7 +102,7 @@ export async function POST(req: NextRequest) {
       color: rgb(0.99, 0.98, 0.95)
     })
 
-    // 2. Draw Premium Outer Green Border
+    // 2. Draw Outer Green Border
     page.drawRectangle({
       x: 20,
       y: 20,
@@ -103,7 +112,7 @@ export async function POST(req: NextRequest) {
       borderWidth: 8
     })
 
-    // 3. Draw Premium Inner Gold Border
+    // 3. Draw Inner Gold Border
     page.drawRectangle({
       x: 34,
       y: 34,
@@ -113,7 +122,7 @@ export async function POST(req: NextRequest) {
       borderWidth: 2
     })
 
-    // 4. Load & Draw Logos
+    // 4. Load Logos
     const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-transparent.png')
     const coalIndiaLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo-transparent.png')
 
@@ -200,8 +209,6 @@ export async function POST(req: NextRequest) {
     page.drawText(`Serial No: MCL/HRD/INT/${serialNo}`, { x: 50, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
     page.drawText(`Date of Issue: ${issueDate}`, { x: width - 200, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
-
-
     // 7. Dynamic Paragraph & Student Details
     const student = sanitizeText(studentName || internship.student?.full_name || 'Intern')
     const university = sanitizeText(internship.student?.university || 'their respective institution')
@@ -233,6 +240,29 @@ export async function POST(req: NextRequest) {
     const nextY = titleY - 10
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
+    // Generate QR Code dynamically
+    let qrCodeImg = null
+    try {
+      const verifyUrl = `${req.nextUrl.origin}/verify/${internshipId}`
+      const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 })
+      const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
+      qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)
+    } catch (e) {
+      console.error('Failed to generate QR Code:', e)
+    }
+
+    // Draw Verification QR Code centered horizontally above signature lines
+    if (qrCodeImg) {
+      const qrSize = 45
+      page.drawImage(qrCodeImg, {
+        x: (width - qrSize) / 2,
+        y: 130,
+        width: qrSize,
+        height: qrSize
+      })
+      drawCenteredText('Scan to Verify', 122, 6, italicFont, rgb(0.5, 0.5, 0.5))
+    }
+
     // Load GM HRD signature
     const gmSigPath = path.join(process.cwd(), 'public', 'gm-signature.png')
     let gmSigImg = null
@@ -257,7 +287,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 8. Signatures Section at the Bottom
+    // Load Admin dynamic signature (acting as Project Coordinator)
+    let adminSigImg = null
+    if (adminSignatureData) {
+      try {
+        const base64Data = adminSignatureData.split(',')[1]
+        const signatureBuffer = Buffer.from(base64Data, 'base64')
+        adminSigImg = await pdfDoc.embedPng(signatureBuffer)
+      } catch (e) {
+        console.error('Failed to embed Admin signature:', e)
+      }
+    }
+
+    // 8. Signatures Section at the Bottom (Three Columns)
     // Left Side - Mentor
     if (mentorSigImg) {
       const sigWidth = 90
@@ -276,6 +318,25 @@ export async function POST(req: NextRequest) {
     const mentorLabel = `(${mentorName})`
     const mentorLabelWidth = regularFont.widthOfTextAtSize(mentorLabel, 9)
     page.drawText(mentorLabel, { x: 155 - (mentorLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+
+    // Center Side - Project Coordinator (Admin)
+    if (adminSigImg) {
+      const sigWidth = 90
+      const sigHeight = sigWidth / 2.67
+      page.drawImage(adminSigImg, {
+        x: 421 - (sigWidth / 2), // centered on line x:346..496
+        y: 80,
+        width: sigWidth,
+        height: sigHeight
+      })
+    }
+    page.drawLine({ start: { x: 346, y: 75 }, end: { x: 496, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    const adminTitle = 'Project Coordinator'
+    const adminTitleWidth = boldFont.widthOfTextAtSize(adminTitle, 10)
+    page.drawText(adminTitle, { x: 421 - (adminTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    const adminLabel = `(${adminName})`
+    const adminLabelWidth = regularFont.widthOfTextAtSize(adminLabel, 9)
+    page.drawText(adminLabel, { x: 421 - (adminLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     // Right Side - GM (HRD)
     if (gmSigImg) {
