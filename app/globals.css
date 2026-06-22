@@ -134,3 +134,83 @@ body { background-color: #f9fafb; }
   -webkit-mask-image: radial-gradient(circle at center, black, transparent 75%);
 }
 
+/* ==========================================================================
+   AUTOMATED PREMIUM DASHBOARD OVERRIDES
+   ========================================================================== */
+
+/* 1. Global Page Layout Styling & Modern Font Smooth */
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11" !important;
+  text-rendering: optimizeLegibility !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* 2. Automated Card Premium Elevate */
+.bg-white.rounded-xl.border {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.015), 0 2px 6px rgba(0, 0, 0, 0.01) !important;
+  border-radius: 1rem !important; /* 16px (rounded-2xl) */
+  border-color: #f1f5f9 !important; /* border-slate-100 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.bg-white.rounded-xl.border:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.035), 0 4px 10px rgba(0, 0, 0, 0.01) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 3. Automated Form Controls Elevate */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="date"], 
+select, 
+textarea {
+  border-radius: 0.75rem !important; /* rounded-xl */
+  border-color: #e2e8f0 !important; /* border-slate-200 */
+  transition: all 0.2s ease-in-out !important;
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus, 
+input[type="password"]:focus, 
+input[type="date"]:focus, 
+select:focus, 
+textarea:focus {
+  border-color: #10b981 !important; /* border-emerald-500 */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important; /* ring-emerald-500/15 */
+}
+
+/* 4. Automated Primary Button Enhancements */
+button.bg-green-600, 
+a.bg-green-600,
+.bg-green-600 {
+  background-image: linear-gradient(135deg, #059669 0%, #10b981 100%) !important; /* emerald gradient */
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button.bg-green-600:hover, 
+a.bg-green-600:hover,
+.bg-green-600:hover {
+  background-image: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+button.bg-green-600:active, 
+a.bg-green-600:active,
+.bg-green-600:active {
+  transform: translateY(0px) !important;
+}
+
+/* 5. Automated Table Enhancements */
+tbody tr {
+  transition: all 0.2s ease-in-out !important;
+}
+
+tbody tr:hover {
+  background-color: rgba(16, 185, 129, 0.02) !important; /* extremely subtle emerald hover */
+}
+
+

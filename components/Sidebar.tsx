@@ -67,42 +67,52 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
   }
 
   return (
-    <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col fixed left-0 top-0 z-10">
-      <div className="p-4 border-b border-gray-100">
+    <aside className="w-56 min-h-screen bg-[#070f0d] border-r border-emerald-950/60 flex flex-col fixed left-0 top-0 z-10 text-slate-300">
+      <div className="p-4 border-b border-emerald-950/60">
         <div className="flex items-center gap-2.5">
-          <img src="/mcl-logo.jpg" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg" />
+          <img src="/mcl-logo-transparent.png" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg brightness-0 invert" />
           <div>
-            <p className="text-sm font-bold text-gray-900 leading-tight">MCL Portal</p>
-            <span className={clsx('text-xs px-1.5 py-0.5 rounded font-medium capitalize', roleBadge[role])}>{role}</span>
+            <p className="text-sm font-bold text-white leading-tight">MCL Portal</p>
+            <span className={clsx('text-[10px] px-2 py-0.5 rounded font-semibold capitalize mt-1 inline-block', {
+              'bg-red-950/40 text-red-400 border border-red-500/20': role === 'admin',
+              'bg-amber-950/40 text-amber-400 border border-amber-500/20': role === 'mentor',
+              'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20': role === 'student',
+              'bg-purple-950/40 text-purple-400 border border-purple-500/20': role === 'employee',
+            })}>{role}</span>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => (
-          <Link key={item.href} href={item.href}
-            className={clsx(
-              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-              pathname === item.href ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            )}>
-            <span className="text-base">{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        {navItems.map(item => {
+          const isActive = pathname === item.href
+          return (
+            <Link key={item.href} href={item.href}
+              className={clsx(
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all duration-300 transform active:scale-[0.98]',
+                isActive 
+                  ? 'bg-gradient-to-r from-emerald-950/60 to-emerald-900/40 text-emerald-400 font-semibold border-l-2 border-emerald-500 shadow-sm' 
+                  : 'text-slate-400 hover:bg-emerald-950/20 hover:text-slate-200'
+              )}>
+              <span className="text-base group-hover:scale-110 transition-transform duration-300">{item.icon}</span>
+              {item.label}
+            </Link>
+          )
+        })}
       </nav>
 
-      <div className="p-3 border-t border-gray-100">
-        <div className="flex items-center gap-2 px-2 py-2 mb-1">
-          <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0', roleColors[role])}>
+      <div className="p-3 border-t border-emerald-950/60">
+        <div className="flex items-center gap-2.5 px-2 py-2 mb-1.5 bg-emerald-950/20 rounded-xl border border-emerald-950/30">
+          <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm', roleColors[role])}>
             {userName?.charAt(0)?.toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-900 truncate">{userName}</p>
-            <p className="text-xs text-gray-400 capitalize">{role}</p>
+            <p className="text-xs font-semibold text-white truncate">{userName}</p>
+            <p className="text-[10px] text-slate-400 capitalize">{role}</p>
           </div>
         </div>
         <button onClick={handleLogout}
-          className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+          className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 rounded-xl transition-all duration-300 font-medium">
           Sign out
         </button>
       </div>
