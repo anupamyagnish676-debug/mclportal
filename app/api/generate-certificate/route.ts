@@ -331,7 +331,7 @@ export async function POST(req: NextRequest) {
       })
     }
     page.drawLine({ start: { x: 346, y: 75 }, end: { x: 496, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    const adminTitle = 'Project Coordinator'
+    const adminTitle = 'Area Training Officer'
     const adminTitleWidth = boldFont.widthOfTextAtSize(adminTitle, 10)
     page.drawText(adminTitle, { x: 421 - (adminTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
     const adminLabel = `(${adminName})`
