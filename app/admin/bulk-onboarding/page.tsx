@@ -1,12 +1,49 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function AdminBulkOnboardingPage() {
+  const supabase = createClient()
   const [file, setFile] = useState<File | null>(null)
   const [students, setStudents] = useState<any[]>([])
+  const [adminProfile, setAdminProfile] = useState<{ role: string; area: string | null } | null>(null)
+  const [areas, setAreas] = useState<any[]>([])
+  const [selectedArea, setSelectedArea] = useState('')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<any[] | null>(null)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadAreas() {
+      try {
+        const res = await fetch('/api/areas')
+        const data = await res.json()
+        if (res.ok) {
+          setAreas(data.areas || [])
+        }
+      } catch (err) {
+        console.error('Failed to load areas:', err)
+      }
+    }
+    loadAreas()
+    async function loadAdmin() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, area')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (data) {
+          setAdminProfile(data)
+          if (data.area && data.area !== 'Headquarters') {
+            setSelectedArea(data.area)
+          }
+        }
+      }
+    }
+    loadAdmin()
+  }, [])
 
   // Helper to trigger blank CSV template download
   function downloadTemplate() {
@@ -86,6 +123,10 @@ export default function AdminBulkOnboardingPage() {
 
   async function handleOnboard() {
     if (!students.length) return
+    if (adminProfile?.area === 'Headquarters' && !selectedArea) {
+      setError('Please select an Office / Area to onboard students into.')
+      return
+    }
     setLoading(true)
     setError('')
     setResults(null)
@@ -94,7 +135,7 @@ export default function AdminBulkOnboardingPage() {
       const res = await fetch('/api/bulk-onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ students })
+        body: JSON.stringify({ students, defaultArea: selectedArea })
       })
 
       const data = await res.json()
@@ -120,7 +161,7 @@ export default function AdminBulkOnboardingPage() {
         </div>
         <button
           onClick={downloadTemplate}
-          className="px-4 py-2 border border-gray-250 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+          className="px-4 py-2 border border-gray-255 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
         >
           📥 Download CSV Template
         </button>
@@ -138,7 +179,7 @@ export default function AdminBulkOnboardingPage() {
         <div className="md:col-span-1 space-y-4">
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="font-bold text-gray-800 text-sm mb-4">Upload CSV File</h2>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-green-500 transition-colors relative cursor-pointer">
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-green-500 transition-colors relative cursor-pointer mb-4">
               <input
                 type="file"
                 accept=".csv"
@@ -151,6 +192,26 @@ export default function AdminBulkOnboardingPage() {
               </p>
               <p className="text-[10px] text-gray-400 mt-1">Accepts only .csv files</p>
             </div>
+
+            {adminProfile?.area === 'Headquarters' && students.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Onboard into Office / Area <span className="text-red-500">*</span>
+                </label>
+                <select 
+                  value={selectedArea} 
+                  onChange={e => setSelectedArea(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                >
+                  <option value="">-- Select Area --</option>
+                  {areas.map(a => (
+                    <option key={a.name} value={a.name}>
+                      {a.name === 'Headquarters' ? 'Headquarters (Central)' : `${a.name} Area`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {students.length > 0 && (
               <div className="mt-4">

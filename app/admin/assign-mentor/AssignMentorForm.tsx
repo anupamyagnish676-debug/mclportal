@@ -9,6 +9,7 @@ type Internship = {
   end_date: string | null
   is_active: boolean
   mentor_id: string | null
+  area: string | null
   student: { full_name: string; email: string } | null
   mentor: { full_name: string } | null
 }
@@ -17,14 +18,21 @@ type Mentor = {
   id: string
   full_name: string
   email: string
+  area: string | null
 }
 
 export default function AssignMentorForm({
   internships,
   mentors,
+  isAdminGlobal,
+  selectedArea,
+  areas = [],
 }: {
   internships: Internship[]
   mentors: Mentor[]
+  isAdminGlobal: boolean
+  selectedArea: string
+  areas?: { name: string }[]
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -97,16 +105,36 @@ export default function AssignMentorForm({
     }
   }
 
-  if (mentors.length === 0) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg text-sm">
-        No mentors found. Create a mentor account first via <strong>Create User</strong>.
-      </div>
-    )
-  }
-
   return (
     <div>
+      {/* Global Area Filter Dropdown */}
+      {isAdminGlobal && (
+        <div className="mb-6 flex justify-end">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium">Filter by Training Office:</span>
+            <select
+              value={selectedArea}
+              onChange={e => {
+                const area = e.target.value
+                if (area) {
+                  router.push(`/admin/assign-mentor?area=${area}`)
+                } else {
+                  router.push('/admin/assign-mentor')
+                }
+              }}
+              className="border border-gray-250 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-gray-700 font-semibold cursor-pointer shadow-sm"
+            >
+              <option value="">All Offices / Areas</option>
+              {areas.map(a => (
+                <option key={a.name} value={a.name}>
+                  {a.name === 'Headquarters' ? 'Headquarters (Central)' : `${a.name} Area`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
           {error}
@@ -123,6 +151,7 @@ export default function AssignMentorForm({
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Student</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-700">Training Area</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Period</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Current Mentor</th>
@@ -136,6 +165,9 @@ export default function AssignMentorForm({
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{intern.student?.full_name || '—'}</p>
                   <p className="text-xs text-gray-400">{intern.student?.email || ''}</p>
+                </td>
+                <td className="px-4 py-3 text-gray-600 font-medium">
+                  {intern.area ? `${intern.area} Area` : 'General'}
                 </td>
                 <td className="px-4 py-3 text-gray-600">
                   {intern.start_date && intern.end_date
@@ -159,24 +191,28 @@ export default function AssignMentorForm({
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <select
-                    value={selections[intern.id] || ''}
-                    onChange={e => setSelections(prev => ({ ...prev, [intern.id]: e.target.value }))}
-                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent w-full max-w-[200px]"
-                  >
-                    <option value="">Select mentor...</option>
-                    {mentors.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name} ({m.email})
-                      </option>
-                    ))}
-                  </select>
+                  {mentors.length === 0 ? (
+                    <span className="text-gray-400 text-xs italic">No mentors available in this area</span>
+                  ) : (
+                    <select
+                      value={selections[intern.id] || ''}
+                      onChange={e => setSelections(prev => ({ ...prev, [intern.id]: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent w-full max-w-[200px]"
+                    >
+                      <option value="">Select mentor...</option>
+                      {mentors.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name} ({m.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAssign(intern.id)}
-                      disabled={saving === intern.id || !selections[intern.id]}
+                      disabled={saving === intern.id || !selections[intern.id] || mentors.length === 0}
                       className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saving === intern.id ? 'Saving...' : 'Assign'}
@@ -185,7 +221,7 @@ export default function AssignMentorForm({
                       <button
                         onClick={() => handleUnassign(intern.id)}
                         disabled={saving === intern.id}
-                        className="border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="border border-gray-250 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
                       >
                         Remove
                       </button>
@@ -199,7 +235,10 @@ export default function AssignMentorForm({
 
         {internships.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm">
-            No internships found. Create student accounts first.
+            {selectedArea 
+              ? `No internships found in ${selectedArea} Area.`
+              : 'No internships found.'
+            }
           </div>
         )}
       </div>

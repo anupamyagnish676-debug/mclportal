@@ -1,15 +1,74 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function CreateUserPage() {
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '', serial_no: '' })
+  const supabase = createClient()
+  const [form, setForm] = useState({ 
+    full_name: '', 
+    email: '', 
+    password: '', 
+    role: 'student', 
+    wing: '', 
+    start_date: '', 
+    end_date: '', 
+    roll_no: '', 
+    university: '', 
+    serial_no: '',
+    area: '',
+    employee_code: ''
+  })
+  const [adminProfile, setAdminProfile] = useState<{ role: string; area: string | null } | null>(null)
+  const [areas, setAreas] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    async function loadAreas() {
+      try {
+        const res = await fetch('/api/areas')
+        const data = await res.json()
+        if (res.ok) {
+          setAreas(data.areas || [])
+        }
+      } catch (err) {
+        console.error('Failed to load areas:', err)
+      }
+    }
+
+    async function loadAdmin() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, area')
+          .eq('id', user.id)
+          .maybeSingle()
+        
+        if (data) {
+          setAdminProfile(data)
+          // If local Area Admin, auto-bind user's area to local admin's area
+          if (data.area && data.area !== 'Headquarters') {
+            setForm(prev => ({ ...prev, area: data.area || '' }))
+          }
+        }
+      }
+    }
+    loadAdmin()
+    loadAreas()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
+
+    // For Headquarters admins, require selecting an area
+    if (adminProfile?.area === 'Headquarters' && !form.area) {
+      setMessage({ type: 'error', text: 'Please select an Office / Area Location' })
+      setLoading(false)
+      return
+    }
 
     try {
       const res = await fetch('/api/create-user', {
@@ -21,7 +80,20 @@ export default function CreateUserPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: `User created! Login: ${form.email} / ${form.password}` })
-        setForm({ full_name: '', email: '', password: '', role: 'student', wing: '', start_date: '', end_date: '', roll_no: '', university: '', serial_no: '' })
+        setForm({ 
+          full_name: '', 
+          email: '', 
+          password: '', 
+          role: 'student', 
+          wing: '', 
+          start_date: '', 
+          end_date: '', 
+          roll_no: '', 
+          university: '', 
+          serial_no: '',
+          employee_code: '',
+          area: adminProfile?.area !== 'Headquarters' ? (adminProfile?.area || '') : ''
+        })
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create user' })
       }
@@ -68,6 +140,30 @@ export default function CreateUserPage() {
               placeholder="Min 6 characters"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required />
           </div>
+
+          {adminProfile?.area === 'Headquarters' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Office / Area Location <span className="text-red-500">*</span></label>
+              <select value={form.area} onChange={e => setForm({ ...form, area: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                <option value="">-- Select Area --</option>
+                {areas.map(a => (
+                  <option key={a.name} value={a.name}>
+                    {a.name === 'Headquarters' ? 'Headquarters (Central)' : `${a.name} Area`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.role === 'employee' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Employee Code</label>
+              <input value={form.employee_code} onChange={e => setForm({ ...form, employee_code: e.target.value })}
+                placeholder="e.g. EMP12345"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Wing / Department</label>

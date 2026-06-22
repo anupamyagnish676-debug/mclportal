@@ -1,25 +1,70 @@
 import { createClient } from '@/lib/supabase/server'
 import InternActions from './InternActions'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+
+import AreaSelector from './AreaSelector'
 
 export const revalidate = 0
 
 export default async function InternsPage({
   searchParams,
 }: {
-  searchParams: { tab?: string }
+  searchParams: { tab?: string; area?: string }
 }) {
   const supabase = await createClient()
-  const activeTab = searchParams.tab === 'completed' ? 'completed' : 'active'
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/login')
+  }
+  const { data: profile } = await supabase.from('profiles').select('role, area').eq('id', user.id).maybeSingle()
+  const isAdminGlobal = profile?.area === 'Headquarters'
+  const adminArea = profile?.area || ''
 
-  const { data: internships, error } = await supabase
+  // Fetch areas dynamically from 'areas' table (with fallback)
+  let areas: { name: string }[] = []
+  try {
+    const { data: areasData } = await supabase
+      .from('areas')
+      .select('name')
+      .order('name', { ascending: true })
+    if (areasData && areasData.length > 0) {
+      areas = areasData
+    } else {
+      areas = [
+        { name: 'Talcher' },
+        { name: 'Jagannath' },
+        { name: 'Lingaraj' },
+        { name: 'Subhadra' },
+        { name: 'Headquarters' }
+      ]
+    }
+  } catch (err) {
+    areas = [
+      { name: 'Talcher' },
+      { name: 'Jagannath' },
+      { name: 'Lingaraj' },
+      { name: 'Subhadra' },
+      { name: 'Headquarters' }
+    ]
+  }
+
+  const activeTab = searchParams.tab === 'completed' ? 'completed' : 'active'
+  const selectedArea = isAdminGlobal ? (searchParams.area || '') : adminArea
+
+  let query = supabase
     .from('internships')
     .select(`
-      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id,
-      student:profiles!internships_student_id_fkey(id, full_name, email),
+      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area,
+      student:profiles!internships_student_id_fkey(id, full_name, email, area),
       mentor:profiles!internships_mentor_id_fkey(full_name)
     `)
-    .order('start_date', { ascending: false })
+
+  if (selectedArea) {
+    query = query.eq('area', selectedArea)
+  }
+
+  const { data: internships, error } = await query.order('start_date', { ascending: false })
 
   // Filter interns based on the active tab
   const filteredInternships = (internships || []).filter((i: any) => {
@@ -32,8 +77,19 @@ export default async function InternsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Interns</h1>
-      <p className="text-gray-500 text-sm mb-6">Manage active and past internships</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Interns</h1>
+          <p className="text-gray-500 text-sm">
+            Manage active and past internships — {selectedArea ? `${selectedArea} Area` : 'All Areas'}
+          </p>
+        </div>
+        {isAdminGlobal && (
+          <div className="flex items-center gap-2">
+            <AreaSelector selectedArea={selectedArea} areas={areas} />
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
@@ -44,7 +100,7 @@ export default async function InternsPage({
       {/* Tabs Navigation */}
       <div className="flex border-b border-gray-200 mb-6">
         <Link
-          href="/admin/interns?tab=active"
+          href={`/admin/interns?tab=active${selectedArea ? `&area=${selectedArea}` : ''}`}
           className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
             activeTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -54,7 +110,7 @@ export default async function InternsPage({
           Active Interns ({ (internships || []).filter(i => i.is_active).length })
         </Link>
         <Link
-          href="/admin/interns?tab=completed"
+          href={`/admin/interns?tab=completed${selectedArea ? `&area=${selectedArea}` : ''}`}
           className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
             activeTab === 'completed'
               ? 'border-green-600 text-green-600'

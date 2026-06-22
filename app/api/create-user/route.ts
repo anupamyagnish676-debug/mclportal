@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { full_name, email, password, role, wing, start_date, end_date, roll_no, university, serial_no } = await req.json()
+    const { full_name, email, password, role, wing, start_date, end_date, roll_no, university, serial_no, area, employee_code } = await req.json()
 
     if (!email || !password || !full_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
 
-    // The trigger auto-creates a profile row with role='student' default — update it to the real role
+    // Update profile (which is auto-created by the Supabase auth trigger)
     const { error: profileUpdateError } = await adminClient
       .from('profiles')
       .update({ 
@@ -36,11 +36,22 @@ export async function POST(req: NextRequest) {
         wing: wing || null, 
         full_name,
         roll_no: roll_no || null,
-        university: university || null
+        university: university || null,
+        area: area || null,
+        employee_code: role === 'employee' ? employee_code || null : null
       })
       .eq('id', newUser.user.id)
 
     if (profileUpdateError) return NextResponse.json({ error: profileUpdateError.message }, { status: 400 })
+
+    if (role === 'student') {
+      // Link any approved application with this email to the new student ID
+      await adminClient
+        .from('applications')
+        .update({ student_id: newUser.user.id })
+        .eq('student_email', email.toLowerCase().trim())
+        .eq('status', 'approved')
+    }
 
     let nextSerialStr = '42'
     if (role === 'student' && start_date && end_date) {
@@ -66,13 +77,14 @@ export async function POST(req: NextRequest) {
         start_date,
         end_date,
         is_active: true,
-        serial_no: nextSerialStr
+        serial_no: nextSerialStr,
+        area: area || null
       })
       if (internshipError) return NextResponse.json({ error: internshipError.message }, { status: 400 })
     }
 
-    // Send welcome email with login credentials for students, mentors, and employees
-    if (role === 'student' || role === 'mentor' || role === 'employee') {
+    // Send welcome email with login credentials for students, mentors, employees, and admins
+    if (role === 'student' || role === 'mentor' || role === 'employee' || role === 'admin') {
       try {
         if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
           const nodemailer = await import('nodemailer')
@@ -119,8 +131,8 @@ export async function POST(req: NextRequest) {
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;"><strong>${nextSerialStr}</strong></td>
                     </tr>
                     <tr style="background: #f0fdf4;">
-                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Training Place</td>
-                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: #166534;">Talcher Area, MCL</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; width: 40%;">Training Place</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: #166534;">${area || 'General'} Area, MCL</td>
                     </tr>
                     ${wing ? `<tr>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Wing / Department</td>
@@ -144,7 +156,7 @@ export async function POST(req: NextRequest) {
                     <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">Please change your password after logging in for the first time.</p>
                   </div>
 
-                  <p>You are requested to report to the training office of the concerned wing on your start date.</p>
+                  <p>You are requested to report to the training office of the concerned wing at <strong>${area || 'Talcher'} Area</strong> on your start date.</p>
                   <p>We wish you a productive and enriching internship experience.</p>
 
                   <br/>
@@ -181,6 +193,14 @@ export async function POST(req: NextRequest) {
                     ${wing ? `<tr style="background: #f0fdf4;">
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Wing / Department</td>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${wing}</td>
+                    </tr>` : ''}
+                    ${area ? `<tr style="background: #f0fdf4;">
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Office / Area Location</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${area} Area</td>
+                    </tr>` : ''}
+                    ${employee_code ? `<tr>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Employee Code</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb;">${employee_code}</td>
                     </tr>` : ''}
                   </table>
 

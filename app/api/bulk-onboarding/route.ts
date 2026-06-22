@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { students } = await req.json()
+    const { students, defaultArea } = await req.json()
     if (!Array.isArray(students) || !students.length) {
       return NextResponse.json({ error: 'Invalid or empty students array' }, { status: 400 })
     }
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     let currentSerial = maxSerial
 
     for (const student of students) {
-      const { full_name, email, password, wing, start_date, end_date, roll_no, university } = student
+      const { full_name, email, password, wing, start_date, end_date, roll_no, university, area: studentArea } = student
+      const area = studentArea || defaultArea || null
 
       if (!email || !password || !full_name) {
         results.push({ email: email || 'N/A', success: false, error: 'Missing required fields (email, password, full_name)' })
@@ -66,7 +67,8 @@ export async function POST(req: NextRequest) {
             wing: wing || null, 
             full_name,
             roll_no: roll_no || null,
-            university: university || null
+            university: university || null,
+            area: area
           })
           .eq('id', newUser.user.id)
 
@@ -84,7 +86,8 @@ export async function POST(req: NextRequest) {
           start_date: start_date || null,
           end_date: end_date || null,
           is_active: true,
-          serial_no: serialStr
+          serial_no: serialStr,
+          area: area
         })
 
         if (internshipError) {
@@ -133,8 +136,8 @@ export async function POST(req: NextRequest) {
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;"><strong>${serialStr}</strong></td>
                     </tr>
                     <tr style="background: #f0fdf4;">
-                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Training Place</td>
-                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: #166534;">Talcher Area, MCL</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; width: 40%;">Training Place</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: #166534;">${area || 'General'} Area, MCL</td>
                     </tr>
                     ${wing ? `<tr>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600;">Wing / Department</td>
@@ -158,7 +161,7 @@ export async function POST(req: NextRequest) {
                     <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">Please change your password after logging in for the first time.</p>
                   </div>
 
-                  <p>You are requested to report to the training office of the concerned wing on your start date.</p>
+                  <p>You are requested to report to the training office of the concerned wing at <strong>${area || 'Talcher'} Area</strong> on your start date.</p>
                   <p>We wish you a productive and enriching internship experience.</p>
 
                   <br/>

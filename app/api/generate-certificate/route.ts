@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     const { data: internship, error: fetchError } = await adminClient
       .from('internships')
-      .select('*, student:profiles!internships_student_id_fkey(full_name, email, university, wing), mentor:profiles!internships_mentor_id_fkey(full_name)')
+      .select('*, student:profiles!internships_student_id_fkey(full_name, email, university, wing, area), mentor:profiles!internships_mentor_id_fkey(full_name, signature_data)')
       .eq('id', internshipId)
       .maybeSingle()
 
@@ -114,8 +114,8 @@ export async function POST(req: NextRequest) {
     })
 
     // 4. Load & Draw Logos
-    const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo.jpg')
-    const coalIndiaLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo.png')
+    const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-transparent.png')
+    const coalIndiaLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo-transparent.png')
 
     let mclLogoImg: any = null
     let coalIndiaLogoImg: any = null
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     try {
       if (fs.existsSync(mclLogoPath)) {
         const mclLogoBytes = fs.readFileSync(mclLogoPath)
-        mclLogoImg = await pdfDoc.embedJpg(mclLogoBytes)
+        mclLogoImg = await pdfDoc.embedPng(mclLogoBytes)
       }
     } catch (e) {
       console.error('Failed to embed MCL logo:', e)
@@ -140,22 +140,27 @@ export async function POST(req: NextRequest) {
 
     // Draw Left Logo (MCL)
     if (mclLogoImg) {
+      const logoHeight = 60
+      const logoWidth = logoHeight * 1.22
       page.drawImage(mclLogoImg, {
         x: 65,
-        y: height - 120,
-        width: 70,
-        height: 70,
+        y: height - 115,
+        width: logoWidth,
+        height: logoHeight,
       })
     }
 
     // Draw Right Logo (Coal India or fallback to MCL)
     const rightImg = coalIndiaLogoImg || mclLogoImg
     if (rightImg) {
+      const logoHeight = 60
+      const isMcl = rightImg === mclLogoImg
+      const logoWidth = logoHeight * (isMcl ? 1.22 : 0.74)
       page.drawImage(rightImg, {
-        x: width - 135,
-        y: height - 120,
-        width: 70,
-        height: 70,
+        x: width - 65 - logoWidth,
+        y: height - 115,
+        width: logoWidth,
+        height: logoHeight,
       })
     }
 
@@ -206,12 +211,15 @@ export async function POST(req: NextRequest) {
     const projectTitle = sanitizeText(internship.project_title || 'N/A')
     const projectDate = sanitizeText(formatDate(internship.project_submitted_at))
     const mentorName = sanitizeText(internship.mentor?.full_name || 'N/A')
+    const area = sanitizeText(internship.student?.area || 'Talcher')
 
     // Structured Centered Text Layout
     drawCenteredText('This is to certify that', 385, 13, regularFont, rgb(0.4, 0.4, 0.4))
     drawCenteredText(student.toUpperCase(), 350, 22, boldFont, rgb(0.06, 0.35, 0.18))
     drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 315, 12, regularFont, rgb(0.2, 0.2, 0.2))
-    drawCenteredText(`${wing} department at Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 290, 13, boldFont, rgb(0.2, 0.2, 0.2))
+    
+    const areaText = area === 'Headquarters' ? 'Headquarters' : `${area} Area`
+    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 290, 13, boldFont, rgb(0.2, 0.2, 0.2))
     drawCenteredText('They have submitted a final project report titled', 255, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Dynamically wrap project title if it is too long
@@ -225,20 +233,68 @@ export async function POST(req: NextRequest) {
     const nextY = titleY - 10
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
+    // Load GM HRD signature
+    const gmSigPath = path.join(process.cwd(), 'public', 'gm-signature.png')
+    let gmSigImg = null
+    try {
+      if (fs.existsSync(gmSigPath)) {
+        const gmSigBytes = fs.readFileSync(gmSigPath)
+        gmSigImg = await pdfDoc.embedPng(gmSigBytes)
+      }
+    } catch (e) {
+      console.error('Failed to embed GM HRD signature:', e)
+    }
+
+    // Load Mentor dynamic signature
+    let mentorSigImg = null
+    if (internship.mentor?.signature_data) {
+      try {
+        const base64Data = internship.mentor.signature_data.split(',')[1]
+        const signatureBuffer = Buffer.from(base64Data, 'base64')
+        mentorSigImg = await pdfDoc.embedPng(signatureBuffer)
+      } catch (e) {
+        console.error('Failed to embed Mentor signature:', e)
+      }
+    }
+
     // 8. Signatures Section at the Bottom
     // Left Side - Mentor
+    if (mentorSigImg) {
+      const sigWidth = 90
+      const sigHeight = sigWidth / 2.67
+      page.drawImage(mentorSigImg, {
+        x: 155 - (sigWidth / 2), // centered on line x:80..230
+        y: 80,
+        width: sigWidth,
+        height: sigHeight
+      })
+    }
     page.drawLine({ start: { x: 80, y: 75 }, end: { x: 230, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    page.drawText('Project Mentor', { x: 120, y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    const mentorTitle = 'Project Mentor'
+    const mentorTitleWidth = boldFont.widthOfTextAtSize(mentorTitle, 10)
+    page.drawText(mentorTitle, { x: 155 - (mentorTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
     const mentorLabel = `(${mentorName})`
     const mentorLabelWidth = regularFont.widthOfTextAtSize(mentorLabel, 9)
-    page.drawText(mentorLabel, { x: 155 - mentorLabelWidth / 2, y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(mentorLabel, { x: 155 - (mentorLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     // Right Side - GM (HRD)
+    if (gmSigImg) {
+      const sigWidth = 100
+      const sigHeight = sigWidth / 2.90
+      page.drawImage(gmSigImg, {
+        x: 687 - (sigWidth / 2), // centered on line x:612..762
+        y: 80,
+        width: sigWidth,
+        height: sigHeight
+      })
+    }
     page.drawLine({ start: { x: 612, y: 75 }, end: { x: 762, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    page.drawText('General Manager (HRD)', { x: 622, y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    const gmTitle = 'General Manager (HRD)'
+    const gmTitleWidth = boldFont.widthOfTextAtSize(gmTitle, 10)
+    page.drawText(gmTitle, { x: 687 - (gmTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
     const coLabel = 'Mahanadi Coalfields Limited'
     const coLabelWidth = regularFont.widthOfTextAtSize(coLabel, 9)
-    page.drawText(coLabel, { x: 687 - coLabelWidth / 2, y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(coLabel, { x: 687 - (coLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     const pdfBytes = await pdfDoc.save()
     const pdfBuffer = Buffer.from(pdfBytes)
