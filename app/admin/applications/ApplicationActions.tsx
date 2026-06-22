@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -31,6 +32,13 @@ export default function ApplicationActions({
   const [status, setStatus] = useState(currentStatus)
   const [error, setError] = useState('')
   const supabase = createClient()
+  
+  // Mounted state for React Portal rendering on client-side only
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
   // Form states for creating student account
   const [showRegisterForm, setShowRegisterForm] = useState(false)
@@ -196,9 +204,9 @@ export default function ApplicationActions({
       </div>
       {error && <p className="text-red-500 text-xs mt-1.5 font-medium">{error}</p>}
 
-      {/* Account Registration Modal */}
-      {showRegisterForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {/* Account Registration Modal via React Portal */}
+      {showRegisterForm && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-100 shadow-xl relative text-gray-900">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Create Student Account</h3>
             <p className="text-xs text-gray-500 mb-4">
@@ -275,7 +283,8 @@ export default function ApplicationActions({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
