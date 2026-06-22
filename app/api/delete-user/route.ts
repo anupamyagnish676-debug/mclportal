@@ -21,15 +21,25 @@ export async function POST(req: NextRequest) {
 
     // 1. Delete associated data to prevent foreign key constraint violations
     if (internshipId) {
-      // Delete submissions (needs joining table check or direct select)
+      // Delete submissions
       await adminClient.from('submissions').delete().eq('student_id', studentId)
       // Delete attendance
       await adminClient.from('attendance').delete().eq('internship_id', internshipId)
+      // Delete leaves
+      await adminClient.from('leaves').delete().eq('internship_id', internshipId)
+      // Delete logbooks
+      await adminClient.from('logbooks').delete().eq('internship_id', internshipId)
       // Delete materials (if any are tied to this internship)
       await adminClient.from('materials').delete().eq('internship_id', internshipId)
       // Delete internship
       await adminClient.from('internships').delete().eq('id', internshipId)
     }
+
+    // Unlink the student from any approved LOR applications
+    await adminClient
+      .from('applications')
+      .update({ student_id: null })
+      .eq('student_id', studentId)
 
     // 2. Delete profile
     await adminClient.from('profiles').delete().eq('id', studentId)
