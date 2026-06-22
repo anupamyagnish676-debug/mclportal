@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
@@ -7,6 +7,15 @@ export default function LoginPage() {
   const [error, setError]       = useState('')
   const [status, setStatus]     = useState('')
   const [loading, setLoading]   = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('reset') === 'success') {
+        setStatus('Password reset successfully! Please sign in with your new password.')
+      }
+    }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -86,7 +95,12 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <a href="/forgot-password" className="text-xs font-semibold text-green-600 hover:text-green-700">
+                Forgot password?
+              </a>
+            </div>
             <input
               type="password"
               value={password}
