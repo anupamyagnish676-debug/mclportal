@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import InternActions from './InternActions'
+import IssueActions from './IssueActions'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-
-import AreaSelector from './AreaSelector'
+import AreaSelector from '../interns/AreaSelector' // Re-use area selector from interns page
 
 export const revalidate = 0
 
-export default async function InternsPage({
+export default async function IssueCertificatePage({
   searchParams,
 }: {
   searchParams: { tab?: string; area?: string }
@@ -49,7 +48,7 @@ export default async function InternsPage({
     ]
   }
 
-  const activeTab = searchParams.tab === 'completed' ? 'completed' : 'active'
+  const activeTab = searchParams.tab === 'issued' ? 'issued' : 'pending'
   const selectedArea = isAdminGlobal ? (searchParams.area || '') : adminArea
 
   let query = supabase
@@ -68,10 +67,11 @@ export default async function InternsPage({
 
   // Filter interns based on the active tab
   const filteredInternships = (internships || []).filter((i: any) => {
-    if (activeTab === 'active') {
-      return i.is_active === true
+    const hasCert = !!i.certificate_url
+    if (activeTab === 'pending') {
+      return !hasCert
     } else {
-      return i.is_active === false
+      return hasCert
     }
   })
 
@@ -79,9 +79,9 @@ export default async function InternsPage({
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Interns</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Issue Certificates</h1>
           <p className="text-gray-500 text-sm">
-            Manage active and past internships — {selectedArea ? `${selectedArea} Area` : 'All Areas'}
+            Generate and manage completion certificates — {selectedArea ? `${selectedArea} Area` : 'All Areas'}
           </p>
         </div>
         {isAdminGlobal && (
@@ -93,38 +93,38 @@ export default async function InternsPage({
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-          Error loading interns: {error.message}
+          Error loading internships: {error.message}
         </div>
       )}
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-gray-200 mb-6">
         <Link
-          href={`/admin/interns?tab=active${selectedArea ? `&area=${selectedArea}` : ''}`}
+          href={`/admin/issue-certificate?tab=pending${selectedArea ? `&area=${selectedArea}` : ''}`}
           className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
-            activeTab === 'active'
+            activeTab === 'pending'
               ? 'border-green-600 text-green-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          Active Interns ({ (internships || []).filter(i => i.is_active).length })
+          Pending Issuance ({ (internships || []).filter(i => !i.certificate_url).length })
         </Link>
         <Link
-          href={`/admin/interns?tab=completed${selectedArea ? `&area=${selectedArea}` : ''}`}
+          href={`/admin/issue-certificate?tab=issued${selectedArea ? `&area=${selectedArea}` : ''}`}
           className={`py-2.5 px-4 font-semibold text-sm border-b-2 transition-colors ${
-            activeTab === 'completed'
+            activeTab === 'issued'
               ? 'border-green-600 text-green-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          Completed Interns ({ (internships || []).filter(i => !i.is_active).length })
+          Issued Certificates ({ (internships || []).filter(i => i.certificate_url).length })
         </Link>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {!filteredInternships.length ? (
           <div className="p-12 text-center text-gray-400 text-sm">
-            {activeTab === 'active' ? 'No active internships found' : 'No completed internships found'}
+            {activeTab === 'pending' ? 'No internships pending certificate issuance' : 'No issued certificates found'}
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -133,7 +133,7 @@ export default async function InternsPage({
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Student</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Mentor</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Period</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Mentor Status</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
@@ -147,16 +147,20 @@ export default async function InternsPage({
                   <td className="px-4 py-3 text-gray-600">{i.mentor?.full_name || 'Unassigned'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{i.start_date} → {i.end_date}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${i.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {i.is_active ? 'Active' : 'Completed'}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      i.certificate_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {i.certificate_approved ? 'Approved' : 'Pending'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <InternActions
+                    <IssueActions
                       internshipId={i.id}
-                      studentId={i.student_id}
                       studentName={i.student?.full_name || 'Intern'}
-                      isActive={i.is_active}
+                      studentEmail={i.student?.email || ''}
+                      hasCertificate={!!i.certificate_url}
+                      certificateUrl={i.certificate_url}
+                      mentorApproved={!!i.certificate_approved}
                     />
                   </td>
                 </tr>

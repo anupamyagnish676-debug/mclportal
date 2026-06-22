@@ -14,6 +14,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Departments',   href: '/admin/departments',  icon: '🏢' },
     { label: 'Bulk Onboard',  href: '/admin/bulk-onboarding', icon: '📥' },
     { label: 'Assign Mentor', href: '/admin/assign-mentor', icon: '🔗' },
+    { label: 'Issue Certificate', href: '/admin/issue-certificate', icon: '🎓' },
     { label: 'Create User',   href: '/admin/create-user',  icon: '➕' },
     { label: 'Settings',      href: '/admin/settings',     icon: '⚙️' },
   ],

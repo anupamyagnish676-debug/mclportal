@@ -4,20 +4,16 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function InternActions({
-  internshipId, studentId, studentEmail, studentName, isActive, hasCertificate, mentorApproved
+  internshipId, studentId, studentName, isActive
 }: {
   internshipId: string
   studentId: string
-  studentEmail: string
   studentName: string
   isActive: boolean
-  hasCertificate: boolean
-  mentorApproved: boolean
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [active, setActive] = useState(isActive)
-  const [certIssued, setCertIssued] = useState(hasCertificate)
   const [error, setError] = useState('')
   const supabase = createClient()
 
@@ -34,28 +30,6 @@ export default function InternActions({
     } else {
       setActive(!active)
       router.refresh()
-    }
-    setLoading(false)
-  }
-
-  async function issueCertificate() {
-    setLoading(true)
-    setError('')
-    try {
-      const res = await fetch('/api/generate-certificate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ internshipId, studentName, studentEmail }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Failed to generate certificate')
-      } else {
-        setCertIssued(true)
-        router.refresh()
-      }
-    } catch (err: any) {
-      setError(err.message)
     }
     setLoading(false)
   }
@@ -97,20 +71,6 @@ export default function InternActions({
           }`}>
           {active ? 'Deactivate' : 'Activate'}
         </button>
-        {!certIssued ? (
-          mentorApproved ? (
-            <button onClick={issueCertificate} disabled={loading}
-              className="px-2 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg disabled:opacity-50">
-              {loading ? 'Working...' : 'Issue Cert'}
-            </button>
-          ) : (
-            <span className="px-2 py-1 text-xs bg-yellow-50 text-yellow-600 rounded-lg" title="Mentor must approve before certificate can be issued">
-              ⏳ Awaiting Approval
-            </span>
-          )
-        ) : (
-          <span className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">Cert Issued ✓</span>
-        )}
         <button
           onClick={deleteStudent}
           disabled={loading}
