@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCL Internship Portal — Software Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #15803d;
+      --primary-dark: #166534;
+      --primary-light: #f0fdf4;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --border-radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--slate-800);
+      background-color: #ffffff;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    /* Print styling overrides */
+    @media print {
+      body {
+        font-size: 12pt;
+        background-color: #ffffff;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .chapter-title {
+        page-break-before: always;
+        margin-top: 0 !important;
+      }
+      pre, code, blockquote, table, tr, img {
+        page-break-inside: avoid;
+      }
+      a {
+        text-decoration: underline;
+        color: #000 !important;
+      }
+      a::after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #555;
+      }
+      .content-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .cover-page {
+        height: 95vh !important;
+      }
+    }
+
+    /* Layout */
+    .content-wrapper {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 0 40px;
+    }
+
+    /* Cover Page */
+    .cover-page {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 90vh;
+      padding: 60px 0;
+      border-bottom: 2px solid var(--slate-200);
+    }
+
+    .cover-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .cover-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+    }
+
+    .cover-company-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      letter-spacing: 0.05em;
+    }
+
+    .cover-company-sub {
+      font-size: 0.85rem;
+      color: var(--slate-700);
+      font-weight: 500;
+    }
+
+    .cover-body {
+      margin-top: 80px;
+    }
+
+    .cover-title {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1.2;
+      margin-bottom: 20px;
+    }
+
+    .cover-subtitle {
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--slate-700);
+      margin-bottom: 40px;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid rgba(21, 128, 61, 0.15);
+    }
+
+    .cover-footer {
+      font-size: 0.9rem;
+      color: var(--slate-700);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      border-top: 1px solid var(--slate-200);
+      padding-top: 30px;
+    }
+
+    .meta-item strong {
+      color: var(--slate-900);
+    }
+
+    /* Headings */
+    h1, h2, h3, h4 {
+      color: var(--slate-900);
+      font-weight: 700;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      page-break-after: avoid;
+    }
+
+    h1 {
+      font-size: 2rem;
+      border-bottom: 2px solid var(--slate-100);
+      padding-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 2.5rem;
+      border-bottom: 1px solid var(--slate-200);
+      padding-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+      color: var(--slate-700);
+    }
+
+    p {
+      margin-bottom: 1.25rem;
+      color: var(--slate-700);
+      text-align: justify;
+    }
+
+    /* Table of Contents */
+    .toc-container {
+      background-color: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--border-radius);
+      padding: 30px;
+      margin: 40px 0;
+    }
+
+    .toc-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-top: 0;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--slate-200);
+      padding-bottom: 10px;
+    }
+
+    .toc-list {
+      list-style-type: none;
+    }
+
+    .toc-item {
+      margin-bottom: 10px;
+    }
+
+    .toc-item a {
+      color: var(--slate-800);
+      text-decoration: none;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .toc-item a:hover {
+      color: var(--primary);
+    }
+
+    .toc-sublist {
+      list-style-type: none;
+      margin-left: 20px;
+      margin-top: 6px;
+    }
+
+    .toc-subitem {
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .toc-subitem a {
+      color: var(--slate-700);
+    }
+
+    /* Lists */
+    ul, ol {
+      margin-bottom: 1.25rem;
+      padding-left: 24px;
+      color: var(--slate-700);
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Code Block & Inlines */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background-color: var(--slate-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #b91c1c;
+      font-weight: 500;
+    }
+
+    pre {
+      background-color: var(--slate-900);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      overflow-x: auto;
+      margin-bottom: 1.50rem;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      color: #e2e8f0;
+      font-size: 0.9em;
+      font-weight: 400;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 25px 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid var(--slate-200);
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--slate-50);
+      color: var(--slate-900);
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) {
+      background-color: var(--slate-50)/30;
+    }
+
+    /* Blockquotes */
+    blockquote {
+      background-color: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      padding: 20px;
+      border-radius: 0 var(--border-radius) var(--border-radius) 0;
+      margin-bottom: 1.5rem;
+    }
+
+    blockquote p {
+      margin-bottom: 0;
+      color: var(--primary-dark);
+      font-weight: 500;
+    }
+
+    /* Badges & Status */
+    .role-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .role-student { background-color: #d1fae5; color: #065f46; }
+    .role-mentor { background-color: #fef3c7; color: #92400e; }
+    .role-employee { background-color: #f3e8ff; color: #6b21a8; }
+    .role-admin { background-color: #fee2e2; color: #991b1b; }
+
+    /* Footer Pagination Simulation */
+    .doc-footer {
+      margin-top: 80px;
+      border-top: 1px solid var(--slate-200);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--slate-700);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="content-wrapper">
+    
+    <!-- Cover Page -->
+    <div class="cover-page">
+      <div class="cover-header">
+        <img src="https://medamneluagjkxfcrtit.supabase.co/storage/v1/object/public/certificates/mcl-logo-transparent.png" alt="MCL Logo" class="cover-logo" onerror="this.src='mcl-logo-transparent.png'; this.onerror=null;">
+        <div>
+          <div class="cover-company-title">MAHANADI COALFIELDS LIMITED</div>
+          <div class="cover-company-sub">A Subsidiary of Coal India Limited (A Govt. of India Enterprise)</div>
+        </div>
+      </div>
+      
+      <div class="cover-body">
+        <span class="cover-badge">Technical Specification Document</span>
+        <h1 class="cover-title">Internship Management Portal</h1>
+        <p class="cover-subtitle">Software Architecture, Security Framework, and System Documentation</p>
+      </div>
+      
+      <div class="cover-footer">
+        <div class="meta-item">
+          <p><strong>System Version:</strong> v1.2.0 (Stable)</p>
+          <p><strong>Database Backend:</strong> PostgreSQL (Supabase)</p>
+          <p><strong>Frontend Host:</strong> Next.js on Vercel</p>
+        </div>
+        <div class="meta-item">
+          <p><strong>Prepared For:</strong> HRD (Training & Development), MCL</p>
+          <p><strong>Date of Issue:</strong> June 23, 2026</p>
+          <p><strong>Classification:</strong> Internal Use Only</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="toc-container page-break no-print">
+      <div class="toc-title">Table of Contents</div>
+      <ul class="toc-list">
+        <li class="toc-item">
+          <a href="#introduction">1. Executive Introduction <span>02</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#architecture">2. System Architecture & Tech Stack <span>03</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#database">3. Database Schema & Relationships <span>04</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#security">4. System Security & Verification <span>06</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#workflows">5. Role-Based Portals & Workflows <span>08</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#installation">6. Installation & Deployment <span>11</span></a>
+        </li>
+        <li class="toc-item">
+          <a href="#maintenance">7. Administration & Maintenance <span>13</span></a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Section 1 -->
+    <h1 id="introduction" class="chapter-title">1. Executive Introduction</h1>
+    <p>
+      The <strong>Mahanadi Coalfields Limited (MCL) Internship Portal</strong> is an enterprise web application designed to digitalize, streamline, and secure the end-to-end internship workflow. It replaces paper-based Letter of Recommendation (LOR) submission, manual attendance ledger maintenance, physical logbook filing, and analog certificate stamping.
+    </p>
+    <p>
+      For MCL’s Human Resource Development (HRD) department and Area Training Offices, the portal provides complete visibility into student placements, mentor allocations, progress tracking, and certificate issuance. It ensures zero forgery, automates notifications, and presents a modern visual experience aligned with the corporate identity of MCL.
+    </p>
+
+    <blockquote>
+      <p>💡 Key Business Benefit: Reduces the administrative overhead of managing an intern from LOR approval to joining and final evaluation by over 85%, while completely securing certificates from tampering via real-time database-backed QR verification.</p>
+    </blockquote>
+
+    <!-- Section 2 -->
+    <h1 id="architecture" class="chapter-title">2. System Architecture & Tech Stack</h1>
+    <p>
+      The portal is constructed utilizing a highly optimized modern web stack, dividing processing workload between client-side rendering and secure serverless backend environments.
+    </p>
+    <h3>Tech Stack Overview</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Technology</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Framework</strong></td>
+          <td>Next.js 14 (React)</td>
+          <td>Handles both Client-Side routing (SPA experience) and Server-Side execution (Secure APIs and Middleware).</td>
+        </tr>
+        <tr>
+          <td><strong>Database</strong></td>
+          <td>Supabase (PostgreSQL)</td>
+          <td>Stores transactional data, RLS security policies, and manages user accounts.</td>
+        </tr>
+        <tr>
+          <td><strong>Object Storage</strong></td>
+          <td>Supabase Storage</td>
+          <td>Host study materials, student project reports, LOR files, and issued certificates.</td>
+        </tr>
+        <tr>
+          <td><strong>Email Service</strong></td>
+          <td>NodeMailer + Google SMTP</td>
+          <td>Sends dynamic credentials, joining letters, and certificate attachments.</td>
+        </tr>
+        <tr>
+          <td><strong>PDF Engine</strong></td>
+          <td>pdf-lib</td>
+          <td>Draws certificates and logos dynamically on the server side to protect raw signatures.</td>
+        </tr>
+        <tr>
+          <td><strong>Styling</strong></td>
+          <td>Vanilla CSS + Tailwind</td>
+          <td>Sleek glassmorphism effects, cinematic Ken Burns grids, and modern layout animations.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>Architectural Security Boundary:</strong> The frontend client speaks to Supabase through Server-Side API Routes. This ensures that secret API credentials (such as the Supabase Service Role Key) are never exposed to the student or employee's browser, preventing database manipulation.
+    </p>
+
+    <!-- Section 3 -->
+    <h1 id="database" class="chapter-title">3. Database Schema & Relationships</h1>
+    <p>
+      The relational database structure ensures strict data integrity. The schema utilizes cascade rules on delete actions to maintain cleanup safety.
+    </p>
+
+    <h3>Table Schemas</h3>
+
+    <h4>1. Table: <code>profiles</code></h4>
+    <p>Stores identity data for all user roles (Students, Mentors, Employees, Admins).</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Column Name</th>
+          <th>Data Type</th>
+          <th>Constraints</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>id</code></td>
+          <td>UUID</td>
+          <td>Primary Key (References auth.users)</td>
+          <td>Unique User Authentication ID.</td>
+        </tr>
+        <tr>
+          <td><code>full_name</code></td>
+          <td>Text</td>
+          <td>Not Null</td>
+          <td>Full name of the user.</td>
+        </tr>
+        <tr>
+          <td><code>email</code></td>
+          <td>Text</td>
+          <td>Not Null, Unique</td>
+          <td>Login email address.</td>
+        </tr>
+        <tr>
+          <td><code>role</code></td>
+          <td>Text</td>
+          <td>Not Null</td>
+          <td>Enum: <code>student</code>, <code>mentor</code>, <code>employee</code>, <code>admin</code>.</td>
+        </tr>
+        <tr>
+          <td><code>area</code></td>
+          <td>Text</td>
+          <td>Nullable</td>
+          <td>Specific operational area placement (e.g. Talcher, HQ).</td>
+        </tr>
+        <tr>
+          <td><code>signature_data</code></td>
+          <td>Text</td>
+          <td>Nullable</td>
+          <td>Base64 encoded string representing the hand-drawn signature.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>2. Table: <code>applications</code></h4>
+    <p>Contains Letter of Recommendation (LOR) submissions forwarded by Employees.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Column Name</th>
+          <th>Data Type</th>
+          <th>Constraints</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>id</code></td>
+          <td>UUID</td>
+          <td>Primary Key</td>
+          <td>Unique application ID.</td>
+        </tr>
+        <tr>
+          <td><code>status</code></td>
+          <td>Text</td>
+          <td>Not Null</td>
+          <td><code>pending_hq</code>, <code>pending_area</code>, <code>approved</code>, <code>rejected</code>.</td>
+        </tr>
+        <tr>
+          <td><code>student_name</code></td>
+          <td>Text</td>
+          <td>Not Null</td>
+          <td>Name entered during LOR upload.</td>
+        </tr>
+        <tr>
+          <td><code>student_email</code></td>
+          <td>Text</td>
+          <td>Not Null</td>
+          <td>Student's email address.</td>
+        </tr>
+        <tr>
+          <td><code>roll_no</code></td>
+          <td>Text</td>
+          <td>Nullable</td>
+          <td>Roll number/Reg number.</td>
+        </tr>
+        <tr>
+          <td><code>university</code></td>
+          <td>Text</td>
+          <td>Nullable</td>
+          <td>University/College name.</td>
+        </tr>
+        <tr>
+          <td><code>student_id</code></td>
+          <td>UUID</td>
+          <td>References <code>profiles(id)</code> ON DELETE SET NULL</td>
+          <td>Links application to student account once registered.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>3. Table: <code>internships</code></h4>
+    <p>Defines active student training periods, guidance mentors, and serial numbers.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Column Name</th>
+          <th>Data Type</th>
+          <th>Constraints</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>id</code></td>
+          <td>UUID</td>
+          <td>Primary Key</td>
+          <td>Unique internship record identifier.</td>
+        </tr>
+        <tr>
+          <td><code>student_id</code></td>
+          <td>UUID</td>
+          <td>References <code>profiles(id)</code> ON DELETE CASCADE</td>
+          <td>Linked student user.</td>
+        </tr>
+        <tr>
+          <td><code>mentor_id</code></td>
+          <td>UUID</td>
+          <td>References <code>profiles(id)</code> ON DELETE SET NULL</td>
+          <td>Assigned guiding mentor.</td>
+        </tr>
+        <tr>
+          <td><code>serial_no</code></td>
+          <td>Text</td>
+          <td>Unique, Not Null</td>
+          <td>Auto-incrementing serial string used for certificate registry.</td>
+        </tr>
+        <tr>
+          <td><code>start_date</code></td>
+          <td>Date</td>
+          <td>Not Null</td>
+          <td>Joining date.</td>
+        </tr>
+        <tr>
+          <td><code>end_date</code></td>
+          <td>Date</td>
+          <td>Not Null</td>
+          <td>Completion date.</td>
+        </tr>
+        <tr>
+          <td><code>certificate_url</code></td>
+          <td>Text</td>
+          <td>Nullable</td>
+          <td>Signed link to issued certificate PDF.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>4. Child Tables (Cascade Deletion Mapping)</h4>
+    <ul>
+      <li><strong><code>attendance</code></strong>: Stores daily attendance records. Rows are keyed with <code>internship_id</code> referencing <code>internships(id) ON DELETE CASCADE</code>.</li>
+      <li><strong><code>leaves</code></strong>: Manages leave submissions. Columns include <code>internship_id</code> referencing <code>internships(id) ON DELETE CASCADE</code>.</li>
+      <li><strong><code>logbooks</code></strong>: Contains daily learning diary entries. Column <code>internship_id</code> references <code>internships(id) ON DELETE CASCADE</code>.</li>
+      <li><strong><code>submissions</code></strong>: Handles files submitted for assignments. References `student_id` and `assignment_id` with cascading constraints.</li>
+    </ul>
+
+    <!-- Section 4 -->
+    <h1 id="security" class="chapter-title">4. System Security & Verification</h1>
+    <p>
+      The security implementation is divided into request validation and programmatic data protection to comply with enterprise IT standards:
+    </p>
+    
+    <h3>A. Role-Based Access Control (RBAC)</h3>
+    <p>
+      All client routing is gated by a next-gen server-side middleware (<code>middleware.ts</code>). Every HTTP page request fetches the user's role:
+    </p>
+    <ul>
+      <li>Requests targeting <code>/admin/*</code> require <code>role = 'admin'</code>.</li>
+      <li>Requests targeting <code>/mentor/*</code> require <code>role = 'mentor'</code>.</li>
+      <li>Requests targeting <code>/student/*</code> require <code>role = 'student'</code>.</li>
+      <li>Requests targeting <code>/employee/*</code> require <code>role = 'employee'</code>.</li>
+    </ul>
+    <p>
+      If authorization checks fail, the middleware immediately cancels the route request and redirects the user to the <code>/login</code> view.
+    </p>
+
+    <h3>B. Supabase Row Level Security (RLS)</h3>
+    <p>
+      PostgreSQL tables have RLS policies enabled. The database evaluates policies at the row level:
+    </p>
+    <pre><code>-- Example RLS Policy for Leaves table
+CREATE POLICY "Students can view only their own leaves"
+ON public.leaves FOR SELECT
+USING (
+  internship_id IN (
+    SELECT id FROM public.internships WHERE student_id = auth.uid()
+  )
+);</code></pre>
+    <p>
+      This configuration guarantees that even if a student intercepts raw database requests, they cannot read, write, or alter entries belonging to other students.
+    </p>
+
+    <h3>C. Tamper-Proof Certificate Verification</h3>
+    <p>
+      Certificates generated by the portal are secured by a verification loop:
+    </p>
+    <ol>
+      <li>During generation, the server creates a unique <strong>UUIDv4</strong> for the certificate.</li>
+      <li>The server generates an offline QR code containing a secure URL pointing back to the verification route: <code>https://[portal-domain]/verify/[internship-id]</code>.</li>
+      <li>This QR code is drawn directly in the center-bottom footer of the certificate PDF.</li>
+      <li>When scanned, the verification route reads the UUID directly from the PostgreSQL database and presents the student's authentic training metadata (Name, Project Title, and Internship Period). Any unauthorized manual modifications made to the PDF document will not match the official database record.</li>
+    </ol>
+
+    <!-- Section 5 -->
+    <h1 id="workflows" class="chapter-title">5. Role-Based Portals & Workflows</h1>
+    <p>
+      The portal separates privileges into five custom roles, each possessing targeted tools:
+    </p>
+
+    <div style="margin-left: 20px; border-left: 2px solid var(--primary); padding-left: 15px;">
+      <p>
+        <span class="role-badge role-employee">Employee</span><br/>
+        Can submit LOR files along with details of the referred student (Name, Email, Roll Number, College). Employee sees a dashboard showing the screening progress of their referred candidates.
+      </p>
+      <p>
+        <span class="role-badge role-admin">Global Admin (Headquarters)</span><br/>
+        Possesses system-wide visibility. Handles initial LOR screening, and routes eligible LOR requests to the concerned local operational Areas. Manages department configurations, performs bulk onboarding, and runs settings updates.
+      </p>
+      <p>
+        <span class="role-badge role-admin">Area Admin (Local Area)</span><br/>
+        Manages local area approvals. Approves incoming routed applications. Upon approval, registers the student account inline, which automatically creates Supabase Auth credentials, calculates the serial number, and dispatches a single unified Joining Letter.
+      </p>
+      <p>
+        <span class="role-badge role-mentor">Project Mentor</span><br/>
+        Oversees assigned interns. Configured with a dedicated settings page containing an interactive signature pad to store their sign-off image. Mentors verify daily logbooks, review assignment files, mark attendance, and approve final certificate generation.
+      </p>
+      <p>
+        <span class="role-badge role-student">Student Intern</span><br/>
+        Views placement details, logs work daily in their logbook, submits leaves, uploads assignment files, reads study materials uploaded by their mentor, and downloads their final certificate once issued.
+      </p>
+    </div>
+
+    <!-- Section 6 -->
+    <h1 id="installation" class="chapter-title">6. Installation & Deployment</h1>
+    <p>
+      Follow this process to configure the environment and run or deploy the portal.
+    </p>
+    
+    <h3>A. Environment Variables (<code>.env.local</code>)</h3>
+    <p>
+      Create a configuration file in the project root containing the following variables:
+    </p>
+    <pre><code># Supabase API Keys (Server and Client access)
+NEXT_PUBLIC_SUPABASE_URL=https://[your-project-id].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUz...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUz...
+
+# Email configuration
+GMAIL_USER=mclinternshipportal@gmail.com
+GMAIL_PASS=lshjomvfmyvtednd</code></pre>
+
+    <h3>B. Local Development Commands</h3>
+    <pre><code># 1. Install required packages
+npm install
+
+# 2. Run local Next.js server in development mode
+npm run dev -- -p 3001
+
+# 3. Create production-ready compiled bundle
+npm run build
+
+# 4. Start production server locally
+npm start</code></pre>
+
+    <h3>C. Vercel Deployment</h3>
+    <ol>
+      <li>Connect your GitHub repository to your Vercel Dashboard.</li>
+      <li>Add the environment variables listed above in the <strong>Environment Variables</strong> tab under Project Settings.</li>
+      <li>Click <strong>Deploy</strong>. Vercel will build, optimize, and serve the site globally over HTTPS.</li>
+    </ol>
+
+    <!-- Section 7 -->
+    <h1 id="maintenance" class="chapter-title">7. Administration & Maintenance</h1>
+    <p>
+      Operational instructions for portal admins to perform maintenance tasks:
+    </p>
+
+    <h3>1. Updating the Area Training Officer / GM Signature</h3>
+    <p>
+      The certificate requires three signature lines: **Project Mentor** (dynamic), **Area Training Officer** (dynamic), and **General Manager (HRD)** (static default).
+    </p>
+    <ul>
+      <li>To change the static default **GM HRD signature**, replace the image located at <code>/public/gm-signature.png</code> with a new transparent PNG file keeping the aspect ratio around <code>2.90</code>.</li>
+      <li>To change the **Area Training Officer signature**, log in as the Area Admin, go to **Settings**, sign in the digital drawing pad canvas, and click **Save Signature**.</li>
+    </ul>
+
+    <h3>2. Manual Student Account Deletion</h3>
+    <p>
+      If you need to delete a student account directly inside the Supabase Console, the database will handle related child tables automatically:
+    </p>
+    <ul>
+      <li>Deleting a profile row in <code>profiles</code> will cascade and delete the corresponding row in <code>internships</code>, which in turn cascades and deletes all related rows in <code>attendance</code>, <code>leaves</code>, <code>logbooks</code>, and <code>submissions</code>.</li>
+      <li>The linked row in the <code>applications</code> table will not be deleted, but its <code>student_id</code> column will automatically be set to <code>NULL</code>, preserving the historical LOR submission.</li>
+    </ul>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+      <div>MCL Technical Specifications Handbook — 2026</div>
+      <div>Page 14 of 14</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
