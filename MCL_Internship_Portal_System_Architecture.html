@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCL Internship Portal — Architectural Blueprints</title>
+  <title>MCL Internship Portal — System Architecture & Workflow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -250,29 +250,146 @@
       </div>
       
       <div class="cover-body">
-        <span class="cover-badge">Technical Design Specification</span>
-        <h1 class="cover-title">System Architecture Blueprint</h1>
-        <p class="cover-subtitle">Complete Process Workflows, LOR Onboarding Flowcharts, and Certificate Verification Sequences</p>
+        <span class="cover-badge">Executive & Technical Presentation</span>
+        <h1 class="cover-title">System Architecture & Workflows</h1>
+        <p class="cover-subtitle">User-to-User Propagation Lifecycles, LOR Onboarding Frameworks, and IT Architecture Blueprints</p>
       </div>
       
       <div class="cover-footer">
         <div class="meta-item">
-          <p><strong>Database:</strong> Supabase PostgreSQL (RLS Active)</p>
-          <p><strong>Execution Layer:</strong> Next.js Serverless APIs</p>
-          <p><strong>Deployment:</strong> Vercel Platform</p>
+          <p><strong>Audience:</strong> Executive Officials & IT Auditing Teams</p>
+          <p><strong>Database Backend:</strong> Supabase PostgreSQL (RLS Secured)</p>
+          <p><strong>Application Layer:</strong> Next.js Serverless Engines</p>
         </div>
         <div class="meta-item">
-          <p><strong>Prepared By:</strong> Engineering Team</p>
+          <p><strong>Prepared By:</strong> Technical Architecture Board</p>
           <p><strong>Year of Release:</strong> 2026</p>
-          <p><strong>Status:</strong> Active & Approved</p>
+          <p><strong>Classification:</strong> Confidential (MCL HRD Internal)</p>
         </div>
       </div>
     </div>
 
-    <!-- Section 1: Entire System -->
-    <h1 id="overall-system">1. Entire System Architecture</h1>
+    <!-- Section 1: Executive Non-Technical User Flow -->
+    <h1 id="user-propagation">1. User-to-User Propagation Lifecycle (Executive Overview)</h1>
     <p>
-      The <strong>MCL Internship Management Portal</strong> uses a highly optimized 3-tier architecture. Client devices run Single Page Application (SPA) dashboards, making standard authenticated requests directly to the database. These queries are intercepted and filtered by database **Row-Level Security (RLS)**. Complex backend transactions (like user onboarding, emailing credentials, and compiling certificate PDFs) run inside secure Next.js API server routes.
+      This diagram provides a non-technical overview of how data and responsibility propagate through the portal from user to user. It illustrates the human collaboration cycle, showing how an intern moves from the initial employee referral to daily guidance under a mentor, and finally to administrative sign-off.
+    </p>
+
+    <div class="diagram-container">
+      <div class="mermaid">
+        graph TD
+            %% Styling for non-technical roles
+            classDef employee fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px,font-weight:bold;
+            classDef hqAdmin fill:#fee2e2,stroke:#dc2626,stroke-width:2px,font-weight:bold;
+            classDef areaAdmin fill:#ffedd5,stroke:#ea580c,stroke-width:2px,font-weight:bold;
+            classDef student fill:#d1fae5,stroke:#16a34a,stroke-width:2px,font-weight:bold;
+            classDef mentor fill:#fef3c7,stroke:#d97706,stroke-width:2px,font-weight:bold;
+            classDef external fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,font-weight:bold;
+
+            %% Nodes
+            A["1. Employee<br/>(Submits LOR Candidate)"]:::employee
+            B["2. HQ Training Admin<br/>(Screens LOR & Routes)"]:::hqAdmin
+            C["3. Area Training Officer<br/>(Approves LOR & Onboards Student)"]:::areaAdmin
+            D["4. Student Intern<br/>(Submits Attendance & Logbooks)"]:::student
+            E["5. Project Mentor<br/>(Reviews Logbooks & Signs Off)"]:::mentor
+            F["6. Area Training Officer<br/>(Issues Verified Certificate)"]:::areaAdmin
+            G["7. External Employer<br/>(Scans QR to Verify Credentials)"]:::external
+
+            %% Propagation Steps
+            A -->|"Uploads LOR & student details"| B
+            B -->|"Routes application to concerned Area"| C
+            C -->|"Registers student account<br/>(Auto-sends portal password)"| D
+            D -->|"Submits daily work logs"| E
+            E -->|"Approves attendance & logbooks"| D
+            D -->|"Submits final project report"| E
+            E -->|"Reviews report & approves certificate"| F
+            F -->|"Compiles PDF with Mentor + Admin<br/>+ GM HRD signatures"| D
+            D -->|"Presents certificate to employers"| G
+            G -->|"Queries portal database via QR code"| F
+      </div>
+      <div class="diagram-title">Figure 1.1: Chronological User-to-User Portal Ingestion and Action Pipeline</div>
+    </div>
+
+    <!-- Section 2: LOR Approval Flow -->
+    <h1 id="lor-flow" class="page-break">2. Detailed LOR Approval & Account Creation Flow</h1>
+    <p>
+      This workflow describes the step-by-step verification pipeline of the Letter of Recommendation (LOR) from initial submission by the employee to account setup and credential email dispatch by local Area Admins.
+    </p>
+
+    <div class="diagram-container">
+      <div class="mermaid">
+        flowchart TD
+            %% Styling
+            classDef actor fill:#eff6ff,stroke:#1e40af,stroke-width:2px;
+            classDef action fill:#f8fafc,stroke:#475569,stroke-width:2px;
+            classDef database fill:#fffdfa,stroke:#d97706,stroke-width:2px;
+            classDef notify fill:#fdf2f8,stroke:#be185d,stroke-width:2px;
+
+            E["Employee"]:::actor -->|"1. Submits LOR PDF & details"| API1["submit-lor API"]:::action
+            API1 -->|"2. Saves application record (Status: pending_hq)"| DB_App["applications table"]:::database
+            
+            HQ["HQ Admin"]:::actor -->|"3. Filters pending HQ apps"| DB_App
+            HQ -->|"4. Clicks 'Forward to Area'"| API2["Update Status to pending_area"]:::action
+            
+            Area["Area Admin"]:::actor -->|"5. Filters pending local Area apps"| DB_App
+            Area -->|"6. Clicks 'Approve' (Sets Status: approved)"| DB_App
+            
+            Area -->|"7. Opens 'Create Student Account' Modal"| Form["Input Temp Password & Dates"]:::action
+            Form -->|"8. Triggers"| API3["create-user API"]:::action
+            
+            subgraph Onboarding API ["create-user API execution"]
+                API3 -->|"A. Registers user account"| Auth["Supabase auth.users"]:::database
+                API3 -->|"B. Creates profile record"| Profiles["public.profiles (student)"]:::database
+                API3 -->|"C. Calculates next serial number"| Internship["public.internships"]:::database
+                API3 -->|"D. Links LOR application record"| DB_App
+            end
+            
+            API3 -->|"9. Dispatches single combined Welcome / Joining Letter"| Mail["Student Email Address"]:::notify
+      </div>
+      <div class="diagram-title">Figure 2.1: LOR Submission and Joining Letter Generation Pipeline</div>
+    </div>
+
+    <!-- Section 3: Certificate Issuance Sequence -->
+    <h1 id="cert-flow" class="page-break">3. Certificate Generation & Verification Sequence</h1>
+    <p>
+      This sequence details the verification structure of the completion certificates. When issued, the Next.js API server fetches the required metadata and saved digital signature coordinates from PostgreSQL, draws them into the PDF, and adds a database-matched validation QR code.
+    </p>
+
+    <div class="diagram-container">
+      <div class="mermaid">
+        sequenceDiagram
+            autonumber
+            actor Admin as Area Admin
+            participant Server as Next.js API Server
+            participant DB as PostgreSQL Database
+            participant Storage as Object Storage
+            actor Student as Student / Employer
+            
+            Note over Admin, Student: Phase A: Document Generation
+            Admin->>Server: Click "Issue Certificate" (on Pending tab)
+            Server->>DB: Query Student info, Mentor signature, & Admin signature
+            DB-->>Server: Return metadata & Base64 signature vectors
+            Server->>Server: Generate unique UUIDv4 & Validation URL
+            Server->>Server: Generate QR Code (linking to verify URL)
+            Server->>Server: Compile PDF (using pdf-lib) and draw QR + Signatures
+            Server->>Storage: Upload generated PDF buffer
+            Server->>DB: Update internship record with signed URL
+            Server->>Student: Email PDF as attachment
+            
+            Note over Admin, Student: Phase B: Real-Time Scanner Verification
+            Student->>Student: Scan QR Code on Certificate
+            Student->>Server: Request /verify/{uuid}
+            Server->>DB: Query official registry by UUID
+            DB-->>Server: Return authenticated record
+            Server-->>Student: Display verified Student Name, Dates, and Project Title
+      </div>
+      <div class="diagram-title">Figure 3.1: Certificate Cryptographic Issuance and Verification Sequence Diagram</div>
+    </div>
+
+    <!-- Section 4: Entire IT System Architecture -->
+    <h1 id="overall-system" class="page-break">4. Entire IT System Architecture (Technical Specs)</h1>
+    <p>
+      This section details the IT architecture governing data transit, Edge middleware routing, role validation (RBAC), and Database Row-Level Security (RLS) configurations for audits.
     </p>
 
     <div class="diagram-container">
@@ -311,86 +428,7 @@
             C -->|"Authentication Requests"| E
             E -->|"Tokens"| A
       </div>
-      <div class="diagram-title">Figure 1.1: 3-Tier Technical Portal Architecture Flowchart</div>
-    </div>
-
-    <!-- Section 2: LOR Onboarding -->
-    <h1 id="lor-flow" class="page-break">2. LOR Submission & Student Onboarding Flow</h1>
-    <p>
-      The LOR flow facilitates manual student registration by bridging employee submissions with direct Area Admin controls. This workflow ensures that student records are validated by central screening before they are registered in the system.
-    </p>
-    <div class="callout">
-      <p>📬 Onboarding Detail: Disabling initial screening emails ensures that the student receives exactly one combined welcome letter containing LOR approval confirmation, internship period dates, and portal credentials.</p>
-    </div>
-
-    <div class="diagram-container">
-      <div class="mermaid">
-        flowchart TD
-            %% Styling
-            classDef actor fill:#eff6ff,stroke:#1e40af,stroke-width:2px;
-            classDef action fill:#f8fafc,stroke:#475569,stroke-width:2px;
-            classDef database fill:#fffdfa,stroke:#d97706,stroke-width:2px;
-            classDef notify fill:#fdf2f8,stroke:#be185d,stroke-width:2px;
-
-            E["Employee"]:::actor -->|"1. Submits LOR PDF & details"| API1["submit-lor API"]:::action
-            API1 -->|"2. Saves application record (Status: pending_hq)"| DB_App["applications table"]:::database
-            
-            HQ["HQ Admin"]:::actor -->|"3. Filters pending HQ apps"| DB_App
-            HQ -->|"4. Clicks 'Forward to Area'"| API2["Update Status to pending_area"]:::action
-            
-            Area["Area Admin"]:::actor -->|"5. Filters pending local Area apps"| DB_App
-            Area -->|"6. Clicks 'Approve' (Sets Status: approved)"| DB_App
-            
-            Area -->|"7. Opens 'Create Student Account' Modal"| Form["Input Temp Password & Dates"]:::action
-            Form -->|"8. Triggers"| API3["create-user API"]:::action
-            
-            subgraph Onboarding API ["create-user API execution"]
-                API3 -->|"A. Registers user account"| Auth["Supabase auth.users"]:::database
-                API3 -->|"B. Creates profile record"| Profiles["public.profiles (student)"]:::database
-                API3 -->|"C. Calculates next serial number"| Internship["public.internships"]:::database
-                API3 -->|"D. Links LOR application record"| DB_App
-            end
-            
-            API3 -->|"9. Dispatches single combined Welcome / Joining Letter"| Mail["Student Email Address"]:::notify
-      </div>
-      <div class="diagram-title">Figure 2.1: Letter of Recommendation (LOR) Submission and Student Account Registration Flow</div>
-    </div>
-
-    <!-- Section 3: Certificate Issuance -->
-    <h1 id="cert-flow" class="page-break">3. Certificate Issuance & Verification Lifecycle</h1>
-    <p>
-      The certificate pipeline secures the completion documents from forgery. The generated PDF incorporates digital signatures and a database-matched verification QR code.
-    </p>
-
-    <div class="diagram-container">
-      <div class="mermaid">
-        sequenceDiagram
-            autonumber
-            actor Admin as Area Admin
-            participant Server as Next.js API Server
-            participant DB as PostgreSQL Database
-            participant Storage as Object Storage
-            actor Student as Student / Employer
-            
-            Note over Admin, Student: Phase A: Document Generation
-            Admin->>Server: Click "Issue Certificate" (on Pending tab)
-            Server->>DB: Query Student info, Mentor signature, & Admin signature
-            DB-->>Server: Return metadata & Base64 signature vectors
-            Server->>Server: Generate unique UUIDv4 & Validation URL
-            Server->>Server: Generate QR Code (linking to verify URL)
-            Server->>Server: Compile PDF (using pdf-lib) and draw QR + Signatures
-            Server->>Storage: Upload generated PDF buffer
-            Server->>DB: Update internship record with signed URL
-            Server->>Student: Email PDF as attachment
-            
-            Note over Admin, Student: Phase B: Real-Time Scanner Verification
-            Student->>Student: Scan QR Code on Certificate
-            Student->>Server: Request /verify/{uuid}
-            Server->>DB: Query official registry by UUID
-            DB-->>Server: Return authenticated record
-            Server-->>Student: Display verified Student Name, Dates, and Project Title
-      </div>
-      <div class="diagram-title">Figure 3.1: Certificate Issuance and Verification Sequence Diagram</div>
+      <div class="diagram-title">Figure 4.1: Technical Portal Infrastructure Topology</div>
     </div>
 
     <!-- Footer -->
