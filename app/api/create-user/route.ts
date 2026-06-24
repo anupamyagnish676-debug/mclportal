@@ -53,14 +53,14 @@ export async function POST(req: NextRequest) {
         .eq('status', 'approved')
     }
 
-    let nextSerialStr = '42'
+    let nextSerialStr = '1'
     if (role === 'student' && start_date && end_date) {
       // Automatically calculate the next serial number
       const { data: existingInternships } = await adminClient
         .from('internships')
         .select('serial_no')
 
-      let maxSerial = 41 // Start at 41 so the first student gets 42
+      let maxSerial = 0 // Start at 0 so the first student gets 1
       if (existingInternships && existingInternships.length > 0) {
         const serials = existingInternships
           .map(i => parseInt(i.serial_no || ''))
