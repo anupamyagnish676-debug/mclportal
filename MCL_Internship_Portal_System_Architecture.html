@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCL Internship Portal — System Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #15803d;
+      --primary-dark: #166534;
+      --primary-light: #f0fdf4;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --border-radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--slate-800);
+      background-color: #ffffff;
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    @media print {
+      body {
+        font-size: 12pt;
+        background-color: #ffffff;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      pre, code, blockquote, table, tr, img, .diagram-container {
+        page-break-inside: avoid;
+      }
+      .content-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .cover-page {
+        height: 95vh !important;
+      }
+    }
+
+    .content-wrapper {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 0 40px;
+    }
+
+    /* Cover Page */
+    .cover-page {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 85vh;
+      padding: 60px 0;
+      border-bottom: 2px solid var(--slate-200);
+      margin-bottom: 40px;
+    }
+
+    .cover-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .cover-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+    }
+
+    .cover-company-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      letter-spacing: 0.05em;
+    }
+
+    .cover-company-sub {
+      font-size: 0.85rem;
+      color: var(--slate-700);
+      font-weight: 500;
+    }
+
+    .cover-body {
+      margin-top: 60px;
+    }
+
+    .cover-title {
+      font-size: 2.75rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1.2;
+      margin-bottom: 15px;
+    }
+
+    .cover-subtitle {
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: var(--slate-700);
+      margin-bottom: 30px;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid rgba(21, 128, 61, 0.15);
+    }
+
+    .cover-footer {
+      font-size: 0.9rem;
+      color: var(--slate-700);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      border-top: 1px solid var(--slate-200);
+      padding-top: 30px;
+    }
+
+    /* Headings */
+    h1, h2, h3 {
+      color: var(--slate-900);
+      font-weight: 700;
+      margin-top: 2.25rem;
+      margin-bottom: 1rem;
+      page-break-after: avoid;
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      border-bottom: 2px solid var(--slate-100);
+      padding-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      border-bottom: 1px solid var(--slate-200);
+      padding-bottom: 6px;
+      margin-top: 2rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+    }
+
+    p {
+      margin-bottom: 1.25rem;
+      color: var(--slate-700);
+      text-align: justify;
+    }
+
+    /* Diagram containers */
+    .diagram-container {
+      background-color: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--border-radius);
+      padding: 24px;
+      margin: 25px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .diagram-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--slate-700);
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    /* Info Callouts */
+    .callout {
+      background-color: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 var(--border-radius) var(--border-radius) 0;
+      margin-bottom: 1.5rem;
+    }
+
+    .callout p {
+      margin-bottom: 0;
+      color: var(--primary-dark);
+      font-weight: 500;
+    }
+
+    /* Footer */
+    .doc-footer {
+      margin-top: 80px;
+      border-top: 1px solid var(--slate-200);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--slate-700);
+    }
+  </style>
+  <!-- Load Mermaid JS from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    // Initialize Mermaid Configuration
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <div class="content-wrapper">
+    
+    <!-- Cover Page -->
+    <div class="cover-page">
+      <div class="cover-header">
+        <img src="https://medamneluagjkxfcrtit.supabase.co/storage/v1/object/public/certificates/mcl-logo-transparent.png" alt="MCL Logo" class="cover-logo" onerror="this.src='mcl-logo-transparent.png'; this.onerror=null;">
+        <div>
+          <div class="cover-company-title">MAHANADI COALFIELDS LIMITED</div>
+          <div class="cover-company-sub">A Subsidiary of Coal India Limited (A Govt. of India Enterprise)</div>
+        </div>
+      </div>
+      
+      <div class="cover-body">
+        <span class="cover-badge">Technical Design Diagram</span>
+        <h1 class="cover-title">System Architecture Blueprint</h1>
+        <p class="cover-subtitle">MCL Internship Management Portal Architecture and Process Lifecycle Flowcharts</p>
+      </div>
+      
+      <div class="cover-footer">
+        <div class="meta-item">
+          <p><strong>Database:</strong> Supabase PostgreSQL (RLS Active)</p>
+          <p><strong>Execution Layer:</strong> Next.js Serverless APIs</p>
+          <p><strong>Deployment:</strong> Vercel Platform</p>
+        </div>
+        <div class="meta-item">
+          <p><strong>Prepared By:</strong> Engineering Team</p>
+          <p><strong>Year of Release:</strong> 2026</p>
+          <p><strong>Status:</strong> Active & Approved</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Introduction -->
+    <h1 id="intro">1. Overview</h1>
+    <p>
+      This document details the architectural blueprints of the <strong>MCL Internship Management Portal</strong>. The system employs a 3-tier architecture: the Client Presentation layer, the server-side Routing & Logic execution layer, and the database persistence layer.
+    </p>
+    <div class="callout">
+      <p>🛡️ Security Standard: The implementation strictly separates public database queries (governed by Row-Level Security) from system-level API transactions (governed by the Supabase Service Role configuration).</p>
+    </div>
+
+    <!-- Section 2: Overall Architecture -->
+    <h1 id="overall-diagram" class="page-break">2. Master Architecture Diagram</h1>
+    <p>
+      The master architecture details data ingestion and access rules. Client devices run SPA operations, querying public scopes using Row-Level Security (RLS) filters. Server-side API endpoints handle mail dispatches, PDF builds, and service role overrides securely.
+    </p>
+
+    <!-- Rendered Mermaid Flowchart -->
+    <div class="diagram-container">
+      <div class="mermaid">
+        graph TD
+            %% Nodes
+            A["User Devices<br/>(Student, Mentor, Admin, Employee)"]
+            
+            subgraph Vercel ["Next.js Presentation & Logic Layer (Vercel Host)"]
+                B["Edge Middleware<br/>(Route protection & RBAC checks)"]
+                C["Client Views<br/>(React SPA Components)"]
+                D["Secure Backend APIs<br/>(Nodemailer, pdf-lib, qrcode)"]
+            end
+
+            subgraph Supabase ["Supabase Backend-as-a-Service (BaaS)"]
+                E["Supabase Auth<br/>(JWT Token & bcrypt Hashing)"]
+                F["PostgreSQL Database<br/>(Row-Level Security - RLS Enabled)"]
+                G["Object Storage Buckets<br/>(Certificates, LORs, Reports)"]
+            end
+
+            H["Gmail SMTP Server"]
+
+            %% Relationships
+            A -->|"HTTPS Requests"| B
+            B -->|"Authorized Pages"| C
+            C -->|"Client Queries (Anon Key + RLS)"| F
+            C -->|"Secure API Actions"| D
+            D -->|"Write Operations (Service Key)"| F
+            D -->|"Upload PDFs"| G
+            D -->|"Dispatch Emails"| H
+            C -->|"Authentication Requests"| E
+            E -->|"Tokens"| A
+      </div>
+      <div class="diagram-title">Figure 2.1: 3-Tier Technical Portal Architecture Flowchart</div>
+    </div>
+
+    <!-- Section 3: Certificate Verification Flow -->
+    <h1 id="certificate-flow" class="page-break">3. Certificate Generation & Verification Sequence</h1>
+    <p>
+      To ensure verification authenticity, the issuance process generates an immutable UUIDv4 registry entry. The QR code links directly to this record on the live server, exposing document tampering.
+    </p>
+
+    <!-- Rendered Mermaid Sequence -->
+    <div class="diagram-container">
+      <div class="mermaid">
+        sequenceDiagram
+            autonumber
+            actor Admin as Area Admin
+            participant Server as Next.js API Server
+            participant DB as PostgreSQL Database
+            participant Storage as Object Storage
+            actor Student as Student / Employer
+            
+            Note over Admin, Student: Phase A: Document Generation
+            Admin->>Server: Click "Issue Certificate"
+            Server->>DB: Query details, Mentor signature, & Admin signature
+            DB-->>Server: Return metadata & Base64 signature vectors
+            Server->>Server: Create unique UUIDv4 & Validation URL
+            Server->>Server: Generate QR Code (linking to verify URL)
+            Server->>Server: Compile PDF (using pdf-lib) with QR and Signatures
+            Server->>Storage: Upload generated PDF buffer
+            Server->>DB: Update internship record with signed URL
+            Server->>Student: Email PDF as attachment
+            
+            Note over Admin, Student: Phase B: Real-Time Scanner Verification
+            Student->>Student: Scan QR Code on Certificate
+            Student->>Server: Request /verify/{uuid}
+            Server->>DB: Query official registry by UUID
+            DB-->>Server: Return authenticated record
+            Server-->>Student: Display verified Student Name, Dates, and Project Title
+      </div>
+      <div class="diagram-title">Figure 3.1: Certificate Issuance and Verification Sequence Diagram</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+      <div>MCL Architectural Blueprints — 2026</div>
+      <div>Page 3 of 3</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
