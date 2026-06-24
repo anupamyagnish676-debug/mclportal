@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCL Internship Portal — System Architecture</title>
+  <title>MCL Internship Portal — Architectural Blueprints</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
 
     @media print {
       body {
-        font-size: 12pt;
+        font-size: 11pt;
         background-color: #ffffff;
       }
       .no-print {
@@ -250,9 +250,9 @@
       </div>
       
       <div class="cover-body">
-        <span class="cover-badge">Technical Design Diagram</span>
+        <span class="cover-badge">Technical Design Specification</span>
         <h1 class="cover-title">System Architecture Blueprint</h1>
-        <p class="cover-subtitle">MCL Internship Management Portal Architecture and Process Lifecycle Flowcharts</p>
+        <p class="cover-subtitle">Complete Process Workflows, LOR Onboarding Flowcharts, and Certificate Verification Sequences</p>
       </div>
       
       <div class="cover-footer">
@@ -269,41 +269,36 @@
       </div>
     </div>
 
-    <!-- Section 1: Introduction -->
-    <h1 id="intro">1. Overview</h1>
+    <!-- Section 1: Entire System -->
+    <h1 id="overall-system">1. Entire System Architecture</h1>
     <p>
-      This document details the architectural blueprints of the <strong>MCL Internship Management Portal</strong>. The system employs a 3-tier architecture: the Client Presentation layer, the server-side Routing & Logic execution layer, and the database persistence layer.
-    </p>
-    <div class="callout">
-      <p>🛡️ Security Standard: The implementation strictly separates public database queries (governed by Row-Level Security) from system-level API transactions (governed by the Supabase Service Role configuration).</p>
-    </div>
-
-    <!-- Section 2: Overall Architecture -->
-    <h1 id="overall-diagram" class="page-break">2. Master Architecture Diagram</h1>
-    <p>
-      The master architecture details data ingestion and access rules. Client devices run SPA operations, querying public scopes using Row-Level Security (RLS) filters. Server-side API endpoints handle mail dispatches, PDF builds, and service role overrides securely.
+      The <strong>MCL Internship Management Portal</strong> uses a highly optimized 3-tier architecture. Client devices run Single Page Application (SPA) dashboards, making standard authenticated requests directly to the database. These queries are intercepted and filtered by database **Row-Level Security (RLS)**. Complex backend transactions (like user onboarding, emailing credentials, and compiling certificate PDFs) run inside secure Next.js API server routes.
     </p>
 
-    <!-- Rendered Mermaid Flowchart -->
     <div class="diagram-container">
       <div class="mermaid">
         graph TD
-            %% Nodes
-            A["User Devices<br/>(Student, Mentor, Admin, Employee)"]
+            %% Styling
+            classDef client fill:#f0fdf4,stroke:#15803d,stroke-width:2px;
+            classDef nextjs fill:#f8fafc,stroke:#334155,stroke-width:2px;
+            classDef supabase fill:#fffbeb,stroke:#d97706,stroke-width:2px;
+            classDef external fill:#faf5ff,stroke:#7c3aed,stroke-width:2px;
+
+            A["User Devices<br/>(Student, Mentor, Admin, Employee)"]:::client
             
             subgraph Vercel ["Next.js Presentation & Logic Layer (Vercel Host)"]
-                B["Edge Middleware<br/>(Route protection & RBAC checks)"]
-                C["Client Views<br/>(React SPA Components)"]
-                D["Secure Backend APIs<br/>(Nodemailer, pdf-lib, qrcode)"]
+                B["Edge Middleware<br/>(Route protection & RBAC checks)"]:::nextjs
+                C["Client Views<br/>(React SPA Components)"]:::nextjs
+                D["Secure Backend APIs<br/>(Nodemailer, pdf-lib, qrcode)"]:::nextjs
             end
 
             subgraph Supabase ["Supabase Backend-as-a-Service (BaaS)"]
-                E["Supabase Auth<br/>(JWT Token & bcrypt Hashing)"]
-                F["PostgreSQL Database<br/>(Row-Level Security - RLS Enabled)"]
-                G["Object Storage Buckets<br/>(Certificates, LORs, Reports)"]
+                E["Supabase Auth<br/>(JWT Token & bcrypt Hashing)"]:::supabase
+                F["PostgreSQL Database<br/>(Row-Level Security - RLS Enabled)"]:::supabase
+                G["Object Storage Buckets<br/>(Certificates, LORs, Reports)"]:::supabase
             end
 
-            H["Gmail SMTP Server"]
+            H["Gmail SMTP Server"]:::external
 
             %% Relationships
             A -->|"HTTPS Requests"| B
@@ -316,16 +311,57 @@
             C -->|"Authentication Requests"| E
             E -->|"Tokens"| A
       </div>
-      <div class="diagram-title">Figure 2.1: 3-Tier Technical Portal Architecture Flowchart</div>
+      <div class="diagram-title">Figure 1.1: 3-Tier Technical Portal Architecture Flowchart</div>
     </div>
 
-    <!-- Section 3: Certificate Verification Flow -->
-    <h1 id="certificate-flow" class="page-break">3. Certificate Generation & Verification Sequence</h1>
+    <!-- Section 2: LOR Onboarding -->
+    <h1 id="lor-flow" class="page-break">2. LOR Submission & Student Onboarding Flow</h1>
     <p>
-      To ensure verification authenticity, the issuance process generates an immutable UUIDv4 registry entry. The QR code links directly to this record on the live server, exposing document tampering.
+      The LOR flow facilitates manual student registration by bridging employee submissions with direct Area Admin controls. This workflow ensures that student records are validated by central screening before they are registered in the system.
+    </p>
+    <div class="callout">
+      <p>📬 Onboarding Detail: Disabling initial screening emails ensures that the student receives exactly one combined welcome letter containing LOR approval confirmation, internship period dates, and portal credentials.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="mermaid">
+        flowchart TD
+            %% Styling
+            classDef actor fill:#eff6ff,stroke:#1e40af,stroke-width:2px;
+            classDef action fill:#f8fafc,stroke:#475569,stroke-width:2px;
+            classDef database fill:#fffdfa,stroke:#d97706,stroke-width:2px;
+            classDef notify fill:#fdf2f8,stroke:#be185d,stroke-width:2px;
+
+            E["Employee"]:::actor -->|"1. Submits LOR PDF & details"| API1["submit-lor API"]:::action
+            API1 -->|"2. Saves application record (Status: pending_hq)"| DB_App["applications table"]:::database
+            
+            HQ["HQ Admin"]:::actor -->|"3. Filters pending HQ apps"| DB_App
+            HQ -->|"4. Clicks 'Forward to Area'"| API2["Update Status to pending_area"]:::action
+            
+            Area["Area Admin"]:::actor -->|"5. Filters pending local Area apps"| DB_App
+            Area -->|"6. Clicks 'Approve' (Sets Status: approved)"| DB_App
+            
+            Area -->|"7. Opens 'Create Student Account' Modal"| Form["Input Temp Password & Dates"]:::action
+            Form -->|"8. Triggers"| API3["create-user API"]:::action
+            
+            subgraph Onboarding API ["create-user API execution"]
+                API3 -->|"A. Registers user account"| Auth["Supabase auth.users"]:::database
+                API3 -->|"B. Creates profile record"| Profiles["public.profiles (student)"]:::database
+                API3 -->|"C. Calculates next serial number"| Internship["public.internships"]:::database
+                API3 -->|"D. Links LOR application record"| DB_App
+            end
+            
+            API3 -->|"9. Dispatches single combined Welcome / Joining Letter"| Mail["Student Email Address"]:::notify
+      </div>
+      <div class="diagram-title">Figure 2.1: Letter of Recommendation (LOR) Submission and Student Account Registration Flow</div>
+    </div>
+
+    <!-- Section 3: Certificate Issuance -->
+    <h1 id="cert-flow" class="page-break">3. Certificate Issuance & Verification Lifecycle</h1>
+    <p>
+      The certificate pipeline secures the completion documents from forgery. The generated PDF incorporates digital signatures and a database-matched verification QR code.
     </p>
 
-    <!-- Rendered Mermaid Sequence -->
     <div class="diagram-container">
       <div class="mermaid">
         sequenceDiagram
@@ -337,12 +373,12 @@
             actor Student as Student / Employer
             
             Note over Admin, Student: Phase A: Document Generation
-            Admin->>Server: Click "Issue Certificate"
-            Server->>DB: Query details, Mentor signature, & Admin signature
+            Admin->>Server: Click "Issue Certificate" (on Pending tab)
+            Server->>DB: Query Student info, Mentor signature, & Admin signature
             DB-->>Server: Return metadata & Base64 signature vectors
-            Server->>Server: Create unique UUIDv4 & Validation URL
+            Server->>Server: Generate unique UUIDv4 & Validation URL
             Server->>Server: Generate QR Code (linking to verify URL)
-            Server->>Server: Compile PDF (using pdf-lib) with QR and Signatures
+            Server->>Server: Compile PDF (using pdf-lib) and draw QR + Signatures
             Server->>Storage: Upload generated PDF buffer
             Server->>DB: Update internship record with signed URL
             Server->>Student: Email PDF as attachment
@@ -360,7 +396,7 @@
     <!-- Footer -->
     <div class="doc-footer">
       <div>MCL Architectural Blueprints — 2026</div>
-      <div>Page 3 of 3</div>
+      <div>Page 4 of 4</div>
     </div>
 
   </div>
