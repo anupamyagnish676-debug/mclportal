@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import AdminDashboardClient from './AdminDashboardClient'
 import { redirect } from 'next/navigation'
+import { Users, FileText, CheckCircle2, UserPlus, Building2 } from 'lucide-react'
 
 export const revalidate = 0 // fetch fresh statistics on every request
 
@@ -98,9 +99,9 @@ export default async function AdminDashboard({
   }
 
   const stats = [
-    { label: 'Total Students',        value: totalStudents, color: 'bg-blue-50 text-blue-700',     icon: '👥' },
-    { label: 'Pending Applications',  value: pendingApps,   color: 'bg-yellow-50 text-yellow-700', icon: '📋' },
-    { label: 'Active Internships',    value: activeInterns, color: 'bg-green-50 text-green-700',   icon: '✅' },
+    { label: 'Total Students',        value: totalStudents, color: 'bg-blue-50 text-blue-700',     icon: Users },
+    { label: 'Pending Applications',  value: pendingApps,   color: 'bg-yellow-50 text-yellow-700', icon: FileText },
+    { label: 'Active Internships',    value: activeInterns, color: 'bg-green-50 text-green-700',   icon: CheckCircle2 },
   ]
 
   // 2. Fetch completed interns for CSV Export
@@ -157,7 +158,9 @@ export default async function AdminDashboard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-5 flex items-center gap-4 shadow-sm">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${s.color}`}>{s.icon}</div>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.color}`}>
+              <s.icon className="w-5 h-5" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
               <p className="text-xs text-gray-500 mt-1">{s.label}</p>
@@ -172,28 +175,28 @@ export default async function AdminDashboard({
           <h2 className="font-bold text-gray-800 text-sm mb-4">Quick actions</h2>
           <div className="grid grid-cols-2 gap-3 flex-1">
             <a href="/admin/applications" className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-              <span className="text-lg">📋</span>
+              <FileText className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-gray-900">Review Applications</p>
                 <p className="text-[10px] text-gray-400">Approve or reject LoR requests</p>
               </div>
             </a>
             <a href="/admin/create-user" className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-              <span className="text-lg">➕</span>
+              <UserPlus className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-gray-900">Create User</p>
                 <p className="text-[10px] text-gray-400">Add student, mentor, employee</p>
               </div>
             </a>
             <a href="/admin/interns" className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-              <span className="text-lg">👥</span>
+              <Users className="w-5 h-5 text-indigo-600 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-gray-900">Manage Interns</p>
                 <p className="text-[10px] text-gray-400">Control active & completed list</p>
               </div>
             </a>
             <a href="/admin/departments" className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-              <span className="text-lg">🏢</span>
+              <Building2 className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-gray-900">Departments Manager</p>
                 <p className="text-[10px] text-gray-400">Setup wings & training departments</p>
@@ -201,7 +204,7 @@ export default async function AdminDashboard({
             </a>
             {isAdminGlobal && (
               <a href="/admin/areas" className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-                <span className="text-lg">📍</span>
+                <Building2 className="w-5 h-5 text-rose-600 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-gray-900">Areas Manager</p>
                   <p className="text-[10px] text-gray-400">Manage training office locations</p>

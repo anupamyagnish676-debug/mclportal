@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import ProjectReportUpload from './ProjectReportUpload'
+import { Calendar, ClipboardList, CheckCircle2 } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -66,12 +67,14 @@ export default async function StudentDashboard() {
           {/* Stats Overview (Right Column) */}
           <div className="md:col-span-2 space-y-4">
             {[
-              { label: 'Days Present', value: presentDays, icon: '📅', color: 'text-green-700 bg-green-50' },
-              { label: 'Assignments',  value: totalAssignments, icon: '📝', color: 'text-blue-700 bg-blue-50' },
-              { label: 'Submitted',    value: submitted, icon: '✅', color: 'text-purple-700 bg-purple-50' },
+              { label: 'Days Present', value: presentDays, icon: Calendar, color: 'text-green-700 bg-green-50' },
+              { label: 'Assignments',  value: totalAssignments, icon: ClipboardList, color: 'text-blue-700 bg-blue-50' },
+              { label: 'Submitted',    value: submitted, icon: CheckCircle2, color: 'text-purple-700 bg-purple-50' },
             ].map(s => (
               <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${s.color}`}>{s.icon}</div>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.color}`}>
+                  <s.icon className="w-5 h-5" />
+                </div>
                 <div>
                   <p className="text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
                   <p className="text-xs text-gray-500 mt-1">{s.label}</p>

@@ -41,6 +41,18 @@ export async function POST(req: NextRequest) {
       .update({ student_id: null })
       .eq('student_id', studentId)
 
+    // Unlink this user from any LOR applications where they are the recommender (Employee)
+    await adminClient
+      .from('applications')
+      .update({ referred_by: null })
+      .eq('referred_by', studentId)
+
+    // Unlink this user from any internships where they are the guide (Mentor)
+    await adminClient
+      .from('internships')
+      .update({ mentor_id: null })
+      .eq('mentor_id', studentId)
+
     // 2. Delete profile
     await adminClient.from('profiles').delete().eq('id', studentId)
 

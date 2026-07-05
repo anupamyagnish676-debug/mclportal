@@ -1,0 +1,436 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+  <meta charset="UTF-8">
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>90</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    body {
+      font-family: 'Arial', 'Calibri', sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #333333;
+      margin: 1in;
+    }
+    
+    h1 {
+      font-size: 20pt;
+      color: #166534;
+      font-weight: bold;
+      margin-top: 24pt;
+      margin-bottom: 12pt;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 6pt;
+      page-break-before: always;
+    }
+    
+    h2 {
+      font-size: 15pt;
+      color: #334155;
+      font-weight: bold;
+      margin-top: 18pt;
+      margin-bottom: 8pt;
+    }
+    
+    h3 {
+      font-size: 12pt;
+      color: #1e293b;
+      font-weight: bold;
+      margin-top: 14pt;
+      margin-bottom: 6pt;
+    }
+    
+    p {
+      margin-bottom: 10pt;
+      text-align: justify;
+    }
+    
+    .cover-title {
+      font-size: 28pt;
+      color: #0f172a;
+      font-weight: bold;
+      margin-top: 100pt;
+      margin-bottom: 10pt;
+    }
+    
+    .cover-subtitle {
+      font-size: 16pt;
+      color: #475569;
+      margin-bottom: 150pt;
+    }
+    
+    .cover-footer {
+      font-size: 10pt;
+      color: #64748b;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 20px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12pt;
+      margin-bottom: 12pt;
+    }
+    
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8pt 10pt;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-weight: bold;
+    }
+    
+    .callout {
+      background-color: #f0fdf4;
+      border-left: 4px solid #166534;
+      padding: 12pt;
+      margin-top: 12pt;
+      margin-bottom: 12pt;
+    }
+    
+    .callout p {
+      margin-bottom: 0;
+      color: #14532d;
+      font-weight: bold;
+    }
+
+    .diagram-placeholder {
+      border: 2px dashed #cbd5e1;
+      padding: 20px;
+      text-align: center;
+      background-color: #f8fafc;
+      margin: 15pt 0;
+      font-style: italic;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Page -->
+  <div style="page-break-after: always; text-align: center;">
+    <p style="font-size: 14pt; font-weight: bold; color: #166534; margin-top: 40pt;">MAHANADI COALFIELDS LIMITED</p>
+    <p style="font-size: 10pt; color: #475569;">A Subsidiary of Coal India Limited</p>
+    
+    <div class="cover-title">Internship Management Portal</div>
+    <div class="cover-subtitle">Complete Project Report & Software Documentation</div>
+    
+    <div class="cover-footer" style="text-align: left; margin-top: 100pt;">
+      <table style="border: none; width: 100%;">
+        <tr style="border: none;">
+          <td style="border: none; width: 50%;">
+            <strong>Prepared For:</strong> HRD (Training & Development), MCL<br/>
+            <strong>Year:</strong> 2026<br/>
+            <strong>Classification:</strong> Internal Use Only
+          </td>
+          <td style="border: none; width: 50%; text-align: right;">
+            <strong>Database:</strong> Supabase PostgreSQL (RLS Active)<br/>
+            <strong>Framework:</strong> Next.js Serverless APIs<br/>
+            <strong>Host Platform:</strong> Vercel Cloud
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 1: Executive Summary -->
+  <h1>1. Executive Summary</h1>
+  <p>
+    The <strong>Mahanadi Coalfields Limited (MCL) Internship Management Portal</strong> is a high-performance web application engineered to centralize, automate, and secure the end-to-end administration of student interns across all operational Areas and Headquarters of MCL.
+  </p>
+  <p>
+    Historically, processing LOR referrals, managing student files, collecting attendance logs, and issuing training certificates involved heavy manual work across several offices, creating data delays and security concerns. The portal resolves these inefficiencies by establishing a secure digital platform accessible by Employees, local Area Training Officers, Mentors, and Students.
+  </p>
+  <div class="callout">
+    <p>🎯 Key Business Deliverable: An administrative workspace that automates credential provisioning, attendance range validation, logbook oversight, and prints certificates with transparent logos, digital signatures, and database-matched validation QR codes.</p>
+  </div>
+
+  <!-- Section 2: User Workflows -->
+  <h1>2. Core Business Workflows</h1>
+  <p>
+    This section details how tasks and responsibilities propagate through the portal. These workflows are structured to demonstrate how different user groups collaborate sequentially to manage student placement.
+  </p>
+
+  <h2>A. User-to-User Propagation Lifecycle</h2>
+  <p>
+    The propagation flow traces how responsibility shifts from the recommending employee to central training admins, local area officers, project mentors, and external verifiers:
+  </p>
+
+  <div class="diagram-placeholder">
+    [Diagram Reference: Figure 2.1 — User-to-User Portal Ingestion & Action Pipeline]<br/>
+    Note: Dynamic Javascript Mermaid diagrams cannot run inside MS Word. To include this visual flowchart in your printed report, please copy/screenshot the rendered diagram from the HTML documentation and paste it here.
+  </div>
+
+  <h2>B. LOR Onboarding & Activation Flow</h2>
+  <p>
+    This flowchart maps how a Letter of Recommendation (LOR) submitted by an employee is processed by central HQ Admins, approved by local Area Admins, and turned into an active student account with login credentials:
+  </p>
+
+  <div class="diagram-placeholder">
+    [Diagram Reference: Figure 2.2 — LOR Submission and Joining Letter Generation Pipeline]<br/>
+    Note: Dynamic Javascript Mermaid diagrams cannot run inside MS Word. To include this visual flowchart in your printed report, please copy/screenshot the rendered diagram from the HTML documentation and paste it here.
+  </div>
+
+  <h2>C. Certificate Issuance Sequence</h2>
+  <p>
+    This sequence details the verification structure of the completion certificates. When issued, the Next.js API server fetches the required metadata and saved digital signature coordinates from PostgreSQL, draws them into the PDF, and adds a database-matched validation QR code:
+  </p>
+
+  <div class="diagram-placeholder">
+    [Diagram Reference: Figure 2.3 — Certificate Cryptographic Issuance and Verification Sequence Diagram]<br/>
+    Note: Dynamic Javascript Mermaid diagrams cannot run inside MS Word. To include this visual flowchart in your printed report, please copy/screenshot the rendered diagram from the HTML documentation and paste it here.
+  </div>
+
+  <!-- Section 3: Database Schema Specifications -->
+  <h1>3. Database Schema Specifications</h1>
+  <p>
+    The relational database schema is configured on **Supabase (PostgreSQL)**. Key constraints and foreign keys are set up with `ON DELETE CASCADE` or `ON DELETE SET NULL` behaviors to ensure data integrity during deletions.
+  </p>
+
+  <h2>A. Table: profiles</h2>
+  <p>Stores identity and system privileges for all user categories.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Column Name</th>
+        <th>Data Type</th>
+        <th>Constraints</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>id</td>
+        <td>UUID</td>
+        <td>Primary Key (References auth.users)</td>
+        <td>Unique User Auth ID.</td>
+      </tr>
+      <tr>
+        <td>full_name</td>
+        <td>Text</td>
+        <td>Not Null</td>
+        <td>User's first and last name.</td>
+      </tr>
+      <tr>
+        <td>email</td>
+        <td>Text</td>
+        <td>Not Null, Unique</td>
+        <td>Registered email address.</td>
+      </tr>
+      <tr>
+        <td>role</td>
+        <td>Text</td>
+        <td>Not Null</td>
+        <td>Privilege level: student, mentor, employee, admin.</td>
+      </tr>
+      <tr>
+        <td>area</td>
+        <td>Text</td>
+        <td>Nullable</td>
+        <td>Assigned operational location (e.g. Talcher, Ib Valley).</td>
+      </tr>
+      <tr>
+        <td>signature_data</td>
+        <td>Text</td>
+        <td>Nullable</td>
+        <td>Base64 PNG string representing the hand-drawn signature.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>B. Table: applications</h2>
+  <p>Maintains Letter of Recommendation (LOR) registrations submitted by employees.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Column Name</th>
+        <th>Data Type</th>
+        <th>Constraints</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>id</td>
+        <td>UUID</td>
+        <td>Primary Key</td>
+        <td>Unique application ID.</td>
+      </tr>
+      <tr>
+        <td>status</td>
+        <td>Text</td>
+        <td>Not Null</td>
+        <td>Status: pending_hq, pending_area, approved, rejected.</td>
+      </tr>
+      <tr>
+        <td>student_name</td>
+        <td>Text</td>
+        <td>Not Null</td>
+        <td>Student's full name.</td>
+      </tr>
+      <tr>
+        <td>student_email</td>
+        <td>Text</td>
+        <td>Not Null</td>
+        <td>Contact email address.</td>
+      </tr>
+      <tr>
+        <td>roll_no</td>
+        <td>Text</td>
+        <td>Nullable</td>
+        <td>Student's university roll number.</td>
+      </tr>
+      <tr>
+        <td>university</td>
+        <td>Text</td>
+        <td>Nullable</td>
+        <td>Attending college or university.</td>
+      </tr>
+      <tr>
+        <td>student_id</td>
+        <td>UUID</td>
+        <td>References profiles(id) ON DELETE SET NULL</td>
+        <td>Links the LOR to the registered student user account.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>C. Table: internships</h2>
+  <p>Defines active student training configurations, guidance mentors, and serial numbers.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Column Name</th>
+        <th>Data Type</th>
+        <th>Constraints</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>id</td>
+        <td>UUID</td>
+        <td>Primary Key</td>
+        <td>Unique internship record identifier.</td>
+      </tr>
+      <tr>
+        <td>student_id</td>
+        <td>UUID</td>
+        <td>References profiles(id) ON DELETE CASCADE</td>
+        <td>Linked student user.</td>
+      </tr>
+      <tr>
+        <td>mentor_id</td>
+        <td>UUID</td>
+        <td>References profiles(id) ON DELETE SET NULL</td>
+        <td>Assigned guiding mentor.</td>
+      </tr>
+      <tr>
+        <td>serial_no</td>
+        <td>Text</td>
+        <td>Unique, Not Null</td>
+        <td>Auto-incrementing serial string used for certificate registry.</td>
+      </tr>
+      <tr>
+        <td>start_date</td>
+        <td>Date</td>
+        <td>Not Null</td>
+        <td>Joining date.</td>
+      </tr>
+      <tr>
+        <td>end_date</td>
+        <td>Date</td>
+        <td>Not Null</td>
+        <td>Completion date.</td>
+      </tr>
+      <tr>
+        <td>certificate_url</td>
+        <td>Text</td>
+        <td>Nullable</td>
+        <td>Signed link to issued certificate PDF.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 4: Security Policies -->
+  <h1>4. Security & Access Control Policies</h1>
+  <p>
+    The portal is built around a secure architecture designed to protect sensitive data and prevent unauthorized operations.
+  </p>
+
+  <h2>A. Row-Level Security (RLS) Policies</h2>
+  <p>
+    RLS is enabled on all tables in PostgreSQL. When a client performs a select, insert, or update query, the database engine verifies the user's role and session ID.
+  </p>
+  <ul>
+    <li><strong>Profiles:</strong> Authenticated users can read profiles, but users can only edit their own profile details.</li>
+    <li><strong>Attendance/Logbooks/Leaves:</strong> Students can only view and manage records tied to their own internship_id. Mentors can view and edit records for internships where mentor_id = auth.uid().</li>
+    <li><strong>Administrators:</strong> Global and Area Admins have a wildcard override policy allowing full read/write access.</li>
+  </ul>
+
+  <h2>B. Next.js Routing Middleware (RBAC)</h2>
+  <p>
+    A centralized middleware runs on every route request. It intercepts the user's session JWT token, decodes their role, and verifies they have permission to access the requested page, preventing URL manipulation attacks.
+  </p>
+
+  <h2>C. Cryptographic Signature Safeguard</h2>
+  <p>
+    Signatures for Mentors and Area Training Officers are drawn via canvas vectors and saved in the database as base64 strings in RLS-protected tables. 
+    The system does not store signatures in a public file folder. They are drawn directly from the database memory into the PDF during generation and are never exposed as independent URLs, preventing students from accessing or copying the raw signatures.
+  </p>
+
+  <!-- Section 5: IT Architecture -->
+  <h1>5. IT Architecture & Topology</h1>
+  <div class="diagram-placeholder">
+    [Diagram Reference: Figure 5.1 — Technical Portal Infrastructure Topology Flowchart]<br/>
+    Note: Dynamic Javascript Mermaid diagrams cannot run inside MS Word. To include this visual flowchart in your printed report, please copy/screenshot the rendered diagram from the HTML documentation and paste it here.
+  </div>
+
+  <!-- Section 6: Admin Guide -->
+  <h1>6. Administration & Maintenance Guide</h1>
+  <p>
+    This guide outlines core operational tasks for portal administrators to keep the system running smoothly.
+  </p>
+
+  <h2>A. Deleting Users & Deletion Order</h2>
+  <p>
+    If you need to delete a student account directly inside the Supabase Console, the database will handle related child tables automatically:
+  </p>
+  <ul>
+    <li>Deleting a profile row in <code>profiles</code> will cascade and delete the corresponding row in <code>internships</code>, which in turn cascades and deletes all related rows in <code>attendance</code>, <code>leaves</code>, <code>logbooks</code>, and <code>submissions</code>.</li>
+    <li>The linked row in the <code>applications</code> table will not be deleted, but its <code>student_id</code> column will automatically be set to <code>NULL</code>, preserving the historical LOR submission.</li>
+  </ul>
+
+  <h2>B. Resetting Database for a Clean Demo</h2>
+  <p>
+    If you need to wipe out all testing data (students, mentors, LOR applications, attendance logs, logbooks, etc.) except the primary Headquarters Admin account (`admin@mcl.com`) before showing the portal to officials, run the following SQL command in your **Supabase SQL Editor**:
+  </p>
+  <pre><code>-- 1. Wipe out all transactional data
+TRUNCATE TABLE public.attendance RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.leaves RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.logbooks RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.submissions RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.materials RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.assignments RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.internships RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.applications RESTART IDENTITY CASCADE;
+
+-- 2. Delete all user profiles except the HQ Admin
+DELETE FROM public.profiles WHERE email != 'admin@mcl.com';
+
+-- 3. Delete all auth credentials except the HQ Admin
+DELETE FROM auth.users WHERE email != 'admin@mcl.com';</code></pre>
+
+</body>
+</html>

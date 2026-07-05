@@ -4,43 +4,60 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { clsx } from 'clsx'
 
-type NavItem = { label: string; href: string; icon: string }
+import { 
+  Home, 
+  FileText, 
+  Users, 
+  Building2, 
+  FolderInput, 
+  Link as LinkIcon, 
+  GraduationCap, 
+  UserPlus, 
+  Settings,
+  Calendar,
+  ClipboardList,
+  BookOpen,
+  Mail,
+  FolderOpen
+} from 'lucide-react'
+
+type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
 
 const navByRole: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard',     href: '/admin',              icon: '🏠' },
-    { label: 'Applications',  href: '/admin/applications', icon: '📋' },
-    { label: 'Interns',       href: '/admin/interns',      icon: '👥' },
-    { label: 'Departments',   href: '/admin/departments',  icon: '🏢' },
-    { label: 'Bulk Onboard',  href: '/admin/bulk-onboarding', icon: '📥' },
-    { label: 'Assign Mentor', href: '/admin/assign-mentor', icon: '🔗' },
-    { label: 'Issue Certificate', href: '/admin/issue-certificate', icon: '🎓' },
-    { label: 'Create User',   href: '/admin/create-user',  icon: '➕' },
-    { label: 'Settings',      href: '/admin/settings',     icon: '⚙️' },
+    { label: 'Dashboard',     href: '/admin',              icon: Home },
+    { label: 'Applications',  href: '/admin/applications', icon: FileText },
+    { label: 'Interns',       href: '/admin/interns',      icon: Users },
+    { label: 'Departments',   href: '/admin/departments',  icon: Building2 },
+    { label: 'Bulk Onboard',  href: '/admin/bulk-onboarding', icon: FolderInput },
+    { label: 'Assign Mentor', href: '/admin/assign-mentor', icon: LinkIcon },
+    { label: 'Issue Certificate', href: '/admin/issue-certificate', icon: GraduationCap },
+    { label: 'Create User',   href: '/admin/create-user',  icon: UserPlus },
+    { label: 'Settings',      href: '/admin/settings',     icon: Settings },
   ],
   mentor: [
-    { label: 'Dashboard',      href: '/mentor',                    icon: '🏠' },
-    { label: 'Attendance',     href: '/mentor/attendance',         icon: '📅' },
-    { label: 'Assignments',    href: '/mentor/assignments',        icon: '📝' },
-    { label: 'Materials',      href: '/mentor/materials',           icon: '📂' },
-    { label: 'Intern Reviews', href: '/mentor/intern-reviews',     icon: '📋' },
-    { label: 'Approve Cert',   href: '/mentor/approve-certificate', icon: '🎓' },
-    { label: 'Settings',       href: '/mentor/settings',            icon: '⚙️' },
+    { label: 'Dashboard',      href: '/mentor',                    icon: Home },
+    { label: 'Attendance',     href: '/mentor/attendance',         icon: Calendar },
+    { label: 'Assignments',    href: '/mentor/assignments',        icon: ClipboardList },
+    { label: 'Materials',      href: '/mentor/materials',           icon: FolderOpen },
+    { label: 'Intern Reviews', href: '/mentor/intern-reviews',     icon: FileText },
+    { label: 'Approve Cert',   href: '/mentor/approve-certificate', icon: GraduationCap },
+    { label: 'Settings',       href: '/mentor/settings',            icon: Settings },
   ],
   student: [
-    { label: 'Dashboard',     href: '/student',             icon: '🏠' },
-    { label: 'Attendance',    href: '/student/attendance',  icon: '📅' },
-    { label: 'Daily Logbook', href: '/student/logbook',     icon: '📔' },
-    { label: 'Leave Apply',   href: '/student/leaves',      icon: '✉️' },
-    { label: 'Assignments',   href: '/student/assignments', icon: '📝' },
-    { label: 'Materials',     href: '/student/materials',   icon: '📂' },
-    { label: 'Certificate',   href: '/student/certificate', icon: '🎓' },
-    { label: 'Settings',      href: '/student/settings',    icon: '⚙️' },
+    { label: 'Dashboard',     href: '/student',             icon: Home },
+    { label: 'Attendance',    href: '/student/attendance',  icon: Calendar },
+    { label: 'Daily Logbook', href: '/student/logbook',     icon: BookOpen },
+    { label: 'Leave Apply',   href: '/student/leaves',      icon: Mail },
+    { label: 'Assignments',   href: '/student/assignments', icon: ClipboardList },
+    { label: 'Materials',     href: '/student/materials',   icon: FolderOpen },
+    { label: 'Certificate',   href: '/student/certificate', icon: GraduationCap },
+    { label: 'Settings',      href: '/student/settings',    icon: Settings },
   ],
   employee: [
-    { label: 'Dashboard',  href: '/employee',        icon: '🏠' },
-    { label: 'Review LoR', href: '/employee/review', icon: '📋' },
-    { label: 'Settings',   href: '/employee/settings',icon: '⚙️' },
+    { label: 'Dashboard',  href: '/employee',        icon: Home },
+    { label: 'Review LoR', href: '/employee/review', icon: FileText },
+    { label: 'Settings',   href: '/employee/settings',icon: Settings },
   ],
 }
 
@@ -95,7 +112,7 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
                   ? 'bg-gradient-to-r from-emerald-950/60 to-emerald-900/40 text-emerald-400 font-semibold border-l-2 border-emerald-500 shadow-sm' 
                   : 'text-slate-400 hover:bg-emerald-950/20 hover:text-slate-200'
               )}>
-              <span className="text-base group-hover:scale-110 transition-transform duration-300">{item.icon}</span>
+              <item.icon className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
               {item.label}
             </Link>
           )
