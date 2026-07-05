@@ -184,6 +184,10 @@ export async function POST(req: NextRequest) {
                       <strong>संबंधित क्षेत्र/परियोजना/विभाग द्वारा लगाई गई कोई अन्य शर्तें।</strong><br/>
                       <span style="color: #6b7280;">Any other conditions imposed by the concerned sector/project/department.</span>
                     </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>छात्र को सलाह दी जाती है कि वह इस ईमेल का प्रिंटआउट लें और रिपोर्ट करें।</strong><br/>
+                      <span style="color: #6b7280;">The Student is advised to take a printout of this mail and report.</span>
+                    </li>
                   </ol>
 
                   <div style="font-size: 13px; color: #374151; line-height: 1.6; background: #fdf2f8; border: 1px solid #fbcfe8; padding: 12px; border-radius: 8px; margin: 20px 0;">
