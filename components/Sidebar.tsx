@@ -85,17 +85,17 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
   }
 
   return (
-    <aside className="w-56 min-h-screen bg-[#070f0d] border-r border-emerald-950/60 flex flex-col fixed left-0 top-0 z-10 text-slate-300">
-      <div className="p-4 border-b border-emerald-950/60">
+    <aside className="w-56 min-h-screen glass-panel flex flex-col fixed left-0 top-0 z-10 text-slate-300">
+      <div className="p-4 border-b border-white/5">
         <div className="flex items-center gap-2.5">
           <img src="/mcl-logo-transparent.png" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg brightness-0 invert" />
           <div>
-            <p className="text-sm font-bold text-white leading-tight">MCL Portal</p>
-            <span className={clsx('text-[10px] px-2 py-0.5 rounded font-semibold capitalize mt-1 inline-block', {
-              'bg-red-950/40 text-red-400 border border-red-500/20': role === 'admin',
-              'bg-amber-950/40 text-amber-400 border border-amber-500/20': role === 'mentor',
-              'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20': role === 'student',
-              'bg-purple-950/40 text-purple-400 border border-purple-500/20': role === 'employee',
+            <p className="text-sm font-extrabold text-white leading-tight tracking-tight">MCL Portal</p>
+            <span className={clsx('text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider mt-1 inline-block', {
+              'bg-red-500/10 text-red-400 border border-red-500/25': role === 'admin',
+              'bg-amber-500/10 text-amber-400 border border-amber-500/25': role === 'mentor',
+              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25': role === 'student',
+              'bg-purple-500/10 text-purple-400 border border-purple-500/25': role === 'employee',
             })}>{role}</span>
           </div>
         </div>
@@ -109,8 +109,8 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
               className={clsx(
                 'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all duration-300 transform active:scale-[0.98]',
                 isActive 
-                  ? 'bg-gradient-to-r from-emerald-950/60 to-emerald-900/40 text-emerald-400 font-semibold border-l-2 border-emerald-500 shadow-sm' 
-                  : 'text-slate-400 hover:bg-emerald-950/20 hover:text-slate-200'
+                  ? 'bg-emerald-500/10 text-emerald-400 font-semibold border-l-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
               )}>
               <item.icon className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
               {item.label}

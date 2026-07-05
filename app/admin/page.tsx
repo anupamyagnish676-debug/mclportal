@@ -99,9 +99,9 @@ export default async function AdminDashboard({
   }
 
   const stats = [
-    { label: 'Total Students',        value: totalStudents, color: 'bg-blue-50 text-blue-700',     icon: Users },
-    { label: 'Pending Applications',  value: pendingApps,   color: 'bg-yellow-50 text-yellow-700', icon: FileText },
-    { label: 'Active Internships',    value: activeInterns, color: 'bg-green-50 text-green-700',   icon: CheckCircle2 },
+    { label: 'Total Students',        value: totalStudents, color: 'bg-blue-50/50 text-blue-600 border border-blue-100/50',     icon: Users },
+    { label: 'Pending Applications',  value: pendingApps,   color: 'bg-amber-50/50 text-amber-600 border border-amber-100/50', icon: FileText },
+    { label: 'Active Internships',    value: activeInterns, color: 'bg-emerald-50/50 text-emerald-600 border border-emerald-100/50',   icon: CheckCircle2 },
   ]
 
   // 2. Fetch completed interns for CSV Export
@@ -157,7 +157,7 @@ export default async function AdminDashboard({
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-5 flex items-center gap-4 shadow-sm">
+          <div key={s.label} className="glass-card rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:scale-[1.01] hover:-translate-y-0.5 transition-all duration-300">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.color}`}>
               <s.icon className="w-5 h-5" />
             </div>
