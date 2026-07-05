@@ -156,7 +156,41 @@ export async function POST(req: NextRequest) {
                     <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">Please change your password after logging in for the first time.</p>
                   </div>
 
-                  <p>You are requested to report to the training office of the concerned wing at <strong>${area || 'Talcher'} Area</strong> on your start date.</p>
+                  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+                  
+                  <h3 style="color: #166534; margin-top: 0; font-size: 15px;">प्रशिक्षण नियम एवं शर्तें / Training Terms & Conditions:</h3>
+                  <ol style="padding-left: 20px; font-size: 13px; color: #4b5563; line-height: 1.6; margin: 15px 0;">
+                    <li style="margin-bottom: 8px;">
+                      <strong>छातर द्वारा एकत्रित की गई जानकारी का उपयोग केवल शैक्षणिक उद्देश्य के लिए किया जाएगा।</strong><br/>
+                      <span style="color: #6b7280;">The information collected by the student will be used only for educational purpose.</span>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>प्रशिक्षण अवधि के दौरान छात्र को हुई किसी भी चोट/दुर्घटना के लिए कंपनी जिम्मेदार नहीं होगी।</strong><br/>
+                      <span style="color: #6b7280;">The Company will not be responsible for any injury/accident caused to the student during the training period.</span>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>कंपनी द्वारा छात्र को कोई आवास और परिवहन प्रदान नहीं किया जाएगा।</strong><br/>
+                      <span style="color: #6b7280;">No accommodation and transportation will be provided to the student by the company.</span>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>प्रशिक्षण उनके अपने जोखिम पर होगा, यदि उनकी प्रशिक्षण अवधि के दौरान कुछ होता है, तो कंपनी जिम्मेदार नहीं होगी। छात्रा को इस आशय का एक वचन पत्र प्रस्तुत करना होगा।</strong><br/>
+                      <span style="color: #6b7280;">The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student must submit an undertaking to this effect.</span>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>एमसीएल द्वारा कोई वित्तीय भार वहन नहीं किया जाएगा।</strong><br/>
+                      <span style="color: #6b7280;">No financial burden will be borne by MCL.</span>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                      <strong>संबंधित क्षेत्र/परियोजना/विभाग द्वारा लगाई गई कोई अन्य शर्तें।</strong><br/>
+                      <span style="color: #6b7280;">Any other conditions imposed by the concerned sector/project/department.</span>
+                    </li>
+                  </ol>
+
+                  <div style="font-size: 13px; color: #374151; line-height: 1.6; background: #fdf2f8; border: 1px solid #fbcfe8; padding: 12px; border-radius: 8px; margin: 20px 0;">
+                    <strong>आपसे अनुरोध है कि उपरोक्त छात्रा को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ General Manager, ${area ? `${area} Area` : 'Respective Area'}, MCL को उपरोक्त तिथि के अनुसार रिपोर्ट करने की सलाह दें।</strong><br/>
+                    <span style="color: #4b5563;">You are requested to advise the above students to report to the General Manager, ${area ? `${area} Area` : 'Respective Area'}, MCL as per the above date along with his identity card for further necessary action.</span>
+                  </div>
+
                   <p>We wish you a productive and enriching internship experience.</p>
 
                   <br/>
