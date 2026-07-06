@@ -123,35 +123,35 @@ export async function POST(req: NextRequest) {
     })
 
     // 4. Load Logos
-    const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-transparent.png')
-    const coalIndiaLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo-transparent.png')
+    const ministryLogoPath = path.join(process.cwd(), 'public', 'ministry-of-coal-logo.png')
+    const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-new.png')
 
+    let ministryLogoImg: any = null
     let mclLogoImg: any = null
-    let coalIndiaLogoImg: any = null
+
+    try {
+      if (fs.existsSync(ministryLogoPath)) {
+        const bytes = fs.readFileSync(ministryLogoPath)
+        ministryLogoImg = await pdfDoc.embedPng(bytes)
+      }
+    } catch (e) {
+      console.error('Failed to embed Ministry of Coal logo:', e)
+    }
 
     try {
       if (fs.existsSync(mclLogoPath)) {
-        const mclLogoBytes = fs.readFileSync(mclLogoPath)
-        mclLogoImg = await pdfDoc.embedPng(mclLogoBytes)
+        const bytes = fs.readFileSync(mclLogoPath)
+        mclLogoImg = await pdfDoc.embedPng(bytes)
       }
     } catch (e) {
       console.error('Failed to embed MCL logo:', e)
     }
 
-    try {
-      if (fs.existsSync(coalIndiaLogoPath)) {
-        const coalIndiaLogoBytes = fs.readFileSync(coalIndiaLogoPath)
-        coalIndiaLogoImg = await pdfDoc.embedPng(coalIndiaLogoBytes)
-      }
-    } catch (e) {
-      console.error('Failed to embed Coal India logo:', e)
-    }
-
-    // Draw Left Logo (MCL)
-    if (mclLogoImg) {
+    // Draw Left Logo (Ministry of Coal)
+    if (ministryLogoImg) {
       const logoHeight = 60
-      const logoWidth = logoHeight * 1.22
-      page.drawImage(mclLogoImg, {
+      const logoWidth = logoHeight * 1.776
+      page.drawImage(ministryLogoImg, {
         x: 65,
         y: height - 115,
         width: logoWidth,
@@ -159,13 +159,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Draw Right Logo (Coal India or fallback to MCL)
-    const rightImg = coalIndiaLogoImg || mclLogoImg
-    if (rightImg) {
+    // Draw Right Logo (MCL)
+    if (mclLogoImg) {
       const logoHeight = 60
-      const isMcl = rightImg === mclLogoImg
-      const logoWidth = logoHeight * (isMcl ? 1.22 : 0.74)
-      page.drawImage(rightImg, {
+      const logoWidth = logoHeight * 1.746
+      page.drawImage(mclLogoImg, {
         x: width - 65 - logoWidth,
         y: height - 115,
         width: logoWidth,
