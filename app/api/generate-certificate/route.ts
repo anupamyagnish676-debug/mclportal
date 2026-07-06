@@ -93,36 +93,86 @@ export async function POST(req: NextRequest) {
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
 
-    // 1. Draw Cream Background
-    page.drawRectangle({
-      x: 20,
-      y: 20,
-      width: width - 40,
-      height: height - 40,
-      color: rgb(0.99, 0.98, 0.95)
+    // ═══════════════════════════════════════════
+    // BACKGROUND LAYERS
+    // ═══════════════════════════════════════════
+
+    // Full-page rich ivory background
+    page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(0.98, 0.97, 0.93) })
+
+    // Subtle green header band at top
+    page.drawRectangle({ x: 0, y: height - 140, width, height: 140, color: rgb(0.04, 0.22, 0.12) })
+
+    // Thin gold separator under green header band
+    page.drawLine({
+      start: { x: 0, y: height - 140 },
+      end: { x: width, y: height - 140 },
+      color: rgb(0.76, 0.60, 0.21),
+      thickness: 3,
     })
 
-    // 2. Draw Outer Green Border
+    // Subtle green footer band at bottom
+    page.drawRectangle({ x: 0, y: 0, width, height: 55, color: rgb(0.04, 0.22, 0.12) })
+
+    // Thin gold separator above footer band
+    page.drawLine({
+      start: { x: 0, y: 55 },
+      end: { x: width, y: 55 },
+      color: rgb(0.76, 0.60, 0.21),
+      thickness: 3,
+    })
+
+    // ═══════════════════════════════════════════
+    // PREMIUM BORDER SYSTEM
+    // ═══════════════════════════════════════════
+
+    // Outer dark navy/green border
     page.drawRectangle({
-      x: 20,
-      y: 20,
-      width: width - 40,
-      height: height - 40,
+      x: 12, y: 12,
+      width: width - 24, height: height - 24,
+      borderColor: rgb(0.04, 0.22, 0.12),
+      borderWidth: 5,
+    })
+
+    // Middle gold border
+    page.drawRectangle({
+      x: 20, y: 20,
+      width: width - 40, height: height - 40,
+      borderColor: rgb(0.76, 0.60, 0.21),
+      borderWidth: 1.5,
+    })
+
+    // Inner thin green border for content zone
+    page.drawRectangle({
+      x: 26, y: 26,
+      width: width - 52, height: height - 52,
       borderColor: rgb(0.06, 0.35, 0.18),
-      borderWidth: 8
+      borderWidth: 0.5,
     })
 
-    // 3. Draw Inner Gold Border
-    page.drawRectangle({
-      x: 34,
-      y: 34,
-      width: width - 68,
-      height: height - 68,
-      borderColor: rgb(0.76, 0.6, 0.21),
-      borderWidth: 2
-    })
+    // ═══════════════════════════════════════════
+    // CORNER ORNAMENTS (decorative diamond shapes)
+    // ═══════════════════════════════════════════
+    const corners = [
+      { cx: 37, cy: height - 37 }, // Top-left
+      { cx: width - 37, cy: height - 37 }, // Top-right
+      { cx: 37, cy: 37 }, // Bottom-left
+      { cx: width - 37, cy: 37 }, // Bottom-right
+    ]
+    for (const { cx, cy } of corners) {
+      const s = 7
+      // Outer diamond
+      page.drawLine({ start: { x: cx, y: cy + s }, end: { x: cx + s, y: cy }, color: rgb(0.76, 0.60, 0.21), thickness: 1.2 })
+      page.drawLine({ start: { x: cx + s, y: cy }, end: { x: cx, y: cy - s }, color: rgb(0.76, 0.60, 0.21), thickness: 1.2 })
+      page.drawLine({ start: { x: cx, y: cy - s }, end: { x: cx - s, y: cy }, color: rgb(0.76, 0.60, 0.21), thickness: 1.2 })
+      page.drawLine({ start: { x: cx - s, y: cy }, end: { x: cx, y: cy + s }, color: rgb(0.76, 0.60, 0.21), thickness: 1.2 })
+      // Inner dot
+      page.drawRectangle({ x: cx - 2, y: cy - 2, width: 4, height: 4, color: rgb(0.76, 0.60, 0.21) })
+    }
 
-    // 4. Load Logos
+    // ═══════════════════════════════════════════
+    // LOGOS
+    // ═══════════════════════════════════════════
     const ministryLogoPath = path.join(process.cwd(), 'public', 'ministry-of-coal-logo.png')
     const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-new.png')
 
@@ -131,83 +181,59 @@ export async function POST(req: NextRequest) {
 
     try {
       if (fs.existsSync(ministryLogoPath)) {
-        const bytes = fs.readFileSync(ministryLogoPath)
-        ministryLogoImg = await pdfDoc.embedPng(bytes)
+        ministryLogoImg = await pdfDoc.embedPng(fs.readFileSync(ministryLogoPath))
       }
-    } catch (e) {
-      console.error('Failed to embed Ministry of Coal logo:', e)
-    }
+    } catch (e) { console.error('Failed to embed Ministry of Coal logo:', e) }
 
     try {
       if (fs.existsSync(mclLogoPath)) {
-        const bytes = fs.readFileSync(mclLogoPath)
-        mclLogoImg = await pdfDoc.embedPng(bytes)
+        mclLogoImg = await pdfDoc.embedPng(fs.readFileSync(mclLogoPath))
       }
-    } catch (e) {
-      console.error('Failed to embed MCL logo:', e)
-    }
+    } catch (e) { console.error('Failed to embed MCL logo:', e) }
 
-    // Draw Left Logo (Ministry of Coal)
+    // Left Logo: Ministry of Coal (aspect 1.776)
     if (ministryLogoImg) {
-      const logoHeight = 60
-      const logoWidth = logoHeight * 1.776
-      page.drawImage(ministryLogoImg, {
-        x: 65,
-        y: height - 115,
-        width: logoWidth,
-        height: logoHeight,
-      })
+      const lh = 65, lw = lh * 1.776
+      page.drawImage(ministryLogoImg, { x: 55, y: height - 125, width: lw, height: lh })
     }
 
-    // Draw Right Logo (MCL)
+    // Right Logo: MCL (aspect 1.746)
     if (mclLogoImg) {
-      const logoHeight = 60
-      const logoWidth = logoHeight * 1.746
-      page.drawImage(mclLogoImg, {
-        x: width - 65 - logoWidth,
-        y: height - 115,
-        width: logoWidth,
-        height: logoHeight,
-      })
+      const lh = 65, lw = lh * 1.746
+      page.drawImage(mclLogoImg, { x: width - 55 - lw, y: height - 125, width: lw, height: lh })
     }
 
-    // Helper to draw centered text
+    // ═══════════════════════════════════════════
+    // HELPER
+    // ═══════════════════════════════════════════
     const drawCenteredText = (text: string, y: number, size: number, font: any, color = rgb(0.2, 0.2, 0.2)) => {
       const textWidth = font.widthOfTextAtSize(text, size)
-      page.drawText(text, {
-        x: (width - textWidth) / 2,
-        y,
-        size,
-        font,
-        color
-      })
+      page.drawText(text, { x: (width - textWidth) / 2, y, size, font, color })
     }
 
-    // 5. Draw Header Text
-    const titleText = 'MAHANADI COALFIELDS LIMITED'
-    const subText = 'A Subsidiary of Coal India Limited'
-    const certTitle = 'CERTIFICATE OF COMPLETION'
+    // ═══════════════════════════════════════════
+    // HEADER TEXT (inside green band)
+    // ═══════════════════════════════════════════
+    drawCenteredText('MAHANADI COALFIELDS LIMITED', height - 68, 22, boldFont, rgb(1, 1, 1))
+    drawCenteredText('A Subsidiary of Coal India Limited  |  Ministry of Coal, Government of India', height - 90, 9.5, regularFont, rgb(0.72, 0.84, 0.76))
 
-    drawCenteredText(titleText, height - 75, 22, boldFont, rgb(0.06, 0.35, 0.18))
-    drawCenteredText(subText, height - 95, 11, regularFont, rgb(0.4, 0.4, 0.4))
+    // Gold ornament line + cert title
+    const goldLine = rgb(0.76, 0.60, 0.21)
+    page.drawLine({ start: { x: 120, y: height - 108 }, end: { x: 340, y: height - 108 }, color: goldLine, thickness: 0.8 })
+    drawCenteredText('✦  CERTIFICATE OF INTERNSHIP COMPLETION  ✦', height - 108, 11, boldFont, rgb(0.96, 0.84, 0.48))
+    page.drawLine({ start: { x: width - 340, y: height - 108 }, end: { x: width - 120, y: height - 108 }, color: goldLine, thickness: 0.8 })
 
-    // Divider Line
-    page.drawLine({
-      start: { x: 150, y: height - 110 },
-      end: { x: width - 150, y: height - 110 },
-      color: rgb(0.76, 0.6, 0.21),
-      thickness: 1.5
-    })
-
-    drawCenteredText(certTitle, height - 145, 18, boldFont, rgb(0.2, 0.2, 0.2))
-
-    // 6. Metadata (Serial No & Issue Date)
+    // ═══════════════════════════════════════════
+    // METADATA — Serial No & Date
+    // ═══════════════════════════════════════════
     const serialNo = internship.serial_no || 'N/A'
     const issueDate = formatDate(new Date().toISOString().split('T')[0])
-    page.drawText(`Serial No: MCL/HRD/INT/${serialNo}`, { x: 50, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText(`Date of Issue: ${issueDate}`, { x: width - 200, y: height - 50, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(`Ref. No.: MCL/HRD/INT/${serialNo}`, { x: 50, y: height - 155, size: 8.5, font: regularFont, color: rgb(0.35, 0.35, 0.35) })
+    page.drawText(`Date of Issue: ${issueDate}`, { x: width - 205, y: height - 155, size: 8.5, font: regularFont, color: rgb(0.35, 0.35, 0.35) })
 
-    // 7. Dynamic Paragraph & Student Details
+    // ═══════════════════════════════════════════
+    // STUDENT DETAILS & CERTIFICATE BODY
+    // ═══════════════════════════════════════════
     const student = sanitizeText(studentName || internship.student?.full_name || 'Intern')
     const university = sanitizeText(internship.student?.university || 'their respective institution')
     const wing = sanitizeText(internship.student?.wing || internship.wing || 'Training Wing')
@@ -217,49 +243,61 @@ export async function POST(req: NextRequest) {
     const projectDate = sanitizeText(formatDate(internship.project_submitted_at))
     const mentorName = sanitizeText(internship.mentor?.full_name || 'N/A')
     const area = sanitizeText(internship.student?.area || 'Talcher')
-
-    // Structured Centered Text Layout
-    drawCenteredText('This is to certify that', 385, 13, regularFont, rgb(0.4, 0.4, 0.4))
-    drawCenteredText(student.toUpperCase(), 350, 22, boldFont, rgb(0.06, 0.35, 0.18))
-    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 315, 12, regularFont, rgb(0.2, 0.2, 0.2))
-    
     const areaText = area === 'Headquarters' ? 'Headquarters' : `${area} Area`
-    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 290, 13, boldFont, rgb(0.2, 0.2, 0.2))
-    drawCenteredText('They have submitted a final project report titled', 255, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
-    // Dynamically wrap project title if it is too long
-    const wrappedTitle = wrapText(`"${projectTitle}"`, 620, 12, italicFont)
-    let titleY = 225
-    for (const titleLine of wrappedTitle) {
-      drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
-      titleY -= 16
+    // "This is to certify that" intro
+    drawCenteredText('This is to certify that', 380, 12.5, italicFont, rgb(0.35, 0.35, 0.35))
+
+    // Decorative rule before student name
+    page.drawLine({ start: { x: 250, y: 371 }, end: { x: 592, y: 371 }, color: goldLine, thickness: 0.6 })
+
+    // Student name — the centrepiece
+    drawCenteredText(student.toUpperCase(), 342, 24, boldFont, rgb(0.04, 0.22, 0.12))
+
+    // Decorative rule after student name
+    page.drawLine({ start: { x: 250, y: 332 }, end: { x: 592, y: 332 }, color: goldLine, thickness: 0.6 })
+
+    // Body paragraphs
+    drawCenteredText(`student of ${university}`, 312, 11.5, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('has successfully completed their Internship Training in the', 294, 11.5, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(`${wing} Department, ${areaText}, Mahanadi Coalfields Limited`, 274, 12, boldFont, rgb(0.04, 0.22, 0.12))
+    drawCenteredText(`from  ${startDate}  to  ${endDate}`, 254, 11.5, regularFont, rgb(0.2, 0.2, 0.2))
+
+    // Project separator line
+    page.drawLine({ start: { x: 200, y: 238 }, end: { x: 642, y: 238 }, color: rgb(0.82, 0.78, 0.70), thickness: 0.5 })
+    drawCenteredText('Final Project Report', 222, 9, regularFont, rgb(0.5, 0.5, 0.5))
+
+    // Wrap long project title
+    const wrappedTitle = wrapText(`"${projectTitle}"`, 600, 11.5, italicFont)
+    let titleY = 208
+    for (const line of wrappedTitle) {
+      drawCenteredText(line, titleY, 11.5, italicFont, rgb(0.06, 0.35, 0.18))
+      titleY -= 15
     }
 
-    const nextY = titleY - 10
-    drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    const nextY = titleY - 8
+    drawCenteredText(`Submitted on ${projectDate}  ·  Mentor: ${mentorName}`, nextY, 10, regularFont, rgb(0.35, 0.35, 0.35))
 
-    // Generate QR Code dynamically
+    // ═══════════════════════════════════════════
+    // QR CODE
+    // ═══════════════════════════════════════════
     let qrCodeImg = null
     try {
       const verifyUrl = `${req.nextUrl.origin}/verify/${internshipId}`
       const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 })
-      const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
-      qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)
-    } catch (e) {
-      console.error('Failed to generate QR Code:', e)
+      qrCodeImg = await pdfDoc.embedPng(Buffer.from(qrCodeBase64.split(',')[1], 'base64'))
+    } catch (e) { console.error('Failed to generate QR Code:', e) }
+
+    if (qrCodeImg) {
+      const qrSize = 42
+      page.drawImage(qrCodeImg, { x: (width - qrSize) / 2, y: 65, width: qrSize, height: qrSize })
+      drawCenteredText('Scan to Verify Authenticity', 60, 6, italicFont, rgb(0.72, 0.84, 0.76))
     }
 
-    // Draw Verification QR Code centered horizontally above signature lines
-    if (qrCodeImg) {
-      const qrSize = 45
-      page.drawImage(qrCodeImg, {
-        x: (width - qrSize) / 2,
-        y: 130,
-        width: qrSize,
-        height: qrSize
-      })
-      drawCenteredText('Scan to Verify', 122, 6, italicFont, rgb(0.5, 0.5, 0.5))
-    }
+    // ═══════════════════════════════════════════
+    // FOOTER TEXT (inside footer band)
+    // ═══════════════════════════════════════════
+    drawCenteredText('Training & Development Department  |  Mahanadi Coalfields Limited, Sambalpur, Odisha', 20, 8, regularFont, rgb(0.72, 0.84, 0.76))
 
     // Load GM HRD signature
     const gmSigPath = path.join(process.cwd(), 'public', 'gm-signature.png')
@@ -297,63 +335,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 8. Signatures Section at the Bottom (Three Columns)
-    // Left Side - Mentor
+    // ═══════════════════════════════════════════
+    // SIGNATURES SECTION — Three Columns, above footer band
+    // ═══════════════════════════════════════════
+    const sigLineY = 135   // gold signature line Y
+    const sigImgY  = 140   // signature image base Y
+    const titleY2  = 118   // role title Y
+    const labelY2  = 106   // name label Y
+
+    const goldSig = rgb(0.76, 0.60, 0.21)
+
+    // Left — Mentor
     if (mentorSigImg) {
-      const sigWidth = 90
-      const sigHeight = sigWidth / 2.67
-      page.drawImage(mentorSigImg, {
-        x: 155 - (sigWidth / 2), // centered on line x:80..230
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
-      })
+      const sw = 90, sh = sw / 2.67
+      page.drawImage(mentorSigImg, { x: 155 - sw / 2, y: sigImgY, width: sw, height: sh })
     }
-    page.drawLine({ start: { x: 80, y: 75 }, end: { x: 230, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    page.drawLine({ start: { x: 75, y: sigLineY }, end: { x: 235, y: sigLineY }, color: goldSig, thickness: 0.8 })
     const mentorTitle = 'Project Mentor'
-    const mentorTitleWidth = boldFont.widthOfTextAtSize(mentorTitle, 10)
-    page.drawText(mentorTitle, { x: 155 - (mentorTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    page.drawText(mentorTitle, { x: 155 - boldFont.widthOfTextAtSize(mentorTitle, 9.5) / 2, y: titleY2, size: 9.5, font: boldFont, color: rgb(0.15, 0.15, 0.15) })
     const mentorLabel = `(${mentorName})`
-    const mentorLabelWidth = regularFont.widthOfTextAtSize(mentorLabel, 9)
-    page.drawText(mentorLabel, { x: 155 - (mentorLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(mentorLabel, { x: 155 - regularFont.widthOfTextAtSize(mentorLabel, 8.5) / 2, y: labelY2, size: 8.5, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
-    // Center Side - Project Coordinator (Admin)
+    // Center — Area Training Officer (Admin)
     if (adminSigImg) {
-      const sigWidth = 90
-      const sigHeight = sigWidth / 2.67
-      page.drawImage(adminSigImg, {
-        x: 421 - (sigWidth / 2), // centered on line x:346..496
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
-      })
+      const sw = 90, sh = sw / 2.67
+      page.drawImage(adminSigImg, { x: 421 - sw / 2, y: sigImgY, width: sw, height: sh })
     }
-    page.drawLine({ start: { x: 346, y: 75 }, end: { x: 496, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    page.drawLine({ start: { x: 341, y: sigLineY }, end: { x: 501, y: sigLineY }, color: goldSig, thickness: 0.8 })
     const adminTitle = 'Area Training Officer'
-    const adminTitleWidth = boldFont.widthOfTextAtSize(adminTitle, 10)
-    page.drawText(adminTitle, { x: 421 - (adminTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    page.drawText(adminTitle, { x: 421 - boldFont.widthOfTextAtSize(adminTitle, 9.5) / 2, y: titleY2, size: 9.5, font: boldFont, color: rgb(0.15, 0.15, 0.15) })
     const adminLabel = `(${adminName})`
-    const adminLabelWidth = regularFont.widthOfTextAtSize(adminLabel, 9)
-    page.drawText(adminLabel, { x: 421 - (adminLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(adminLabel, { x: 421 - regularFont.widthOfTextAtSize(adminLabel, 8.5) / 2, y: labelY2, size: 8.5, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
-    // Right Side - GM (HRD)
+    // Right — General Manager (HRD)
     if (gmSigImg) {
-      const sigWidth = 100
-      const sigHeight = sigWidth / 2.90
-      page.drawImage(gmSigImg, {
-        x: 687 - (sigWidth / 2), // centered on line x:612..762
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
-      })
+      const sw = 100, sh = sw / 2.90
+      page.drawImage(gmSigImg, { x: 687 - sw / 2, y: sigImgY, width: sw, height: sh })
     }
-    page.drawLine({ start: { x: 612, y: 75 }, end: { x: 762, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+    page.drawLine({ start: { x: 607, y: sigLineY }, end: { x: 767, y: sigLineY }, color: goldSig, thickness: 0.8 })
     const gmTitle = 'General Manager (HRD)'
-    const gmTitleWidth = boldFont.widthOfTextAtSize(gmTitle, 10)
-    page.drawText(gmTitle, { x: 687 - (gmTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+    page.drawText(gmTitle, { x: 687 - boldFont.widthOfTextAtSize(gmTitle, 9.5) / 2, y: titleY2, size: 9.5, font: boldFont, color: rgb(0.15, 0.15, 0.15) })
     const coLabel = 'Mahanadi Coalfields Limited'
-    const coLabelWidth = regularFont.widthOfTextAtSize(coLabel, 9)
-    page.drawText(coLabel, { x: 687 - (coLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText(coLabel, { x: 687 - regularFont.widthOfTextAtSize(coLabel, 8.5) / 2, y: labelY2, size: 8.5, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     const pdfBytes = await pdfDoc.save()
     const pdfBuffer = Buffer.from(pdfBytes)
