@@ -219,9 +219,9 @@ export async function POST(req: NextRequest) {
 
     // Gold ornament line + cert title
     const goldLine = rgb(0.76, 0.60, 0.21)
-    page.drawLine({ start: { x: 120, y: height - 108 }, end: { x: 340, y: height - 108 }, color: goldLine, thickness: 0.8 })
-    drawCenteredText('✦  CERTIFICATE OF INTERNSHIP COMPLETION  ✦', height - 108, 11, boldFont, rgb(0.96, 0.84, 0.48))
-    page.drawLine({ start: { x: width - 340, y: height - 108 }, end: { x: width - 120, y: height - 108 }, color: goldLine, thickness: 0.8 })
+    page.drawLine({ start: { x: 60, y: height - 108 }, end: { x: width - 60, y: height - 108 }, color: goldLine, thickness: 0.5 })
+    drawCenteredText('- CERTIFICATE OF INTERNSHIP COMPLETION -', height - 121, 11.5, boldFont, rgb(0.96, 0.84, 0.48))
+    page.drawLine({ start: { x: 60, y: height - 132 }, end: { x: width - 60, y: height - 132 }, color: goldLine, thickness: 0.5 })
 
     // ═══════════════════════════════════════════
     // METADATA — Serial No & Date
