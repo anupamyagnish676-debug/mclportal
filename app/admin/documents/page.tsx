@@ -81,7 +81,23 @@ export default async function AdminDocumentsPage({
         </div>
       )
     }
+
+    // Generate signed URLs in bulk server-side
+    const paths = (data || []).map((d: any) => d.file_path).filter(Boolean)
     documents = data || []
+    if (paths.length > 0) {
+      const { data: signedUrls } = await adminClient.storage
+        .from('documents')
+        .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
+
+      documents = (data || []).map((doc: any) => {
+        const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
+        return {
+          ...doc,
+          file_url: matched?.signedUrl || doc.file_url
+        }
+      })
+    }
   }
 
   return (

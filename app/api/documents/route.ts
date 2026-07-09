@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
-    // Get the public URL
-    const { data: urlData } = adminClient.storage
+    // Get a signed URL for immediate use (1 year expiry)
+    const { data: signedUrlData } = await adminClient.storage
       .from('documents')
-      .getPublicUrl(storagePath)
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
 
-    const fileUrl = urlData?.publicUrl || ''
+    const fileUrl = signedUrlData?.signedUrl || ''
 
     // Check if a record already exists for same student + doc_type
     const { data: existing } = await adminClient
@@ -151,7 +151,24 @@ export async function GET(req: NextRequest) {
         .order('uploaded_at', { ascending: false })
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json({ documents: data })
+
+      // Generate signed URLs in bulk
+      const paths = (data || []).map((d: any) => d.file_path).filter(Boolean)
+      let signedDocs = data || []
+      if (paths.length > 0) {
+        const { data: signedUrls } = await adminClient.storage
+          .from('documents')
+          .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
+
+        signedDocs = (data || []).map((doc: any) => {
+          const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
+          return {
+            ...doc,
+            file_url: matched?.signedUrl || doc.file_url
+          }
+        })
+      }
+      return NextResponse.json({ documents: signedDocs })
 
     } else if (profile.role === 'admin') {
       const isHQ = profile.area === 'Headquarters'
@@ -178,7 +195,24 @@ export async function GET(req: NextRequest) {
         .order('uploaded_at', { ascending: false })
 
       if (docErr) return NextResponse.json({ error: docErr.message }, { status: 500 })
-      return NextResponse.json({ documents, students })
+
+      // Generate signed URLs in bulk
+      const paths = (documents || []).map((d: any) => d.file_path).filter(Boolean)
+      let signedDocs = documents || []
+      if (paths.length > 0) {
+        const { data: signedUrls } = await adminClient.storage
+          .from('documents')
+          .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
+
+        signedDocs = (documents || []).map((doc: any) => {
+          const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
+          return {
+            ...doc,
+            file_url: matched?.signedUrl || doc.file_url
+          }
+        })
+      }
+      return NextResponse.json({ documents: signedDocs, students })
     } else {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

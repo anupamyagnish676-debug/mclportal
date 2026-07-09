@@ -25,7 +25,24 @@ export default async function StudentDocumentsPage() {
     .eq('student_id', user.id)
     .order('uploaded_at', { ascending: false })
 
-  const typedDocs = (documents || []).map((d: any) => ({
+  // Generate signed URLs in bulk server-side
+  const paths = (documents || []).map((d: any) => d.file_path).filter(Boolean)
+  let resolvedDocs = documents || []
+  if (paths.length > 0) {
+    const { data: signedUrls } = await adminClient.storage
+      .from('documents')
+      .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
+
+    resolvedDocs = (documents || []).map((doc: any) => {
+      const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
+      return {
+        ...doc,
+        file_url: matched?.signedUrl || doc.file_url
+      }
+    })
+  }
+
+  const typedDocs = (resolvedDocs || []).map((d: any) => ({
     id: d.id,
     doc_type: d.doc_type,
     file_url: d.file_url,
