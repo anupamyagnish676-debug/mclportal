@@ -256,5 +256,14 @@ h1, h2, h3, h4, h5, h6 {
   border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
 }
 
+/* Hide scrollbar utility class */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
 
 

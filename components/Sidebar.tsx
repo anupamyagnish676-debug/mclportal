@@ -132,7 +132,7 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
       </div>
 
       {/* Nav List */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-900/50 scrollbar-track-transparent">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto no-scrollbar">
         {navItems.map(item => {
           const isActive = pathname === item.href
           return (
