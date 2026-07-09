@@ -26,31 +26,73 @@ export async function POST(req: NextRequest) {
       const { rating, comments } = body
       if (rating === undefined) return NextResponse.json({ error: 'Missing rating' }, { status: 400 })
 
-      const { error } = await adminClient
+      // Check if existing record exists
+      const { data: existing } = await adminClient
         .from('internship_feedback')
-        .upsert({
-          internship_id,
-          student_rating: rating,
-          student_comments: comments,
-          submitted_by_student_at: new Date().toISOString()
-        }, { onConflict: 'internship_id' })
+        .select('id')
+        .eq('internship_id', internship_id)
+        .maybeSingle()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+      let queryError;
+      if (existing) {
+        const { error } = await adminClient
+          .from('internship_feedback')
+          .update({
+            student_rating: rating,
+            student_comments: comments,
+            submitted_by_student_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+        queryError = error
+      } else {
+        const { error } = await adminClient
+          .from('internship_feedback')
+          .insert({
+            internship_id,
+            student_rating: rating,
+            student_comments: comments,
+            submitted_by_student_at: new Date().toISOString()
+          })
+        queryError = error
+      }
+
+      if (queryError) return NextResponse.json({ error: queryError.message }, { status: 400 })
       return NextResponse.json({ success: true })
     } else if (profile.role === 'mentor') {
       const { rating, comments } = body
       if (rating === undefined) return NextResponse.json({ error: 'Missing rating' }, { status: 400 })
 
-      const { error } = await adminClient
+      // Check if existing record exists
+      const { data: existing } = await adminClient
         .from('internship_feedback')
-        .upsert({
-          internship_id,
-          mentor_rating: rating,
-          mentor_comments: comments,
-          submitted_by_mentor_at: new Date().toISOString()
-        }, { onConflict: 'internship_id' })
+        .select('id')
+        .eq('internship_id', internship_id)
+        .maybeSingle()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+      let queryError;
+      if (existing) {
+        const { error } = await adminClient
+          .from('internship_feedback')
+          .update({
+            mentor_rating: rating,
+            mentor_comments: comments,
+            submitted_by_mentor_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+        queryError = error
+      } else {
+        const { error } = await adminClient
+          .from('internship_feedback')
+          .insert({
+            internship_id,
+            mentor_rating: rating,
+            mentor_comments: comments,
+            submitted_by_mentor_at: new Date().toISOString()
+          })
+        queryError = error
+      }
+
+      if (queryError) return NextResponse.json({ error: queryError.message }, { status: 400 })
       return NextResponse.json({ success: true })
     } else {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
