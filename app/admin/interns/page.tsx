@@ -56,6 +56,7 @@ export default async function InternsPage({
     .from('internships')
     .select(`
       id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area,
+      internship_type, stipend_amount, stipend_frequency,
       student:profiles!internships_student_id_fkey(id, full_name, email, area),
       mentor:profiles!internships_mentor_id_fkey(full_name)
     `)
@@ -157,6 +158,9 @@ export default async function InternsPage({
                       studentId={i.student_id}
                       studentName={i.student?.full_name || 'Intern'}
                       isActive={i.is_active}
+                      initialType={i.internship_type || 'unpaid'}
+                      initialAmount={i.stipend_amount || 0}
+                      initialFrequency={i.stipend_frequency || 'monthly'}
                     />
                   </td>
                 </tr>
