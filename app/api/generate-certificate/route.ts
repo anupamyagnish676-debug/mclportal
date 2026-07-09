@@ -239,9 +239,10 @@ export async function POST(req: NextRequest) {
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Generate QR Code dynamically
+    // Use serial_no so the public URL is clean (e.g. /verify/42) instead of exposing a raw Supabase UUID
     let qrCodeImg = null
     try {
-      const verifyUrl = `${req.nextUrl.origin}/verify/${internshipId}`
+      const verifyUrl = `${req.nextUrl.origin}/verify/${internship.serial_no}`
       const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 })
       const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
       qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)
