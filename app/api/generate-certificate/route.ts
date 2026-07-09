@@ -239,10 +239,16 @@ export async function POST(req: NextRequest) {
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Generate QR Code dynamically
-    // Use serial_no so the public URL is clean (e.g. /verify/42) instead of exposing a raw Supabase UUID
+    // Security: Use HMAC-SHA256(secret, serial_no) as the verification token.
+    // This is unguessable without the server secret — prevents enumeration attacks (IDOR).
     let qrCodeImg = null
     try {
-      const verifyUrl = `${req.nextUrl.origin}/verify/${internship.serial_no}`
+      const { createHmac } = await import('crypto')
+      const hmacSecret = process.env.CERT_HMAC_SECRET || ''
+      const verifyToken = createHmac('sha256', hmacSecret)
+        .update(String(internship.serial_no))
+        .digest('hex')
+      const verifyUrl = `${req.nextUrl.origin}/verify/${verifyToken}`
       const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 })
       const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
       qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)

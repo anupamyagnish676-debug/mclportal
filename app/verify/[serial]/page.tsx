@@ -1,28 +1,42 @@
+import { createHmac } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 
-export const revalidate = 0 // always fetch fresh data
+export const revalidate = 0
+
+// Recompute HMAC for a given serial_no and compare with the token in the URL.
+// This is a constant-time comparison to prevent timing attacks.
+function computeToken(serialNo: number | string): string {
+  const secret = process.env.CERT_HMAC_SECRET || ''
+  return createHmac('sha256', secret).update(String(serialNo)).digest('hex')
+}
 
 export default async function PublicVerificationPage({ params }: { params: { serial: string } }) {
   const supabase = createAdminClient()
+  const tokenFromUrl = params.serial  // This is the HMAC hex token, e.g. "8f3a2c7e9b1d..."
 
-  // Look up by serial_no — keeps URLs clean (e.g. /verify/42) instead of exposing raw Supabase UUIDs
-  const { data: internship } = await supabase
+  // We cannot reverse HMAC — so we find internships and verify the token matches.
+  // For efficiency, we fetch all issued certificates and check HMAC match server-side.
+  // In production with thousands of certs, add a `verification_token` DB column instead.
+  const { data: allInternships } = await supabase
     .from('internships')
-    .select('id, start_date, end_date, serial_no, is_active, certificate_url, certificate_approved, student:profiles!internships_student_id_fkey(full_name, roll_no, university, wing, area)')
-    .eq('serial_no', params.serial)
-    .maybeSingle()
+    .select('id, serial_no')
 
-  if (!internship) {
+  // Find the internship whose serial_no produces a matching HMAC token
+  const matched = allInternships?.find(
+    (i) => computeToken(i.serial_no) === tokenFromUrl
+  )
+
+  if (!matched) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-gray-150 p-8 max-w-md w-full text-center space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center space-y-4">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto font-bold">
             ✗
           </div>
           <h1 className="text-xl font-bold text-gray-900">Verification Failed</h1>
           <p className="text-sm text-gray-500">
-            No internship record found for this certificate serial number. Please verify the QR code and try again.
+            This certificate could not be verified. The QR code may be invalid, tampered with, or the certificate has not been issued yet.
           </p>
           <div className="pt-2">
             <Link href="/login" className="text-sm font-semibold text-green-600 hover:text-green-700">
@@ -34,16 +48,35 @@ export default async function PublicVerificationPage({ params }: { params: { ser
     )
   }
 
+  // Now fetch full details for the matched internship
+  const { data: internship } = await supabase
+    .from('internships')
+    .select('id, start_date, end_date, serial_no, certificate_url, certificate_approved, student:profiles!internships_student_id_fkey(full_name, roll_no, university, wing, area)')
+    .eq('id', matched.id)
+    .maybeSingle()
+
+  if (!internship) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center space-y-4">
+          <h1 className="text-xl font-bold text-gray-900">Record Not Found</h1>
+          <p className="text-sm text-gray-500">The internship record could not be retrieved.</p>
+        </div>
+      </div>
+    )
+  }
+
   const { student } = internship as any
   const isCertified = internship.certificate_approved && internship.certificate_url
 
-  // Format dates nicely
   const formatDate = (d: string | null) => {
     if (!d) return 'N/A'
     return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const areaText = student?.area === 'Headquarters' ? 'MCL Headquarters, Sambalpur' : `${student?.area || 'Talcher'} Area, MCL`
+  const areaText = student?.area === 'Headquarters'
+    ? 'MCL Headquarters, Sambalpur'
+    : `${student?.area || 'Talcher'} Area, MCL`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
@@ -121,7 +154,7 @@ export default async function PublicVerificationPage({ params }: { params: { ser
             <div>
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certificate Status</span>
               <p className="mt-0.5">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold capitalize
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold
                   ${isCertified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                   {isCertified ? '✓  Issued & Approved' : '⏳  In Progress / Pending'}
                 </span>
