@@ -34,6 +34,14 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
     setUploading(prev => ({ ...prev, [docType]: true }))
     setError('')
 
+    // Client-side file size validation (max 4MB to fit Vercel serverless payload limits)
+    const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File "${file.name}" is too large. Maximum size allowed is 4MB. Please compress the file and try again.`)
+      setUploading(prev => ({ ...prev, [docType]: false }))
+      return
+    }
+
     const formData = new FormData()
     formData.append('file', file)
     formData.append('doc_type', docType)
@@ -43,17 +51,35 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
         method: 'POST',
         body: formData
       })
+
+      if (!res.ok) {
+        if (res.status === 413) {
+          throw new Error('File size is too large for the server. Please compress your image or PDF below 4MB.')
+        }
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Failed to upload document')
+        } else {
+          throw new Error('Upload failed due to a server error. Please verify the file size.')
+        }
+      }
+
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to upload document')
 
       // Refresh list
       const listRes = await fetch('/api/documents')
-      const listData = await listRes.json()
-      if (listRes.ok && listData.documents) {
-        setDocuments(listData.documents)
+      if (listRes.ok) {
+        const contentType = listRes.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const listData = await listRes.json()
+          if (listData.documents) {
+            setDocuments(listData.documents)
+          }
+        }
       }
     } catch (e: any) {
-      setError(e.message)
+      setError(e.message || 'An error occurred during file upload')
     } finally {
       setUploading(prev => ({ ...prev, [docType]: false }))
     }
