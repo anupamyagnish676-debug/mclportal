@@ -256,4 +256,33 @@ h1, h2, h3, h4, h5, h6 {
   border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
 }
 
+/* Collapsible Sidebar Layout Variables */
+:root {
+  --sidebar-w: 14rem; /* Initial width matching w-56 (14rem) */
+}
+
+aside {
+  width: var(--sidebar-w) !important;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+main {
+  margin-left: var(--sidebar-w) !important;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.absolute.top-0.left-56 {
+  left: var(--sidebar-w) !important;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Nav links tooltip helper style on collapsed hover */
+.sidebar-tooltip {
+  display: none;
+}
+aside.collapsed-mode .group:hover .sidebar-tooltip {
+  display: block;
+}
+
+
 

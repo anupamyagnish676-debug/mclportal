@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { clsx } from 'clsx'
 
@@ -23,7 +24,9 @@ import {
   Clock,
   DollarSign,
   FileCheck,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
@@ -93,6 +96,20 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
   const pathname = usePathname()
   const router = useRouter()
   const navItems = navByRole[role] || []
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-collapsed') === 'true'
+    setIsCollapsed(stored)
+    document.documentElement.style.setProperty('--sidebar-w', stored ? '4.5rem' : '14rem')
+  }, [])
+
+  const toggleCollapse = () => {
+    const next = !isCollapsed
+    setIsCollapsed(next)
+    localStorage.setItem('sidebar-collapsed', String(next))
+    document.documentElement.style.setProperty('--sidebar-w', next ? '4.5rem' : '14rem')
+  }
 
   async function handleLogout() {
     const supabase = createClient()
@@ -110,54 +127,91 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
   }
 
   return (
-    <aside className="w-56 min-h-screen glass-panel flex flex-col fixed left-0 top-0 z-10 text-slate-300">
-      <div className="p-4 border-b border-white/5">
+    <aside className={clsx(
+      "min-h-screen glass-panel flex flex-col fixed left-0 top-0 z-10 text-slate-300 select-none overflow-visible",
+      isCollapsed ? "collapsed-mode w-18" : "w-56"
+    )}>
+      {/* Brand Header */}
+      <div className={clsx("p-4 border-b border-white/5", isCollapsed ? "flex justify-center" : "")}>
         <div className="flex items-center gap-2.5">
-          <img src="/mcl-logo-transparent.png" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg brightness-0 invert" />
-          <div>
-            <p className="text-sm font-extrabold text-white leading-tight tracking-tight">MCL Portal</p>
-            <span className={clsx('text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider mt-1 inline-block', {
-              'bg-red-500/10 text-red-400 border border-red-500/25': role === 'admin',
-              'bg-amber-500/10 text-amber-400 border border-amber-500/25': role === 'mentor',
-              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25': role === 'student',
-              'bg-purple-500/10 text-purple-400 border border-purple-500/25': role === 'employee',
-            })}>{role}</span>
-          </div>
+          <img src="/mcl-logo-transparent.png" alt="MCL Logo" className="w-9 h-9 object-contain rounded-lg brightness-0 invert flex-shrink-0" />
+          {!isCollapsed && (
+            <div className="transition-all duration-300">
+              <p className="text-sm font-extrabold text-white leading-tight tracking-tight">MCL Portal</p>
+              <span className={clsx('text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider mt-1 inline-block', {
+                'bg-red-500/10 text-red-400 border border-red-500/25': role === 'admin',
+                'bg-amber-500/10 text-amber-400 border border-amber-500/25': role === 'mentor',
+                'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25': role === 'student',
+                'bg-purple-500/10 text-purple-400 border border-purple-500/25': role === 'employee',
+                'bg-blue-500/10 text-blue-400 border border-blue-500/25': role === 'finance',
+              })}>{role}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+      {/* Nav List */}
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto custom-scrollbar">
         {navItems.map(item => {
           const isActive = pathname === item.href
           return (
             <Link key={item.href} href={item.href}
               className={clsx(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all duration-300 transform active:scale-[0.98]',
+                'group relative flex items-center rounded-xl text-sm transition-all duration-300 transform active:scale-[0.98]',
+                isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2.5',
                 isActive 
                   ? 'bg-emerald-500/10 text-emerald-400 font-semibold border-l-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
                   : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
               )}>
-              <item.icon className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-              {item.label}
+              <item.icon className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
+              
+              {/* Tooltip helper when collapsed */}
+              {isCollapsed && (
+                <div className="sidebar-tooltip absolute left-full ml-3 px-2 py-1 bg-gray-900/95 text-white text-[11px] font-semibold rounded-lg shadow-lg border border-white/10 whitespace-nowrap z-50 pointer-events-none">
+                  {item.label}
+                </div>
+              )}
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-3 border-t border-emerald-950/60">
-        <div className="flex items-center gap-2.5 px-2 py-2 mb-1.5 bg-emerald-950/20 rounded-xl border border-emerald-950/30">
+      {/* User Section & Collapse Toggle */}
+      <div className="p-3 border-t border-emerald-950/60 space-y-2">
+        <div className={clsx(
+          "flex items-center bg-emerald-950/20 rounded-xl border border-emerald-950/30",
+          isCollapsed ? "justify-center p-2" : "gap-2.5 px-2 py-2"
+        )}>
           <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm', roleColors[role])}>
             {userName?.charAt(0)?.toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-white truncate">{userName}</p>
-            <p className="text-[10px] text-slate-400 capitalize">{role}</p>
-          </div>
+          {!isCollapsed && (
+            <div className="min-w-0 transition-all duration-300">
+              <p className="text-xs font-semibold text-white truncate">{userName}</p>
+              <p className="text-[10px] text-slate-400 capitalize">{role}</p>
+            </div>
+          )}
         </div>
-        <button onClick={handleLogout}
-          className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 rounded-xl transition-all duration-300 font-medium">
-          Sign out
-        </button>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-1">
+          <button onClick={handleLogout}
+            className={clsx(
+              "text-left text-red-400 hover:bg-red-950/30 rounded-xl transition-all duration-300 font-medium",
+              isCollapsed ? "flex justify-center p-2.5" : "px-3 py-2 text-xs"
+            )}>
+            {isCollapsed ? "✕" : "Sign out"}
+          </button>
+
+          {/* Toggle Sidebar Collapse button */}
+          <button 
+            onClick={toggleCollapse}
+            className="w-full text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded-xl p-2 flex justify-center transition-colors mt-1"
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
     </aside>
   )
