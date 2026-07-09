@@ -124,6 +124,7 @@ export default function CreateUserPage() {
                 <option value="mentor">Mentor</option>
                 <option value="employee">Employee</option>
                 <option value="admin">Admin</option>
+                <option value="finance">Finance</option>
               </select>
             </div>
           </div>

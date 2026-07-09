@@ -18,22 +18,32 @@ import {
   ClipboardList,
   BookOpen,
   Mail,
-  FolderOpen
+  FolderOpen,
+  MessageSquare,
+  Clock,
+  DollarSign,
+  FileCheck,
+  Bell
 } from 'lucide-react'
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
 
 const navByRole: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard',     href: '/admin',              icon: Home },
-    { label: 'Applications',  href: '/admin/applications', icon: FileText },
-    { label: 'Interns',       href: '/admin/interns',      icon: Users },
-    { label: 'Departments',   href: '/admin/departments',  icon: Building2 },
-    { label: 'Bulk Onboard',  href: '/admin/bulk-onboarding', icon: FolderInput },
-    { label: 'Assign Mentor', href: '/admin/assign-mentor', icon: LinkIcon },
+    { label: 'Dashboard',         href: '/admin',                  icon: Home },
+    { label: 'Applications',      href: '/admin/applications',     icon: FileText },
+    { label: 'Interns',           href: '/admin/interns',          icon: Users },
+    { label: 'Departments',       href: '/admin/departments',      icon: Building2 },
+    { label: 'Bulk Onboard',      href: '/admin/bulk-onboarding',  icon: FolderInput },
+    { label: 'Assign Mentor',     href: '/admin/assign-mentor',    icon: LinkIcon },
     { label: 'Issue Certificate', href: '/admin/issue-certificate', icon: GraduationCap },
-    { label: 'Create User',   href: '/admin/create-user',  icon: UserPlus },
-    { label: 'Settings',      href: '/admin/settings',     icon: Settings },
+    { label: 'Verify Docs',       href: '/admin/documents',        icon: FileCheck },
+    { label: 'Confirm Extensions',href: '/admin/extension-requests',icon: Clock },
+    { label: 'Notice Board',      href: '/admin/notices',          icon: Bell },
+    { label: 'Grievances',        href: '/admin/grievances',       icon: Mail },
+    { label: 'Feedback Reports',  href: '/admin/feedback',         icon: MessageSquare },
+    { label: 'Create User',       href: '/admin/create-user',      icon: UserPlus },
+    { label: 'Settings',          href: '/admin/settings',         icon: Settings },
   ],
   mentor: [
     { label: 'Dashboard',      href: '/mentor',                    icon: Home },
@@ -41,6 +51,9 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Assignments',    href: '/mentor/assignments',        icon: ClipboardList },
     { label: 'Materials',      href: '/mentor/materials',           icon: FolderOpen },
     { label: 'Intern Reviews', href: '/mentor/intern-reviews',     icon: FileText },
+    { label: 'Extensions',     href: '/mentor/extension-requests', icon: Clock },
+    { label: 'Notice Board',   href: '/mentor/notices',            icon: Bell },
+    { label: 'Intern Feedback',href: '/mentor/intern-feedback',    icon: MessageSquare },
     { label: 'Approve Cert',   href: '/mentor/approve-certificate', icon: GraduationCap },
     { label: 'Settings',       href: '/mentor/settings',            icon: Settings },
   ],
@@ -51,18 +64,30 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Leave Apply',   href: '/student/leaves',      icon: Mail },
     { label: 'Assignments',   href: '/student/assignments', icon: ClipboardList },
     { label: 'Materials',     href: '/student/materials',   icon: FolderOpen },
+    { label: 'Upload Docs',   href: '/student/documents',   icon: FileCheck },
+    { label: 'Extension Apply',href: '/student/extension',  icon: Clock },
+    { label: 'Notice Board',   href: '/student/notices',     icon: Bell },
+    { label: 'My Stipend',    href: '/student/stipend',     icon: DollarSign },
+    { label: 'Feedback',      href: '/student/feedback',    icon: MessageSquare },
+    { label: 'Grievance',     href: '/student/grievance',   icon: Mail },
     { label: 'Certificate',   href: '/student/certificate', icon: GraduationCap },
     { label: 'Settings',      href: '/student/settings',    icon: Settings },
   ],
   employee: [
-    { label: 'Dashboard',  href: '/employee',        icon: Home },
-    { label: 'Review LoR', href: '/employee/review', icon: FileText },
-    { label: 'Settings',   href: '/employee/settings',icon: Settings },
+    { label: 'Dashboard',    href: '/employee',        icon: Home },
+    { label: 'Review LoR',   href: '/employee/review', icon: FileText },
+    { label: 'Notice Board', href: '/employee/notices',icon: Bell },
+    { label: 'Settings',     href: '/employee/settings',icon: Settings },
   ],
+  finance: [
+    { label: 'Dashboard',    href: '/finance',          icon: Home },
+    { label: 'Payments',     href: '/finance/payments', icon: DollarSign },
+    { label: 'Settings',     href: '/finance/settings', icon: Settings },
+  ]
 }
 
-const roleColors: Record<string, string> = { admin: 'bg-red-500', mentor: 'bg-amber-500', student: 'bg-green-600', employee: 'bg-purple-500' }
-const roleBadge: Record<string, string> = { admin: 'bg-red-50 text-red-700', mentor: 'bg-amber-50 text-amber-700', student: 'bg-green-50 text-green-700', employee: 'bg-purple-50 text-purple-700' }
+const roleColors: Record<string, string> = { admin: 'bg-red-500', mentor: 'bg-amber-500', student: 'bg-green-600', employee: 'bg-purple-500', finance: 'bg-blue-600' }
+const roleBadge: Record<string, string> = { admin: 'bg-red-50 text-red-700', mentor: 'bg-amber-50 text-amber-700', student: 'bg-green-50 text-green-700', employee: 'bg-purple-50 text-purple-700', finance: 'bg-blue-50 text-blue-700' }
 
 export default function Sidebar({ role, userName }: { role: string; userName: string }) {
   const pathname = usePathname()

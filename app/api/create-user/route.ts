@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
       if (internshipError) return NextResponse.json({ error: internshipError.message }, { status: 400 })
     }
 
-    // Send welcome email with login credentials for students, mentors, employees, and admins
-    if (role === 'student' || role === 'mentor' || role === 'employee' || role === 'admin') {
+    // Send welcome email with login credentials for students, mentors, employees, admins, and finance
+    if (role === 'student' || role === 'mentor' || role === 'employee' || role === 'admin' || role === 'finance') {
       try {
         if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
           const nodemailer = await import('nodemailer')
