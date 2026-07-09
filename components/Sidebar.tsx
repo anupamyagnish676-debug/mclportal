@@ -113,7 +113,7 @@ export default function Sidebar({ role, userName }: { role: string; userName: st
   }
 
   return (
-    <aside className="w-56 min-h-screen glass-panel flex flex-col fixed left-0 top-0 z-10 text-slate-300 select-none">
+    <aside className="w-56 h-screen glass-panel flex flex-col fixed left-0 top-0 z-10 text-slate-300 select-none">
       {/* Brand Header */}
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center gap-2.5">
