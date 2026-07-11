@@ -79,6 +79,50 @@ export default function FinancePaymentActions({ initialPayments }: FinancePaymen
     return map[status] || 'bg-gray-50 text-gray-600 border border-gray-200'
   }
 
+  function exportToCSV() {
+    const headers = [
+      'Advice Reference ID',
+      'Intern Name',
+      'University',
+      'Area',
+      'Department/Wing',
+      'Payout Period',
+      'Amount (INR)',
+      'Status',
+      'Transaction Ref (UTR)',
+    ]
+
+    const rows = filteredItems.map(p => [
+      p.id,
+      p.internship?.student?.full_name || 'N/A',
+      p.internship?.student?.university || 'N/A',
+      p.internship?.area || 'N/A',
+      p.internship?.student?.wing || 'N/A',
+      p.period_label,
+      p.amount,
+      p.status.toUpperCase(),
+      p.remarks || 'N/A',
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(val => {
+        const clean = String(val).replace(/"/g, '""')
+        return `"${clean}"`
+      }).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const dateStr = new Date().toISOString().slice(0, 10)
+    link.setAttribute('download', `MCL_Stipend_Disbursements_${filterStatus}_${dateStr}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="space-y-4">
       {/* Filters Bar */}
@@ -97,6 +141,16 @@ export default function FinancePaymentActions({ initialPayments }: FinancePaymen
             <option value="rejected">Rejected</option>
           </select>
         </div>
+
+        <button
+          onClick={exportToCSV}
+          className="bg-green-700 hover:bg-green-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export Report (Excel/CSV)
+        </button>
       </div>
 
       {/* Table */}
