@@ -253,6 +253,7 @@ export async function PATCH(req: NextRequest) {
             remarks,
             internship:internships(
               id,
+              serial_no,
               area,
               bank_name,
               bank_account_no,
@@ -266,7 +267,8 @@ export async function PATCH(req: NextRequest) {
         if (fullPayment) {
           const studentEmail = fullPayment.internship?.student?.email
           const studentName = fullPayment.internship?.student?.full_name
-          const internshipId = fullPayment.internship?.id
+          const serialNo = fullPayment.internship?.serial_no
+          const mclInternshipId = serialNo ? `MCL/HRD/INT/${serialNo}` : fullPayment.internship?.id
           const area = fullPayment.internship?.area
           const bankName = fullPayment.internship?.bank_name
           const accountNo = fullPayment.internship?.bank_account_no
@@ -320,7 +322,7 @@ export async function PATCH(req: NextRequest) {
                   <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
                     <tr style="background: #f9fafb;">
                       <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Internship ID</td>
-                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${internshipId}</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${mclInternshipId}</td>
                     </tr>
                     <tr>
                       <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Period</td>
