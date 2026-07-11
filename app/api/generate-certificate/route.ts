@@ -239,17 +239,17 @@ export async function POST(req: NextRequest) {
     const area = sanitizeText(internship.student?.area || 'Talcher')
 
     // Structured Centered Text Layout
-    drawCenteredText('This is to certify that', 385, 13, regularFont, rgb(0.4, 0.4, 0.4))
-    drawCenteredText(student.toUpperCase(), 350, 22, boldFont, rgb(0.06, 0.35, 0.18))
-    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 315, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('This is to certify that', 415, 13, regularFont, rgb(0.4, 0.4, 0.4))
+    drawCenteredText(student.toUpperCase(), 380, 22, boldFont, rgb(0.06, 0.35, 0.18))
+    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 345, 12, regularFont, rgb(0.2, 0.2, 0.2))
     
     const areaText = area === 'Headquarters' ? 'Headquarters' : `${area} Area`
-    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 290, 13, boldFont, rgb(0.2, 0.2, 0.2))
-    drawCenteredText('They have submitted a final project report titled', 255, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 320, 13, boldFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('They have submitted a final project report titled', 290, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Dynamically wrap project title if it is too long
     const wrappedTitle = wrapText(`"${projectTitle}"`, 620, 12, italicFont)
-    let titleY = 225
+    let titleY = 260
     for (const titleLine of wrappedTitle) {
       drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
       titleY -= 16
@@ -290,26 +290,6 @@ export async function POST(req: NextRequest) {
       console.error('Failed to generate QR Code:', e)
     }
 
-    // Draw Verification QR Code — bottom-right corner, clear of all body text and signatures
-    if (qrCodeImg) {
-      const qrSize = 52
-      const qrX = width - 90   // right margin (page width 842, inner border ends ~802)
-      const qrY = 88            // sits above signature lines at y=75
-      // Light background box so QR is always on white regardless of certificate colour
-      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
-      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.85, 0.85, 0.85), borderWidth: 0.5 })
-      page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
-      const scanLabel = 'Scan to Verify'
-      const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
-      page.drawText(scanLabel, {
-        x: qrX + (qrSize - scanLabelWidth) / 2,
-        y: qrY - 9,
-        size: 6,
-        font: italicFont,
-        color: rgb(0.5, 0.5, 0.5)
-      })
-    }
-
     // Load GM HRD signature
     const gmSigPath = path.join(process.cwd(), 'public', 'gm-signature.png')
     let gmSigImg = null
@@ -334,7 +314,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Load Admin dynamic signature (acting as Project Coordinator)
+    // Load Admin dynamic signature (acting as Area Training Officer)
     let adminSigImg = null
     if (adminSignatureData) {
       try {
@@ -361,56 +341,92 @@ export async function POST(req: NextRequest) {
     // ─── 8. Signatures + QR Section ───────────────────────────────────────
     // PAID (4 cols + QR centered):
     //   [Mentor x=132] [Area Training x=297] || QR center=421 || [Finance x=545] [GM HRD x=710]
-    // UNPAID (3 cols, QR centered):
-    //   [Mentor x=155] || QR center=421 || [Area Training x=421] [GM HRD x=687]
+    // UNPAID (3 cols, QR in bottom-right corner):
+    //   [Mentor x=155] [Area Training x=421] [GM HRD x=687]
     // ─────────────────────────────────────────────────────────────────────
 
-    const qrSize = 54
-    const qrCenterX = width / 2          // 421 — exact horizontal center
-    const qrX = qrCenterX - qrSize / 2   // top-left of QR image
-    const qrY = 83                        // above signature line (y=75)
+    if (isPaidIntern) {
+      // 1. Center QR code
+      const qrSize = 54
+      const qrCenterX = width / 2          // 421 — exact horizontal center
+      const qrX = qrCenterX - qrSize / 2   // top-left of QR image
+      const qrY = 70                        // moved downwards (top is 124)
 
-    // Draw QR Code centered for both paid and unpaid
-    if (qrCodeImg) {
-      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
-      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.75, 0.6, 0.21), borderWidth: 0.6 })
-      page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
-      const scanLabel = 'Scan to Verify'
-      const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
-      page.drawText(scanLabel, {
-        x: qrCenterX - scanLabelWidth / 2,
-        y: qrY - 9,
-        size: 6,
-        font: italicFont,
-        color: rgb(0.5, 0.5, 0.5)
-      })
-    }
-
-    // Signature column definitions
-    const sigCols = isPaidIntern
-      ? [
-          { x: 132, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg,  hw: 62 },
-          { x: 297, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,   hw: 62 },
-          { x: 545, label: 'Finance Officer',        sublabel: `(${financeOfficerName})`,     sigImg: financeSigImg, hw: 62 },
-          { x: 710, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,      hw: 62 },
-        ]
-      : [
-          { x: 155, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg, hw: 70 },
-          { x: 421, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,  hw: 70 },
-          { x: 687, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,     hw: 70 },
-        ]
-
-    for (const col of sigCols) {
-      if (col.sigImg) {
-        const sigWidth = 76
-        const sigHeight = sigWidth / 2.67
-        page.drawImage(col.sigImg, { x: col.x - sigWidth / 2, y: 80, width: sigWidth, height: sigHeight })
+      if (qrCodeImg) {
+        // Draw white background box
+        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
+        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.75, 0.6, 0.21), borderWidth: 0.6 })
+        page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+        
+        const scanLabel = 'Scan to Verify'
+        const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
+        page.drawText(scanLabel, {
+          x: qrCenterX - scanLabelWidth / 2,
+          y: 58, // aligns perfectly with other signature column titles
+          size: 6,
+          font: italicFont,
+          color: rgb(0.5, 0.5, 0.5)
+        })
       }
-      page.drawLine({ start: { x: col.x - col.hw, y: 75 }, end: { x: col.x + col.hw, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-      const titleW = boldFont.widthOfTextAtSize(col.label, 9)
-      page.drawText(col.label, { x: col.x - titleW / 2, y: 58, size: 9, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-      const subW = regularFont.widthOfTextAtSize(col.sublabel, 8)
-      page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+
+      // 2. Draw 4 signature columns
+      const sigCols = [
+        { x: 132, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg,  hw: 62 },
+        { x: 297, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,   hw: 62 },
+        { x: 545, label: 'Finance Officer',        sublabel: `(${financeOfficerName})`,     sigImg: financeSigImg, hw: 62 },
+        { x: 710, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,      hw: 62 },
+      ]
+
+      for (const col of sigCols) {
+        if (col.sigImg) {
+          const sigWidth = 76
+          const sigHeight = sigWidth / 2.67
+          page.drawImage(col.sigImg, { x: col.x - sigWidth / 2, y: 80, width: sigWidth, height: sigHeight })
+        }
+        page.drawLine({ start: { x: col.x - col.hw, y: 75 }, end: { x: col.x + col.hw, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+        const titleW = boldFont.widthOfTextAtSize(col.label, 9)
+        page.drawText(col.label, { x: col.x - titleW / 2, y: 58, size: 9, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+        const subW = regularFont.widthOfTextAtSize(col.sublabel, 8)
+        page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+      }
+    } else {
+      // Unpaid interns layout: 3 columns + QR code in the bottom-right corner
+      if (qrCodeImg) {
+        const qrSize = 52
+        const qrX = width - 90
+        const qrY = 88
+        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
+        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.85, 0.85, 0.85), borderWidth: 0.5 })
+        page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+        const scanLabel = 'Scan to Verify'
+        const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
+        page.drawText(scanLabel, {
+          x: qrX + (qrSize - scanLabelWidth) / 2,
+          y: qrY - 9,
+          size: 6,
+          font: italicFont,
+          color: rgb(0.5, 0.5, 0.5)
+        })
+      }
+
+      const sigCols = [
+        { x: 155, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg, hw: 70 },
+        { x: 421, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,  hw: 70 },
+        { x: 687, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,     hw: 70 },
+      ]
+
+      for (const col of sigCols) {
+        if (col.sigImg) {
+          const sigWidth = 76
+          const sigHeight = sigWidth / 2.67
+          page.drawImage(col.sigImg, { x: col.x - sigWidth / 2, y: 80, width: sigWidth, height: sigHeight })
+        }
+        page.drawLine({ start: { x: col.x - col.hw, y: 75 }, end: { x: col.x + col.hw, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
+        const titleW = boldFont.widthOfTextAtSize(col.label, 9)
+        page.drawText(col.label, { x: col.x - titleW / 2, y: 58, size: 9, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+        const subW = regularFont.widthOfTextAtSize(col.sublabel, 8)
+        page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+      }
     }
 
     const pdfBytes = await pdfDoc.save()

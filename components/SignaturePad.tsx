@@ -26,9 +26,6 @@ export default function SignaturePad({ existingSignature, onSaved }: SignaturePa
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.strokeStyle = '#1a1a1a'
-    // Fill white background so PNG export is not transparent
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
   }, [])
 
   function getPos(e: React.MouseEvent | React.TouchEvent) {
@@ -78,8 +75,7 @@ export default function SignaturePad({ existingSignature, onSaved }: SignaturePa
   function clearPad() {
     const canvas = canvasRef.current!
     const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     setHasDrawn(false)
     setMessage(null)
   }
