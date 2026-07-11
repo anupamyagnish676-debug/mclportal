@@ -122,7 +122,7 @@ export default async function InternsPage({
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100">
         {!filteredInternships.length ? (
           <div className="p-12 text-center text-gray-400 text-sm">
             {activeTab === 'active' ? 'No active internships found' : 'No completed internships found'}
