@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
   const redirect =
     role === 'admin' ? '/admin' :
     role === 'mentor' ? '/mentor' :
-    role === 'employee' ? '/employee' : '/student'
+    role === 'employee' ? '/employee' :
+    role === 'finance' ? '/finance' : '/student'
 
   const responseData = {
     role,
