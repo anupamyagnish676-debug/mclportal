@@ -70,9 +70,34 @@ export async function GET(req: NextRequest) {
 
     if (internsErr) throw internsErr
 
+    // 4. Fetch internships that are "paid" and are ALREADY verified
+    let verifiedQuery = adminClient
+      .from('internships')
+      .select(`
+        id,
+        stipend_amount,
+        stipend_frequency,
+        bank_name,
+        bank_account_no,
+        area,
+        student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
+      `)
+      .eq('internship_type', 'paid')
+      .eq('bank_details_status', 'verified')
+      .eq('is_active', true)
+
+    if (profile.area && profile.area !== 'Headquarters') {
+      verifiedQuery = verifiedQuery.eq('area', profile.area)
+    }
+
+    const { data: verifiedData, error: verifiedErr } = await verifiedQuery
+
+    if (verifiedErr) throw verifiedErr
+
     return NextResponse.json({
       payments: filteredPayments,
-      pending: internsData || []
+      pending: internsData || [],
+      verified: verifiedData || []
     })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

@@ -40,6 +40,7 @@ export default function FinanceDashboard() {
   // Dashboard stats & lists
   const [payments, setPayments] = useState<any[]>([])
   const [pendingInterns, setPendingInterns] = useState<any[]>([])
+  const [verifiedInterns, setVerifiedInterns] = useState<any[]>([])
   const [selectedIntern, setSelectedIntern] = useState<any | null>(null)
   const [internDocs, setInternDocs] = useState<any[]>([])
   const [docsLoading, setDocsLoading] = useState(false)
@@ -52,6 +53,11 @@ export default function FinanceDashboard() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // New payout cycle creation inputs
+  const [createInternId, setCreateInternId] = useState('')
+  const [createPeriod, setCreatePeriod] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
 
   // Payment cycle action states
   const [cycleRemarks, setCycleRemarks] = useState<Record<string, string>>({})
@@ -67,6 +73,7 @@ export default function FinanceDashboard() {
 
       setPayments(data.payments || [])
       setPendingInterns(data.pending || [])
+      setVerifiedInterns(data.verified || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load finance portal data')
     } finally {
@@ -170,6 +177,41 @@ export default function FinanceDashboard() {
       setError(err.message)
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  async function handleCreateCycle(e: React.FormEvent) {
+    e.preventDefault()
+    if (!createInternId || !createPeriod.trim()) {
+      setError('Please select an intern and specify a period.')
+      return
+    }
+
+    setCreateLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const res = await fetch('/api/stipend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          internship_id: createInternId,
+          period_label: createPeriod.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to initiate payout cycle')
+
+      setSuccess(`Stipend payout cycle for "${createPeriod}" initiated successfully!`)
+      setCreateInternId('')
+      setCreatePeriod('')
+      loadDashboardData()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setCreateLoading(false)
     }
   }
 
@@ -284,6 +326,64 @@ export default function FinanceDashboard() {
                 <p className="text-xs text-gray-500 mt-1">Rejected Cycles</p>
               </div>
             </div>
+          </div>
+
+          {/* Initiate Payout Cycle Form */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+            <div className="border-b border-gray-50 pb-2">
+              <h2 className="font-bold text-gray-800 text-sm">Initiate Payout Cycle</h2>
+              <p className="text-xs text-gray-400">Request monthly stipend payout for a verified paid intern.</p>
+            </div>
+            
+            {verifiedInterns.length === 0 ? (
+              <p className="text-xs text-gray-505 italic bg-slate-50 p-3 rounded-xl flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <span>No verified paid interns available in your area. Go to the <strong>Bank &amp; Doc Verification</strong> tab to verify student accounts first.</span>
+              </p>
+            ) : (
+              <form onSubmit={handleCreateCycle} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Select Intern
+                  </label>
+                  <select
+                    value={createInternId}
+                    onChange={(e) => setCreateInternId(e.target.value)}
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  >
+                    <option value="">-- Choose Intern --</option>
+                    {verifiedInterns.map((i: any) => (
+                      <option key={i.id} value={i.id}>
+                        {i.student?.full_name} ({fmtCurrency(i.stipend_amount)} / {i.stipend_frequency})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Payout Period (e.g. Month &amp; Year)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. July 2026"
+                    value={createPeriod}
+                    onChange={(e) => setCreatePeriod(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={createLoading}
+                    className="w-full bg-green-700 hover:bg-green-800 text-white rounded-xl py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {createLoading ? 'Requesting...' : 'Request Payout Cycle'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Payout Cycles Table */}

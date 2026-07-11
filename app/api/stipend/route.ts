@@ -78,37 +78,39 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'finance')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { internship_id, period_label, amount } = await req.json()
-    if (!internship_id || !period_label || !amount) {
-      return NextResponse.json({ error: 'Missing internship_id, period_label, or amount' }, { status: 400 })
+    if (!internship_id || !period_label) {
+      return NextResponse.json({ error: 'Missing internship_id or period_label' }, { status: 400 })
     }
 
     const adminClient = createAdminClient()
 
-    // Retrieve internship to check area match
+    // Retrieve internship to check area and stipend amount
     const { data: internship } = await adminClient
       .from('internships')
-      .select('area')
+      .select('area, stipend_amount')
       .eq('id', internship_id)
       .maybeSingle()
 
     if (!internship) return NextResponse.json({ error: 'Internship not found' }, { status: 404 })
 
-    // Area admin mismatch check
-    if (profile.area !== 'Headquarters' && internship.area !== profile.area) {
+    // Area mismatch check (for non-HQ officers)
+    if (profile.area && profile.area !== 'Headquarters' && internship.area !== profile.area) {
       return NextResponse.json({ error: 'Forbidden — Area mismatch' }, { status: 403 })
     }
+
+    const finalAmount = amount !== undefined ? parseFloat(amount) : (internship.stipend_amount || 0)
 
     const { error } = await adminClient
       .from('stipend_payments')
       .insert({
         internship_id,
         period_label,
-        amount,
+        amount: finalAmount,
         status: 'pending'
       })
 
