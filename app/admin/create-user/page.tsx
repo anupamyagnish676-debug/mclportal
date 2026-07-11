@@ -16,7 +16,8 @@ export default function CreateUserPage() {
     university: '', 
     serial_no: '',
     area: '',
-    employee_code: ''
+    employee_code: '',
+    internship_type: 'unpaid'
   })
   const [adminProfile, setAdminProfile] = useState<{ role: string; area: string | null } | null>(null)
   const [areas, setAreas] = useState<any[]>([])
@@ -92,7 +93,8 @@ export default function CreateUserPage() {
           university: '', 
           serial_no: '',
           employee_code: '',
-          area: adminProfile?.area !== 'Headquarters' ? (adminProfile?.area || '') : ''
+          area: adminProfile?.area !== 'Headquarters' ? (adminProfile?.area || '') : '',
+          internship_type: 'unpaid'
         })
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create user' })
@@ -188,6 +190,15 @@ export default function CreateUserPage() {
                     placeholder="e.g. IIT Kharagpur"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Internship Category</label>
+                <select value={form.internship_type} onChange={e => setForm({ ...form, internship_type: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="unpaid">Unpaid Internship</option>
+                  <option value="paid">Paid Internship</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

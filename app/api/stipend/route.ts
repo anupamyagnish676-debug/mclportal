@@ -135,12 +135,52 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden — Finance only' }, { status: 403 })
     }
 
-    const { payment_id, status, remarks } = await req.json()
+    const body = await req.json()
+    const { payment_id, status, remarks, internship_id, action, amount, frequency, rejection_reason } = body
+
+    const adminClient = createAdminClient()
+
+    if (action === 'verify_bank') {
+      if (!internship_id || !status) {
+        return NextResponse.json({ error: 'Missing internship_id or status' }, { status: 400 })
+      }
+
+      if (status === 'verified') {
+        if (amount === undefined || !frequency) {
+          return NextResponse.json({ error: 'Amount and frequency are required for verification' }, { status: 400 })
+        }
+        const { error } = await adminClient
+          .from('internships')
+          .update({
+            stipend_amount: parseFloat(amount) || 0,
+            stipend_frequency: frequency,
+            bank_details_status: 'verified',
+            bank_rejection_reason: null
+          })
+          .eq('id', internship_id)
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+        return NextResponse.json({ success: true })
+      } else if (status === 'rejected') {
+        const { error } = await adminClient
+          .from('internships')
+          .update({
+            bank_details_status: 'rejected',
+            bank_rejection_reason: rejection_reason || 'Bank details document could not be verified'
+          })
+          .eq('id', internship_id)
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+        return NextResponse.json({ success: true })
+      } else {
+        return NextResponse.json({ error: 'Invalid verification status' }, { status: 400 })
+      }
+    }
+
     if (!payment_id || !status) {
       return NextResponse.json({ error: 'Missing payment_id or status' }, { status: 400 })
     }
 
-    const adminClient = createAdminClient()
     const updateData: any = { status, remarks }
 
     if (status === 'approved') {

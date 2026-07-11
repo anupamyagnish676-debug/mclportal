@@ -91,44 +91,12 @@ export default function InternActions({
       const { error: updateError } = await supabase
         .from('internships')
         .update({
-          internship_type: type,
-          stipend_amount: type === 'paid' ? amount : 0,
-          stipend_frequency: frequency
+          internship_type: type
         })
         .eq('id', internshipId)
 
       if (updateError) throw new Error(updateError.message)
       setSuccess('Stipend configuration saved!')
-      router.refresh()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function addPaymentCycle() {
-    if (!period) {
-      setError('Please specify a period (e.g. July 2025).')
-      return
-    }
-    setLoading(true)
-    setError('')
-    setSuccess('')
-    try {
-      const res = await fetch('/api/stipend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          internship_id: internshipId,
-          period_label: period,
-          amount: parseFloat(cycleAmount) || 0
-        })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to request payment cycle')
-      setSuccess(`Stipend payment request submitted for ${period}!`)
-      setPeriod('')
       router.refresh()
     } catch (err: any) {
       setError(err.message)
@@ -189,63 +157,10 @@ export default function InternActions({
               </select>
             </div>
 
-            {/* Paid configurations */}
             {type === 'paid' && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Amount (₹)</label>
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
-                      className="w-full text-xs border border-gray-200 rounded-lg p-1 bg-white focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Frequency</label>
-                    <select
-                      value={frequency}
-                      onChange={(e) => setFrequency(e.target.value as any)}
-                      className="w-full text-xs border border-gray-200 rounded-lg p-1 bg-white focus:outline-none"
-                    >
-                      <option value="monthly">Monthly</option>
-                      <option value="lumpsum">Lumpsum</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Submit monthly payout cycle directly */}
-                {initialType === 'paid' && (
-                  <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 space-y-2 mt-2">
-                    <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Request Payout Cycle (Finance approval required)</span>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="e.g. July 2025"
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value)}
-                        className="text-[10px] border border-gray-200 rounded-lg p-1 focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Amount"
-                        value={cycleAmount}
-                        onChange={(e) => setCycleAmount(e.target.value)}
-                        className="text-[10px] border border-gray-200 rounded-lg p-1 focus:outline-none"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addPaymentCycle}
-                      disabled={loading}
-                      className="w-full bg-[#166534] hover:bg-[#155e2f] text-white text-[9px] font-bold py-1 rounded transition-colors"
-                    >
-                      Submit Payout Request
-                    </button>
-                  </div>
-                )}
-              </>
+              <p className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg leading-relaxed mt-2">
+                ℹ️ Student will be requested to submit their bank details. The Finance Dept will verify them and configure the stipend amount and frequency.
+              </p>
             )}
 
             <div className="flex gap-1.5 pt-2 justify-end border-t border-gray-100">

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     let currentSerial = maxSerial
 
     for (const student of students) {
-      const { full_name, email, password, wing, start_date, end_date, roll_no, university, area: studentArea } = student
+      const { full_name, email, password, wing, start_date, end_date, roll_no, university, area: studentArea, internship_type } = student
       const area = studentArea || defaultArea || null
 
       if (!email || !password || !full_name) {
@@ -87,7 +87,8 @@ export async function POST(req: NextRequest) {
           end_date: end_date || null,
           is_active: true,
           serial_no: serialStr,
-          area: area
+          area: area,
+          internship_type: (internship_type || 'unpaid').toLowerCase().trim()
         })
 
         if (internshipError) {

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { full_name, email, password, role, wing, start_date, end_date, roll_no, university, serial_no, area, employee_code } = await req.json()
+    const { full_name, email, password, role, wing, start_date, end_date, roll_no, university, serial_no, area, employee_code, internship_type } = await req.json()
 
     if (!email || !password || !full_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
         end_date,
         is_active: true,
         serial_no: nextSerialStr,
-        area: area || null
+        area: area || null,
+        internship_type: internship_type || 'unpaid'
       })
       if (internshipError) return NextResponse.json({ error: internshipError.message }, { status: 400 })
     }

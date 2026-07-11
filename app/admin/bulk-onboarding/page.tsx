@@ -47,8 +47,8 @@ export default function AdminBulkOnboardingPage() {
 
   // Helper to trigger blank CSV template download
   function downloadTemplate() {
-    const headers = 'full_name,email,password,roll_no,university,wing,start_date,end_date\n'
-    const sample = 'Rahul Sharma,rahul@example.com,Password@123,2021CSE088,KIIT University,Computer Science & IT,2026-07-01,2026-08-31\n'
+    const headers = 'full_name,email,password,roll_no,university,wing,start_date,end_date,internship_type\n'
+    const sample = 'Rahul Sharma,rahul@example.com,Password@123,2021CSE088,KIIT University,Computer Science & IT,2026-07-01,2026-08-31,paid\n'
     const blob = new Blob([headers + sample], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -294,6 +294,7 @@ export default function AdminBulkOnboardingPage() {
                       <th className="p-2.5 font-bold text-gray-500">University</th>
                       <th className="p-2.5 font-bold text-gray-500">Wing</th>
                       <th className="p-2.5 font-bold text-gray-500">Dates</th>
+                      <th className="p-2.5 font-bold text-gray-500">Category</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -305,6 +306,9 @@ export default function AdminBulkOnboardingPage() {
                         <td className="p-2.5 text-gray-600">{s.wing || '—'}</td>
                         <td className="p-2.5 text-gray-500">
                           {s.start_date || '—'} to {s.end_date || '—'}
+                        </td>
+                        <td className="p-2.5 text-gray-600 capitalize">
+                          {s.internship_type || 'unpaid'}
                         </td>
                       </tr>
                     ))}
