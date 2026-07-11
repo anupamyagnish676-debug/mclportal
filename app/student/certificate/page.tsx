@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
+import { createHmac } from 'crypto'
 
 export default async function StudentCertificatePage() {
   const supabase = await createClient()
@@ -13,7 +14,16 @@ export default async function StudentCertificatePage() {
 
   const host = headers().get('host') || 'localhost:3000'
   const protocol = host.startsWith('localhost') ? 'http' : 'https'
-  const verifyUrl = internship ? `${protocol}://${host}/verify/${internship.id}` : ''
+  
+  let verifyUrl = ''
+  if (internship && internship.serial_no) {
+    const hmacSecret = process.env.CERT_HMAC_SECRET || ''
+    const verifyToken = createHmac('sha256', hmacSecret)
+      .update(String(internship.serial_no))
+      .digest('hex')
+    verifyUrl = `${protocol}://${host}/verify/${verifyToken}`
+  }
+  
   const qrCodeUrl = verifyUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}` : ''
 
   return (
