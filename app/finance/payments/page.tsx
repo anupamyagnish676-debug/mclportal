@@ -27,7 +27,13 @@ export default async function FinancePaymentsPage() {
       *,
       internship:internships(
         area,
-        student:profiles!internships_student_id_fkey(full_name, university, wing)
+        serial_no,
+        bank_name,
+        bank_account_no,
+        bank_ifsc_code,
+        end_date,
+        stipend_frequency,
+        student:profiles!internships_student_id_fkey(full_name, email, university, wing)
       )
     `)
     .order('created_at', { ascending: false })
@@ -40,8 +46,15 @@ export default async function FinancePaymentsPage() {
     remarks: p.remarks || null,
     internship: {
       area: p.internship?.area || 'N/A',
+      serial_no: p.internship?.serial_no || null,
+      bank_name: p.internship?.bank_name || null,
+      bank_account_no: p.internship?.bank_account_no || null,
+      bank_ifsc_code: p.internship?.bank_ifsc_code || null,
+      end_date: p.internship?.end_date || null,
+      stipend_frequency: p.internship?.stipend_frequency || 'monthly',
       student: {
         full_name: p.internship?.student?.full_name || 'N/A',
+        email: p.internship?.student?.email || '',
         university: p.internship?.student?.university || 'N/A',
         wing: p.internship?.student?.wing || 'N/A'
       }
