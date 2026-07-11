@@ -107,6 +107,10 @@ export async function POST(req: NextRequest) {
               },
             })
 
+            const host = req.headers.get('host') || 'mcl-internship-portal-anupamyagnish676-4942s-projects.vercel.app'
+            const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https'
+            const portalUrl = `${protocol}://${host}`
+
             const htmlContent = `
               <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
                 <div style="background: #166534; padding: 24px 32px;">
@@ -157,7 +161,7 @@ export async function POST(req: NextRequest) {
                     <p style="margin: 0 0 8px; font-weight: 600; color: #374151;">Portal Login Credentials</p>
                     <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> ${email}</p>
                     <p style="margin: 4px 0; font-size: 14px;"><strong>Password:</strong> ${password}</p>
-                    <p style="margin: 8px 0 0; font-size: 14px;"><strong>Portal Link:</strong> <a href="https://mclportal-anupamyagnish676-4942s-projects.vercel.app" style="color: #166534; text-decoration: underline; font-weight: 600;">Click here to access the Portal</a></p>
+                    <p style="margin: 8px 0 0; font-size: 14px;"><strong>Portal Link:</strong> <a href="${portalUrl}" style="color: #166534; text-decoration: underline; font-weight: 600;">Click here to access the Portal</a></p>
                     <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">Please change your password after logging in for the first time.</p>
                   </div>
 
