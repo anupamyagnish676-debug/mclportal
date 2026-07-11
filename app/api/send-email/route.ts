@@ -5,35 +5,21 @@ export async function POST(req: NextRequest) {
   try {
     const { type, to, studentName } = await req.json()
 
-    let transporter
-    let senderEmail
-
-    if (process.env.BREVO_USER && process.env.BREVO_SMTP_KEY) {
-      transporter = nodemailer.createTransport({
-        host: 'smtp-relay.brevo.com',
-        port: 587,
-        auth: {
-          user: process.env.BREVO_USER,
-          pass: process.env.BREVO_SMTP_KEY,
-        },
-      })
-      senderEmail = process.env.SENDER_EMAIL || process.env.BREVO_USER
-    } else if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_PASS,
-        },
-      })
-      senderEmail = process.env.SENDER_EMAIL || process.env.GMAIL_USER
-    } else {
-      return NextResponse.json({ success: true, skipped: true, reason: 'Email service credentials not configured' })
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+      return NextResponse.json({ success: true, skipped: true, reason: 'GMAIL credentials not set' })
     }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
+      },
+    })
 
     if (type === 'joining_letter') {
       await transporter.sendMail({
-        from: `"MCL Internship Portal" <${senderEmail}>`,
+        from: `"MCL Internship Portal" <${process.env.GMAIL_USER}>`,
         to,
         subject: 'Internship Joining Letter — Mahanadi Coalfields Limited',
         html: `
