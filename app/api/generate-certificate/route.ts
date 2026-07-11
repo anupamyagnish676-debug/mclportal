@@ -282,23 +282,32 @@ export async function POST(req: NextRequest) {
         .update(String(internship.serial_no))
         .digest('hex')
       const verifyUrl = `${req.nextUrl.origin}/verify/${verifyToken}`
-      const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 })
+      // Use 300px resolution for reliable scanning when printed/viewed at small size
+      const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 2, width: 300, errorCorrectionLevel: 'H' })
       const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
       qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)
     } catch (e) {
       console.error('Failed to generate QR Code:', e)
     }
 
-    // Draw Verification QR Code centered horizontally above signature lines
+    // Draw Verification QR Code — bottom-right corner, clear of all body text and signatures
     if (qrCodeImg) {
-      const qrSize = 45
-      page.drawImage(qrCodeImg, {
-        x: (width - qrSize) / 2,
-        y: 130,
-        width: qrSize,
-        height: qrSize
+      const qrSize = 52
+      const qrX = width - 90   // right margin (page width 842, inner border ends ~802)
+      const qrY = 88            // sits above signature lines at y=75
+      // Light background box so QR is always on white regardless of certificate colour
+      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
+      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.85, 0.85, 0.85), borderWidth: 0.5 })
+      page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+      const scanLabel = 'Scan to Verify'
+      const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
+      page.drawText(scanLabel, {
+        x: qrX + (qrSize - scanLabelWidth) / 2,
+        y: qrY - 9,
+        size: 6,
+        font: italicFont,
+        color: rgb(0.5, 0.5, 0.5)
       })
-      drawCenteredText('Scan to Verify', 122, 6, italicFont, rgb(0.5, 0.5, 0.5))
     }
 
     // Load GM HRD signature
@@ -349,47 +358,57 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 8. Signatures Section
-    // For paid interns: 4 columns. For unpaid: 3 columns.
+    // ─── 8. Signatures + QR Section ───────────────────────────────────────
+    // PAID (4 cols + QR centered):
+    //   [Mentor x=132] [Area Training x=297] || QR center=421 || [Finance x=545] [GM HRD x=710]
+    // UNPAID (3 cols, QR centered):
+    //   [Mentor x=155] || QR center=421 || [Area Training x=421] [GM HRD x=687]
+    // ─────────────────────────────────────────────────────────────────────
+
+    const qrSize = 54
+    const qrCenterX = width / 2          // 421 — exact horizontal center
+    const qrX = qrCenterX - qrSize / 2   // top-left of QR image
+    const qrY = 83                        // above signature line (y=75)
+
+    // Draw QR Code centered for both paid and unpaid
+    if (qrCodeImg) {
+      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
+      page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.75, 0.6, 0.21), borderWidth: 0.6 })
+      page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+      const scanLabel = 'Scan to Verify'
+      const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
+      page.drawText(scanLabel, {
+        x: qrCenterX - scanLabelWidth / 2,
+        y: qrY - 9,
+        size: 6,
+        font: italicFont,
+        color: rgb(0.5, 0.5, 0.5)
+      })
+    }
+
+    // Signature column definitions
     const sigCols = isPaidIntern
       ? [
-          { x: 108, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg },
-          { x: 288, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg  },
-          { x: 468, label: 'Finance Officer',        sublabel: `(${financeOfficerName})`,     sigImg: financeSigImg },
-          { x: 648, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg      },
+          { x: 132, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg,  hw: 62 },
+          { x: 297, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,   hw: 62 },
+          { x: 545, label: 'Finance Officer',        sublabel: `(${financeOfficerName})`,     sigImg: financeSigImg, hw: 62 },
+          { x: 710, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,      hw: 62 },
         ]
       : [
-          { x: 155, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg },
-          { x: 421, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg  },
-          { x: 687, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg      },
+          { x: 155, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg, hw: 70 },
+          { x: 421, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg,  hw: 70 },
+          { x: 687, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg,     hw: 70 },
         ]
 
-    const colHalfWidth = isPaidIntern ? 75 : 75 // half of line width per column
-    const lineHalfWidth = isPaidIntern ? 75 : 75
-
     for (const col of sigCols) {
-      // Draw signature image if available
       if (col.sigImg) {
-        const sigWidth = 80
+        const sigWidth = 76
         const sigHeight = sigWidth / 2.67
-        page.drawImage(col.sigImg, {
-          x: col.x - sigWidth / 2,
-          y: 80,
-          width: sigWidth,
-          height: sigHeight,
-        })
+        page.drawImage(col.sigImg, { x: col.x - sigWidth / 2, y: 80, width: sigWidth, height: sigHeight })
       }
-      // Draw signature line
-      page.drawLine({
-        start: { x: col.x - lineHalfWidth, y: 75 },
-        end:   { x: col.x + lineHalfWidth, y: 75 },
-        color: rgb(0.6, 0.6, 0.6),
-        thickness: 1,
-      })
-      // Draw title
+      page.drawLine({ start: { x: col.x - col.hw, y: 75 }, end: { x: col.x + col.hw, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
       const titleW = boldFont.widthOfTextAtSize(col.label, 9)
       page.drawText(col.label, { x: col.x - titleW / 2, y: 58, size: 9, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-      // Draw sublabel
       const subW = regularFont.widthOfTextAtSize(col.sublabel, 8)
       page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
     }
