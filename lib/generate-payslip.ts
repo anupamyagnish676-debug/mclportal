@@ -82,6 +82,7 @@ function numberToWords(num: number): string {
 }
 
 interface PaySlipData {
+  paymentId: string
   studentName: string
   university: string
   wing: string
@@ -138,7 +139,8 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
     borderWidth: 1
   })
 
-  // 3. Load & Draw Logo
+  // 3. Load & Draw Logos
+  // Left Logo: MCL
   const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-new.png')
   let mclLogoImg: any = null
   try {
@@ -155,6 +157,27 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
       x: 40,
       y: height - 85,
       width: 70,
+      height: 40
+    })
+  }
+
+  // Right Logo: Coal India
+  const cilLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo-transparent.png')
+  let cilLogoImg: any = null
+  try {
+    if (fs.existsSync(cilLogoPath)) {
+      const bytes = fs.readFileSync(cilLogoPath)
+      cilLogoImg = await pdfDoc.embedPng(bytes)
+    }
+  } catch (e) {
+    console.error('Failed to embed CIL logo on payslip:', e)
+  }
+
+  if (cilLogoImg) {
+    page.drawImage(cilLogoImg, {
+      x: width - 40 - 40,
+      y: height - 85,
+      width: 40,
       height: 40
     })
   }
@@ -300,16 +323,12 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   drawRow('Disbursement Date', formatDate(data.disbursedAt))
 
   // 6. Signatures and Verification section
-  const footerY = 240
+  const footerY = 110
   
-  // Left: Verification QR code
+  // Left: Verification QR code (pointing to payslip authenticity route)
   let qrCodeImg = null
   try {
-    const hmacSecret = process.env.CERT_HMAC_SECRET || ''
-    const verifyToken = createHmac('sha256', hmacSecret)
-      .update(String(data.serialNo))
-      .digest('hex')
-    const verifyUrl = `${data.origin}/verify/${verifyToken}`
+    const verifyUrl = `${data.origin}/verify/stipend/${data.paymentId}`
     const qrCodeBase64 = await QRCode.toDataURL(verifyUrl, { margin: 2, width: 300, errorCorrectionLevel: 'H' })
     const qrCodePngBytes = Buffer.from(qrCodeBase64.split(',')[1], 'base64')
     qrCodeImg = await pdfDoc.embedPng(qrCodePngBytes)
@@ -318,7 +337,7 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   }
 
   if (qrCodeImg) {
-    const qrSize = 65
+    const qrSize = 55
     page.drawRectangle({
       x: 40 - 2,
       y: footerY - 2,
@@ -343,15 +362,15 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
     
     page.drawText('Scan to Verify', {
       x: 40,
-      y: footerY - 12,
-      size: 7,
+      y: footerY - 10,
+      size: 6.5,
       font: italicFont,
       color: rgb(0.4, 0.4, 0.4)
     })
-    page.drawText('Stipend Legitimacy', {
+    page.drawText('Payout Authenticity', {
       x: 40,
-      y: footerY - 22,
-      size: 7,
+      y: footerY - 18,
+      size: 6.5,
       font: italicFont,
       color: rgb(0.4, 0.4, 0.4)
     })
@@ -405,8 +424,8 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   const disclaimerText = 'This is a computer-generated stipend advice slip and does not require a physical stamp.'
   const disclaimerText2 = 'All disbursements are processed digitally after verification by the Finance Department.'
   
-  drawCenteredText(disclaimerText, 65, 8, italicFont, rgb(0.5, 0.5, 0.5))
-  drawCenteredText(disclaimerText2, 53, 8, italicFont, rgb(0.5, 0.5, 0.5))
+  drawCenteredText(disclaimerText, 50, 8, italicFont, rgb(0.5, 0.5, 0.5))
+  drawCenteredText(disclaimerText2, 38, 8, italicFont, rgb(0.5, 0.5, 0.5))
 
   const pdfBytes = await pdfDoc.save()
   return Buffer.from(pdfBytes)

@@ -309,6 +309,7 @@ export async function PATCH(req: NextRequest) {
           let pdfBuffer: Buffer | null = null
           try {
             pdfBuffer = await generatePaySlip({
+              paymentId: payment_id,
               studentName: studentName || 'Intern',
               university: fullPayment.internship?.student?.university || 'their respective institution',
               wing: fullPayment.internship?.student?.wing || 'Training Wing',
