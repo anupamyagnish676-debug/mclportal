@@ -61,67 +61,12 @@ export default function FinanceDashboard() {
     setLoading(true)
     setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const res = await fetch('/api/stipend/finance-data')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to load finance data')
 
-      // Fetch Finance Officer's area profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('area')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      // 1. Fetch monthly stipend payment cycle requests
-      const { data: paymentsData, error: paymentsErr } = await supabase
-        .from('stipend_payments')
-        .select(`
-          *,
-          internship:internships(
-            area,
-            student:profiles!internships_student_id_fkey(full_name, email, area)
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (paymentsErr) throw paymentsErr
-
-      // Filter payments to area if not Headquarters
-      let filteredPayments = paymentsData || []
-      if (profile?.area && profile.area !== 'Headquarters') {
-        filteredPayments = (paymentsData || []).filter(p => p.internship?.area === profile.area)
-      }
-      setPayments(filteredPayments)
-
-      // 2. Fetch internships that are "paid" and need bank account verification
-      let internsQuery = supabase
-        .from('internships')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          internship_type,
-          bank_name,
-          bank_account_no,
-          bank_ifsc_code,
-          bank_document_url,
-          bank_details_status,
-          bank_rejection_reason,
-          area,
-          student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
-        `)
-        .eq('internship_type', 'paid')
-        .neq('bank_details_status', 'verified')
-
-      if (profile?.area && profile.area !== 'Headquarters') {
-        internsQuery = internsQuery.eq('area', profile.area)
-      }
-
-      const { data: internsData, error: internsErr } = await internsQuery
-        .order('bank_details_status', { ascending: false }) // show submitted first
-
-      if (internsErr) throw internsErr
-      setPendingInterns(internsData || [])
-
+      setPayments(data.payments || [])
+      setPendingInterns(data.pending || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load finance portal data')
     } finally {

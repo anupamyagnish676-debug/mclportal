@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const adminClient = createAdminClient()
+
+    // 1. Fetch Finance Officer's profile area
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('role, area')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!profile || profile.role !== 'finance') {
+      return NextResponse.json({ error: 'Forbidden — Finance only' }, { status: 403 })
+    }
+
+    // 2. Fetch monthly stipend payment cycle requests
+    const { data: paymentsData, error: paymentsErr } = await adminClient
+      .from('stipend_payments')
+      .select(`
+        *,
+        internship:internships(
+          area,
+          student:profiles!internships_student_id_fkey(full_name, email, area)
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (paymentsErr) throw paymentsErr
+
+    // Filter payments to area if not Headquarters
+    let filteredPayments = paymentsData || []
+    if (profile.area && profile.area !== 'Headquarters') {
+      filteredPayments = (paymentsData || []).filter(p => p.internship?.area === profile.area)
+    }
+
+    // 3. Fetch internships that are "paid" and need bank account verification
+    let internsQuery = adminClient
+      .from('internships')
+      .select(`
+        id,
+        start_date,
+        end_date,
+        internship_type,
+        bank_name,
+        bank_account_no,
+        bank_ifsc_code,
+        bank_document_url,
+        bank_details_status,
+        bank_rejection_reason,
+        area,
+        student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
+      `)
+      .eq('internship_type', 'paid')
+      .neq('bank_details_status', 'verified')
+
+    if (profile.area && profile.area !== 'Headquarters') {
+      internsQuery = internsQuery.eq('area', profile.area)
+    }
+
+    const { data: internsData, error: internsErr } = await internsQuery
+      .order('bank_details_status', { ascending: false }) // show submitted first
+
+    if (internsErr) throw internsErr
+
+    return NextResponse.json({
+      payments: filteredPayments,
+      pending: internsData || []
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
