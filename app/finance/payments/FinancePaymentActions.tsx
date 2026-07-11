@@ -32,6 +32,8 @@ export default function FinancePaymentActions({ initialPayments }: FinancePaymen
 
   // Filter local state
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterPeriod, setFilterPeriod] = useState<string>('all')
+  const [searchName, setSearchName] = useState<string>('')
 
   async function handleStatusUpdate(id: string, status: 'approved' | 'disbursed' | 'rejected') {
     setSaving(true)
@@ -65,9 +67,28 @@ export default function FinancePaymentActions({ initialPayments }: FinancePaymen
   }
 
   const filteredItems = items.filter(i => {
-    if (filterStatus === 'all') return true
-    return i.status === filterStatus
+    // Status filter
+    if (filterStatus !== 'all' && i.status !== filterStatus) return false
+    
+    // Period filter
+    if (filterPeriod !== 'all' && i.period_label !== filterPeriod) return false
+    
+    // Search Name filter
+    if (searchName.trim() !== '') {
+      const studentName = i.internship?.student?.full_name || ''
+      if (!studentName.toLowerCase().includes(searchName.toLowerCase())) return false
+    }
+    
+    return true
   })
+
+  // Unique list of periods for dropdown filter
+  const uniquePeriods = Array.from(new Set(items.map(item => item.period_label))).sort()
+
+  // Cumulative disbursed sum for currently filtered set
+  const totalPaidFiltered = filteredItems
+    .filter(i => i.status === 'disbursed')
+    .reduce((sum, i) => sum + i.amount, 0)
 
   function statusBadge(status: string) {
     const map: Record<string, string> = {
@@ -125,32 +146,83 @@ export default function FinancePaymentActions({ initialPayments }: FinancePaymen
 
   return (
     <div className="space-y-4">
-      {/* Filters Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Filter Status</label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-xs border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:border-green-600"
-          >
-            <option value="all">All Payments</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="disbursed">Disbursed</option>
-            <option value="rejected">Rejected</option>
-          </select>
+      {/* Filters & Search Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:border-green-600"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="disbursed">Disbursed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          {/* Month/Period Filter */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Period</label>
+            <select
+              value={filterPeriod}
+              onChange={(e) => setFilterPeriod(e.target.value)}
+              className="text-xs border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:border-green-600"
+            >
+              <option value="all">All Months</option>
+              {uniquePeriods.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Intern Name Search Input */}
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Search Student</label>
+            <input
+              type="text"
+              placeholder="Type intern name..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="text-xs border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:border-green-600 w-44"
+            />
+          </div>
+
         </div>
 
         <button
           onClick={exportToCSV}
-          className="bg-green-700 hover:bg-green-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm"
+          className="bg-green-700 hover:bg-green-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm self-end md:self-auto"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
           Export Report (Excel/CSV)
         </button>
+      </div>
+
+      {/* Summary Statistics Panel */}
+      <div className="bg-emerald-50/40 border border-emerald-100/50 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-3 gap-4 shadow-sm">
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Matched Payments</p>
+          <h3 className="text-base font-bold text-gray-800">{filteredItems.length} records</h3>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Disbursed (Cumulative)</p>
+          <h3 className="text-base font-bold text-green-700">
+            ₹{totalPaidFiltered.toLocaleString('en-IN')}
+          </h3>
+        </div>
+        <div className="col-span-2 md:col-span-1 flex items-center justify-end">
+          <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100/60 px-3 py-1 rounded-full border border-emerald-200/50">
+            {searchName ? `Scoped: "${searchName}"` : 'Real-time Calculations'}
+          </span>
+        </div>
       </div>
 
       {/* Table */}
