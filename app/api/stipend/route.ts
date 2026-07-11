@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import nodemailer from 'nodemailer'
+import { generatePaySlip } from '@/lib/generate-payslip'
 
 export async function GET(req: NextRequest) {
   try {
@@ -146,7 +147,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, area')
+      .select('role, area, full_name, signature_data')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -251,14 +252,18 @@ export async function PATCH(req: NextRequest) {
             period_label,
             amount,
             remarks,
+            disbursed_at,
             internship:internships(
               id,
               serial_no,
               area,
               bank_name,
               bank_account_no,
+              bank_ifsc_code,
+              start_date,
+              end_date,
               mentor_id,
-              student:profiles!internships_student_id_fkey(full_name, email)
+              student:profiles!internships_student_id_fkey(full_name, email, university, wing, area)
             )
           `)
           .eq('id', payment_id)
@@ -300,6 +305,31 @@ export async function PATCH(req: NextRequest) {
             if (mentor?.email) ccEmails.push(mentor.email)
           }
 
+          // Generate Stipend Receipt (Pay Slip) PDF
+          let pdfBuffer: Buffer | null = null
+          try {
+            pdfBuffer = await generatePaySlip({
+              studentName: studentName || 'Intern',
+              university: fullPayment.internship?.student?.university || 'their respective institution',
+              wing: fullPayment.internship?.student?.wing || 'Training Wing',
+              serialNo: serialNo || 'N/A',
+              startDate: fullPayment.internship?.start_date,
+              endDate: fullPayment.internship?.end_date,
+              periodLabel: period,
+              amount: amount,
+              bankName: bankName || 'N/A',
+              accountNo: accountNo || 'N/A',
+              ifscCode: fullPayment.internship?.bank_ifsc_code || 'N/A',
+              utr: utr,
+              disbursedAt: fullPayment.disbursed_at || new Date().toISOString(),
+              financeOfficerName: profile?.full_name || 'Finance Officer',
+              financeOfficerSignature: profile?.signature_data || null,
+              origin: req.nextUrl.origin
+            })
+          } catch (pdfErr) {
+            console.error('Failed to generate stipend payslip PDF:', pdfErr)
+          }
+
           const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
@@ -310,6 +340,13 @@ export async function PATCH(req: NextRequest) {
             to: studentEmail,
             cc: ccEmails.length > 0 ? ccEmails.join(',') : undefined,
             subject: `Stipend Disbursed for ${period} — Mahanadi Coalfields Limited`,
+            attachments: pdfBuffer ? [
+              {
+                filename: `Stipend_PaySlip_${period.replace(/\s+/g, '_')}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf'
+              }
+            ] : undefined,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
                 <div style="background: #166534; padding: 24px 32px; color: #fff;">
@@ -318,7 +355,7 @@ export async function PATCH(req: NextRequest) {
                 </div>
                 <div style="padding: 32px; color: #374151;">
                   <p>Dear <strong>${studentName}</strong>,</p>
-                  <p>We are pleased to inform you that your stipend for the period <strong>${period}</strong> has been successfully disbursed to your registered bank account.</p>
+                  <p>We are pleased to inform you that your stipend for the period <strong>${period}</strong> has been successfully disbursed to your registered bank account. We have attached your payment advice slip (Pay Slip) to this email.</p>
                   <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
                     <tr style="background: #f9fafb;">
                       <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Internship ID</td>
