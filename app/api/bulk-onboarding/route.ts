@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
               const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https'
               return `${protocol}://${host}`
             })()
-            const portalUrl = `${siteBase}/login`
+const portalUrl = `${siteBase}/login`
+            const isPaidIntern = (internship_type || 'unpaid').toLowerCase().trim() === 'paid'
 
             const htmlContent = `
               <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
@@ -144,6 +145,10 @@ export async function POST(req: NextRequest) {
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb;"><strong>${serialStr}</strong></td>
                     </tr>
                     <tr style="background: #f0fdf4;">
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; width: 40%;">Internship Type</td>
+                      <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: ${isPaidIntern ? '#166534' : '#374151'};">${isPaidIntern ? '✅ Paid Internship (Stipend Eligible)' : 'Unpaid Internship'}</td>
+                    </tr>
+                    <tr style="background: #f0fdf4;">
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; width: 40%;">Training Place</td>
                       <td style="padding: 10px 16px; border: 1px solid #e5e7eb; font-weight: 600; color: #166534;">${area || 'General'} Area, MCL</td>
                     </tr>
@@ -168,6 +173,36 @@ export async function POST(req: NextRequest) {
                     <p style="margin: 8px 0 0; font-size: 14px;"><strong>Portal Link:</strong> <a href="${portalUrl}" style="color: #166534; text-decoration: underline; font-weight: 600;">Click here to access the Portal</a></p>
                     <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">Please change your password after logging in for the first time.</p>
                   </div>
+
+                  ${isPaidIntern ? `
+                  <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 10px; padding: 18px 20px; margin: 24px 0; font-family: Arial, sans-serif;">
+                    <p style="margin: 0 0 10px; font-weight: 700; color: #92400e; font-size: 15px;">&#9888; Action Required - Paid Internship Stipend Onboarding</p>
+                    <p style="margin: 0 0 12px; font-size: 13px; color: #78350f;">
+                      You have been registered as a <strong>Paid Intern</strong> at Mahanadi Coalfields Limited and are eligible for monthly stipend. 
+                      To enable stipend disbursement, you must complete the following steps immediately after logging in to the portal:
+                    </p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                      <tr style="background: #fef3c7;">
+                        <td style="padding: 10px 14px; border: 1px solid #fcd34d; font-weight: 700; width: 20%; color: #78350f;">Step 1</td>
+                        <td style="padding: 10px 14px; border: 1px solid #fcd34d; color: #374151;">
+                          Go to <strong>"Upload Docs"</strong> section in your dashboard and upload the required identity/onboarding documents 
+                          (e.g., Aadhar Card, College ID, Undertaking Letter, etc.)
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 14px; border: 1px solid #fcd34d; font-weight: 700; color: #78350f;">Step 2</td>
+                        <td style="padding: 10px 14px; border: 1px solid #fcd34d; color: #374151;">
+                          Go to <strong>"My Stipend"</strong> section in your dashboard and submit your bank account details 
+                          (Bank Name, Account Number, IFSC Code, Cancelled Cheque / Passbook copy) for Finance Department verification.
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">
+                      &#9203; <strong>Stipend payments will only be processed after both steps are completed and verified by the Finance Department.</strong>
+                      Please complete this at the earliest to avoid delays.
+                    </p>
+                  </div>
+                  ` : ''}
 
                   <p>You are requested to report to the training office of the concerned wing at <strong>${area || 'Talcher'} Area</strong> on your start date.</p>
                   <p>We wish you a productive and enriching internship experience.</p>
