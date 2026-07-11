@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
           pass: process.env.BREVO_SMTP_KEY,
         },
       })
-      senderEmail = process.env.BREVO_USER
+      senderEmail = process.env.SENDER_EMAIL || process.env.BREVO_USER
     } else if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
       transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           pass: process.env.GMAIL_PASS,
         },
       })
-      senderEmail = process.env.GMAIL_USER
+      senderEmail = process.env.SENDER_EMAIL || process.env.GMAIL_USER
     } else {
       return NextResponse.json({ success: true, skipped: true, reason: 'Email service credentials not configured' })
     }
