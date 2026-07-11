@@ -6,6 +6,28 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import path from 'path'
 import QRCode from 'qrcode'
+import { Jimp } from 'jimp'
+
+// Helper to strip white background from signature images using Jimp
+async function makeTransparent(base64Str: string): Promise<Buffer> {
+  const base64Data = base64Str.includes(',') ? base64Str.split(',')[1] : base64Str
+  const imageBuffer = Buffer.from(base64Data, 'base64')
+  
+  const image = await Jimp.read(imageBuffer)
+  
+  // Replace white/near-white pixels with transparent ones
+  image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
+    const r = image.bitmap.data[idx + 0]
+    const g = image.bitmap.data[idx + 1]
+    const b = image.bitmap.data[idx + 2]
+    
+    if (r > 240 && g > 240 && b > 240) {
+      image.bitmap.data[idx + 3] = 0 // Alpha = 0
+    }
+  })
+  
+  return await image.getBuffer('image/png')
+}
 
 // Helper function to wrap text
 function wrapText(text: string, maxWidth: number, size: number, font: any) {
@@ -306,11 +328,15 @@ export async function POST(req: NextRequest) {
     let mentorSigImg = null
     if (internship.mentor?.signature_data) {
       try {
-        const base64Data = internship.mentor.signature_data.split(',')[1]
-        const signatureBuffer = Buffer.from(base64Data, 'base64')
-        mentorSigImg = await pdfDoc.embedPng(signatureBuffer)
+        const transparentBuffer = await makeTransparent(internship.mentor.signature_data)
+        mentorSigImg = await pdfDoc.embedPng(transparentBuffer)
       } catch (e) {
-        console.error('Failed to embed Mentor signature:', e)
+        console.error('Failed to embed Mentor signature with transparency:', e)
+        try {
+          const base64Data = internship.mentor.signature_data.split(',')[1]
+          const signatureBuffer = Buffer.from(base64Data, 'base64')
+          mentorSigImg = await pdfDoc.embedPng(signatureBuffer)
+        } catch (_) {}
       }
     }
 
@@ -318,11 +344,15 @@ export async function POST(req: NextRequest) {
     let adminSigImg = null
     if (adminSignatureData) {
       try {
-        const base64Data = adminSignatureData.split(',')[1]
-        const signatureBuffer = Buffer.from(base64Data, 'base64')
-        adminSigImg = await pdfDoc.embedPng(signatureBuffer)
+        const transparentBuffer = await makeTransparent(adminSignatureData)
+        adminSigImg = await pdfDoc.embedPng(transparentBuffer)
       } catch (e) {
-        console.error('Failed to embed Admin signature:', e)
+        console.error('Failed to embed Admin signature with transparency:', e)
+        try {
+          const base64Data = adminSignatureData.split(',')[1]
+          const signatureBuffer = Buffer.from(base64Data, 'base64')
+          adminSigImg = await pdfDoc.embedPng(signatureBuffer)
+        } catch (_) {}
       }
     }
 
@@ -330,11 +360,15 @@ export async function POST(req: NextRequest) {
     let financeSigImg = null
     if (isPaidIntern && financeOfficerSignatureData) {
       try {
-        const base64Data = financeOfficerSignatureData.split(',')[1]
-        const signatureBuffer = Buffer.from(base64Data, 'base64')
-        financeSigImg = await pdfDoc.embedPng(signatureBuffer)
+        const transparentBuffer = await makeTransparent(financeOfficerSignatureData)
+        financeSigImg = await pdfDoc.embedPng(transparentBuffer)
       } catch (e) {
-        console.error('Failed to embed Finance Officer signature:', e)
+        console.error('Failed to embed Finance Officer signature with transparency:', e)
+        try {
+          const base64Data = financeOfficerSignatureData.split(',')[1]
+          const signatureBuffer = Buffer.from(base64Data, 'base64')
+          financeSigImg = await pdfDoc.embedPng(signatureBuffer)
+        } catch (_) {}
       }
     }
 
