@@ -85,6 +85,26 @@ export async function POST(req: NextRequest) {
     if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 400 })
     if (!internship) return NextResponse.json({ error: 'Internship not found' }, { status: 404 })
 
+    const isPaidIntern = internship.internship_type === 'paid'
+
+    // Fetch Finance Officer for the student's area (for paid interns)
+    let financeOfficerName = ''
+    let financeOfficerSignatureData: string | null = null
+    if (isPaidIntern) {
+      const studentArea = internship.student?.area
+      if (studentArea) {
+        const { data: financeProfile } = await adminClient
+          .from('profiles')
+          .select('full_name, signature_data')
+          .eq('role', 'finance')
+          .eq('area', studentArea)
+          .limit(1)
+          .maybeSingle() as { data: any }
+        financeOfficerName = sanitizeText(financeProfile?.full_name || 'Finance Officer')
+        financeOfficerSignatureData = financeProfile?.signature_data || null
+      }
+    }
+
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage([842, 595])
     const { width, height } = page.getSize()
@@ -238,6 +258,19 @@ export async function POST(req: NextRequest) {
     const nextY = titleY - 10
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
+    // For paid interns: add stipend acknowledgment line
+    if (isPaidIntern) {
+      const stipendY = nextY - 22
+      drawCenteredText(
+        'During the tenure, the intern was entitled to and received a monthly stipend as per MCL norms,',
+        stipendY, 11, italicFont, rgb(0.35, 0.35, 0.35)
+      )
+      drawCenteredText(
+        'duly verified and disbursed by the Finance Department.',
+        stipendY - 14, 11, italicFont, rgb(0.35, 0.35, 0.35)
+      )
+    }
+
     // Generate QR Code dynamically
     // Security: Use HMAC-SHA256(secret, serial_no) as the verification token.
     // This is unguessable without the server secret — prevents enumeration attacks (IDOR).
@@ -304,63 +337,62 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 8. Signatures Section at the Bottom (Three Columns)
-    // Left Side - Mentor
-    if (mentorSigImg) {
-      const sigWidth = 90
-      const sigHeight = sigWidth / 2.67
-      page.drawImage(mentorSigImg, {
-        x: 155 - (sigWidth / 2), // centered on line x:80..230
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
-      })
+    // Load Finance Officer signature (paid interns only)
+    let financeSigImg = null
+    if (isPaidIntern && financeOfficerSignatureData) {
+      try {
+        const base64Data = financeOfficerSignatureData.split(',')[1]
+        const signatureBuffer = Buffer.from(base64Data, 'base64')
+        financeSigImg = await pdfDoc.embedPng(signatureBuffer)
+      } catch (e) {
+        console.error('Failed to embed Finance Officer signature:', e)
+      }
     }
-    page.drawLine({ start: { x: 80, y: 75 }, end: { x: 230, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    const mentorTitle = 'Project Mentor'
-    const mentorTitleWidth = boldFont.widthOfTextAtSize(mentorTitle, 10)
-    page.drawText(mentorTitle, { x: 155 - (mentorTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-    const mentorLabel = `(${mentorName})`
-    const mentorLabelWidth = regularFont.widthOfTextAtSize(mentorLabel, 9)
-    page.drawText(mentorLabel, { x: 155 - (mentorLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
-    // Center Side - Project Coordinator (Admin)
-    if (adminSigImg) {
-      const sigWidth = 90
-      const sigHeight = sigWidth / 2.67
-      page.drawImage(adminSigImg, {
-        x: 421 - (sigWidth / 2), // centered on line x:346..496
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
-      })
-    }
-    page.drawLine({ start: { x: 346, y: 75 }, end: { x: 496, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    const adminTitle = 'Area Training Officer'
-    const adminTitleWidth = boldFont.widthOfTextAtSize(adminTitle, 10)
-    page.drawText(adminTitle, { x: 421 - (adminTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-    const adminLabel = `(${adminName})`
-    const adminLabelWidth = regularFont.widthOfTextAtSize(adminLabel, 9)
-    page.drawText(adminLabel, { x: 421 - (adminLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
+    // 8. Signatures Section
+    // For paid interns: 4 columns. For unpaid: 3 columns.
+    const sigCols = isPaidIntern
+      ? [
+          { x: 108, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg },
+          { x: 288, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg  },
+          { x: 468, label: 'Finance Officer',        sublabel: `(${financeOfficerName})`,     sigImg: financeSigImg },
+          { x: 648, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg      },
+        ]
+      : [
+          { x: 155, label: 'Project Mentor',        sublabel: `(${mentorName})`,             sigImg: mentorSigImg },
+          { x: 421, label: 'Area Training Officer',  sublabel: `(${adminName})`,              sigImg: adminSigImg  },
+          { x: 687, label: 'General Manager (HRD)',  sublabel: 'Mahanadi Coalfields Limited', sigImg: gmSigImg      },
+        ]
 
-    // Right Side - GM (HRD)
-    if (gmSigImg) {
-      const sigWidth = 100
-      const sigHeight = sigWidth / 2.90
-      page.drawImage(gmSigImg, {
-        x: 687 - (sigWidth / 2), // centered on line x:612..762
-        y: 80,
-        width: sigWidth,
-        height: sigHeight
+    const colHalfWidth = isPaidIntern ? 75 : 75 // half of line width per column
+    const lineHalfWidth = isPaidIntern ? 75 : 75
+
+    for (const col of sigCols) {
+      // Draw signature image if available
+      if (col.sigImg) {
+        const sigWidth = 80
+        const sigHeight = sigWidth / 2.67
+        page.drawImage(col.sigImg, {
+          x: col.x - sigWidth / 2,
+          y: 80,
+          width: sigWidth,
+          height: sigHeight,
+        })
+      }
+      // Draw signature line
+      page.drawLine({
+        start: { x: col.x - lineHalfWidth, y: 75 },
+        end:   { x: col.x + lineHalfWidth, y: 75 },
+        color: rgb(0.6, 0.6, 0.6),
+        thickness: 1,
       })
+      // Draw title
+      const titleW = boldFont.widthOfTextAtSize(col.label, 9)
+      page.drawText(col.label, { x: col.x - titleW / 2, y: 58, size: 9, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
+      // Draw sublabel
+      const subW = regularFont.widthOfTextAtSize(col.sublabel, 8)
+      page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
     }
-    page.drawLine({ start: { x: 612, y: 75 }, end: { x: 762, y: 75 }, color: rgb(0.6, 0.6, 0.6), thickness: 1 })
-    const gmTitle = 'General Manager (HRD)'
-    const gmTitleWidth = boldFont.widthOfTextAtSize(gmTitle, 10)
-    page.drawText(gmTitle, { x: 687 - (gmTitleWidth / 2), y: 58, size: 10, font: boldFont, color: rgb(0.2, 0.2, 0.2) })
-    const coLabel = 'Mahanadi Coalfields Limited'
-    const coLabelWidth = regularFont.widthOfTextAtSize(coLabel, 9)
-    page.drawText(coLabel, { x: 687 - (coLabelWidth / 2), y: 44, size: 9, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
 
     const pdfBytes = await pdfDoc.save()
     const pdfBuffer = Buffer.from(pdfBytes)
