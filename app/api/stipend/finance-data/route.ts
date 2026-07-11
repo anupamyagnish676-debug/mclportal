@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
       .from('internships')
       .select(`
         id,
+        serial_no,
         created_at,
         stipend_amount,
         stipend_frequency,

@@ -390,7 +390,7 @@ export default function FinanceDashboard() {
                       <option value="">-- Choose Intern --</option>
                       {verifiedInterns.map((i: any) => (
                         <option key={i.id} value={i.id}>
-                          {i.student?.full_name} · ID: {i.id.slice(0, 8)}… · {fmtCurrency(i.stipend_amount)}/{i.stipend_frequency}
+                          {i.student?.full_name} · MCL/HRD/INT/{i.serial_no ?? '?'} · {fmtCurrency(i.stipend_amount)}/{i.stipend_frequency}
                         </option>
                       ))}
                     </select>
