@@ -88,14 +88,18 @@ export default function InternActions({
     setError('')
     setSuccess('')
     try {
-      const { error: updateError } = await supabase
-        .from('internships')
-        .update({
+      const res = await fetch('/api/admin/update-internship', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          internshipId,
           internship_type: type
         })
-        .eq('id', internshipId)
+      })
 
-      if (updateError) throw new Error(updateError.message)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update category')
+
       setSuccess('Stipend configuration saved!')
       router.refresh()
     } catch (err: any) {
