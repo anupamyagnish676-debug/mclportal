@@ -127,7 +127,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, area')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -143,6 +143,19 @@ export async function PATCH(req: NextRequest) {
     if (action === 'verify_bank') {
       if (!internship_id || !status) {
         return NextResponse.json({ error: 'Missing internship_id or status' }, { status: 400 })
+      }
+
+      // Check area mismatch for non-HQ Finance officers
+      const { data: internship } = await adminClient
+        .from('internships')
+        .select('area')
+        .eq('id', internship_id)
+        .maybeSingle()
+
+      if (!internship) return NextResponse.json({ error: 'Internship not found' }, { status: 404 })
+
+      if (profile.area && profile.area !== 'Headquarters' && internship.area !== profile.area) {
+        return NextResponse.json({ error: 'Forbidden — Area mismatch' }, { status: 403 })
       }
 
       if (status === 'verified') {
@@ -179,6 +192,19 @@ export async function PATCH(req: NextRequest) {
 
     if (!payment_id || !status) {
       return NextResponse.json({ error: 'Missing payment_id or status' }, { status: 400 })
+    }
+
+    // Check area mismatch for non-HQ Finance officers on payment cycles
+    const { data: paymentRecord } = await adminClient
+      .from('stipend_payments')
+      .select('*, internship:internships(area)')
+      .eq('id', payment_id)
+      .maybeSingle()
+
+    if (!paymentRecord) return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
+
+    if (profile.area && profile.area !== 'Headquarters' && paymentRecord.internship?.area !== profile.area) {
+      return NextResponse.json({ error: 'Forbidden — Area mismatch' }, { status: 403 })
     }
 
     const updateData: any = { status, remarks }

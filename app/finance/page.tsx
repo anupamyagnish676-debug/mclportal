@@ -64,6 +64,13 @@ export default function FinanceDashboard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Fetch Finance Officer's area profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('area')
+        .eq('id', user.id)
+        .maybeSingle()
+
       // 1. Fetch monthly stipend payment cycle requests
       const { data: paymentsData, error: paymentsErr } = await supabase
         .from('stipend_payments')
@@ -77,10 +84,16 @@ export default function FinanceDashboard() {
         .order('created_at', { ascending: false })
 
       if (paymentsErr) throw paymentsErr
-      setPayments(paymentsData || [])
+
+      // Filter payments to area if not Headquarters
+      let filteredPayments = paymentsData || []
+      if (profile?.area && profile.area !== 'Headquarters') {
+        filteredPayments = (paymentsData || []).filter(p => p.internship?.area === profile.area)
+      }
+      setPayments(filteredPayments)
 
       // 2. Fetch internships that are "paid" and need bank account verification
-      const { data: internsData, error: internsErr } = await supabase
+      let internsQuery = supabase
         .from('internships')
         .select(`
           id,
@@ -93,10 +106,17 @@ export default function FinanceDashboard() {
           bank_document_url,
           bank_details_status,
           bank_rejection_reason,
+          area,
           student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
         `)
         .eq('internship_type', 'paid')
         .neq('bank_details_status', 'verified')
+
+      if (profile?.area && profile.area !== 'Headquarters') {
+        internsQuery = internsQuery.eq('area', profile.area)
+      }
+
+      const { data: internsData, error: internsErr } = await internsQuery
         .order('bank_details_status', { ascending: false }) // show submitted first
 
       if (internsErr) throw internsErr
