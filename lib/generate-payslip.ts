@@ -140,7 +140,28 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   })
 
   // 3. Load & Draw Logos
-  // Left Logo: MCL
+  // Left Logo: Ministry of Coal
+  const ministryLogoPath = path.join(process.cwd(), 'public', 'ministry-of-coal-logo.png')
+  let ministryLogoImg: any = null
+  try {
+    if (fs.existsSync(ministryLogoPath)) {
+      const bytes = fs.readFileSync(ministryLogoPath)
+      ministryLogoImg = await pdfDoc.embedPng(bytes)
+    }
+  } catch (e) {
+    console.error('Failed to embed Ministry of Coal logo on payslip:', e)
+  }
+
+  if (ministryLogoImg) {
+    page.drawImage(ministryLogoImg, {
+      x: 40,
+      y: height - 85,
+      width: 70,
+      height: 40
+    })
+  }
+
+  // Right Logo: MCL
   const mclLogoPath = path.join(process.cwd(), 'public', 'mcl-logo-new.png')
   let mclLogoImg: any = null
   try {
@@ -154,30 +175,9 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
 
   if (mclLogoImg) {
     page.drawImage(mclLogoImg, {
-      x: 40,
+      x: width - 40 - 70, // 595 - 40 - 70 = 485
       y: height - 85,
       width: 70,
-      height: 40
-    })
-  }
-
-  // Right Logo: Coal India
-  const cilLogoPath = path.join(process.cwd(), 'public', 'coal-india-logo-transparent.png')
-  let cilLogoImg: any = null
-  try {
-    if (fs.existsSync(cilLogoPath)) {
-      const bytes = fs.readFileSync(cilLogoPath)
-      cilLogoImg = await pdfDoc.embedPng(bytes)
-    }
-  } catch (e) {
-    console.error('Failed to embed CIL logo on payslip:', e)
-  }
-
-  if (cilLogoImg) {
-    page.drawImage(cilLogoImg, {
-      x: width - 40 - 40,
-      y: height - 85,
-      width: 40,
       height: 40
     })
   }
@@ -217,7 +217,7 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   const boxTop = height - 145
   const boxLeft = 40
   const boxWidth = width - 80
-  const boxHeight = 440
+  const boxHeight = 465
 
   // Draw light gray table box
   page.drawRectangle({
@@ -319,6 +319,7 @@ export async function generatePaySlip(data: PaySlipData): Promise<Buffer> {
   drawRow('Bank coordinates', `${data.bankName} (A/C ending ****${lastFour})`)
   drawRow('IFSC Code', data.ifscCode)
   drawRow('Transaction Ref / UTR', data.utr)
+  drawRow('Advice Reference ID', data.paymentId)
   drawRow('Status', 'DISBURSED / SUCCESS')
   drawRow('Disbursement Date', formatDate(data.disbursedAt))
 
