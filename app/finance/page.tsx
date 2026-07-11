@@ -459,7 +459,7 @@ export default function FinanceDashboard() {
                             {p.internship?.student?.email || ''}
                           </p>
                           <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
-                            ID: {p.internship_id}
+                            MCL/HRD/INT/{p.internship?.serial_no ?? '—'}
                           </p>
                         </td>
                         <td className="px-5 py-4 text-xs text-gray-600">

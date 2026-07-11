@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
           *,
           internship:internships(
             area,
+            serial_no,
             student:profiles!internships_student_id_fkey(full_name, university, wing)
           )
         `)
