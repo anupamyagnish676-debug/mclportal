@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
       `)
       .eq('internship_type', 'paid')
-      .neq('bank_details_status', 'verified')
+      .or('bank_details_status.is.null, bank_details_status.neq.verified')
 
     if (profile.area && profile.area !== 'Headquarters') {
       internsQuery = internsQuery.eq('area', profile.area)
