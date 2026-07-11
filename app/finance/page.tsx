@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   DollarSign,
@@ -53,6 +53,7 @@ export default function FinanceDashboard() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null)
 
   // New payout cycle creation inputs
   const [createInternId, setCreateInternId] = useState('')
@@ -444,6 +445,60 @@ export default function FinanceDashboard() {
                     </button>
                   </div>
                 </div>
+
+                {/* Selected Intern Bank Account Details Box */}
+                {(() => {
+                  if (!createInternId) return null
+                  const intern = verifiedInterns.find((i: any) => i.id === createInternId)
+                  if (!intern || !intern.bank_account_no) return null
+                  return (
+                    <div className="bg-blue-50/50 border border-blue-100/70 rounded-xl p-4 mt-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-800">🏦 Bank Details for Fund Transfer</span>
+                        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-bold uppercase">Stipend Account</span>
+                        <span className="text-[10px] text-gray-400 ml-auto">Initiate bank transfer using these coordinates</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Beneficiary Name</p>
+                          <p className="font-bold text-gray-900 mt-0.5">{intern.student?.full_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Bank Name</p>
+                          <p className="font-bold text-gray-900 mt-0.5">{intern.bank_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Account Number</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="font-mono font-bold text-gray-900 tracking-wider">{intern.bank_account_no}</p>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(intern.bank_account_no || '')}
+                              className="text-[9px] text-blue-600 hover:text-blue-800 font-bold border border-blue-200 rounded px-1.5 py-0.5 hover:bg-blue-50 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">IFSC Code</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="font-mono font-bold text-gray-900 tracking-widest">{intern.bank_ifsc_code || 'N/A'}</p>
+                            {intern.bank_ifsc_code && (
+                              <button
+                                type="button"
+                                onClick={() => navigator.clipboard.writeText(intern.bank_ifsc_code || '')}
+                                className="text-[9px] text-blue-600 hover:text-blue-800 font-bold border border-blue-200 rounded px-1.5 py-0.5 hover:bg-blue-50 transition-colors"
+                              >
+                                Copy
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
               </form>
             )}
           </div>
@@ -469,88 +524,168 @@ export default function FinanceDashboard() {
                       <th className="px-5 py-3 text-right">Amount</th>
                       <th className="px-5 py-3 text-center">Status</th>
                       <th className="px-5 py-3">Actions &amp; Remarks</th>
+                      <th className="px-5 py-3 text-center">Bank Account</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-gray-900 text-xs leading-tight">
-                            {p.internship?.student?.full_name || '—'}
-                          </p>
-                          <p className="text-[10px] text-gray-400 mt-0.5">
-                            {p.internship?.student?.email || ''}
-                          </p>
-                          <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
-                            MCL/HRD/INT/{p.internship?.serial_no ?? '—'}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 text-xs text-gray-600">
-                          {p.internship?.area} Area
-                        </td>
-                        <td className="px-5 py-4 text-xs text-gray-600">{p.period_label}</td>
-                        <td className="px-5 py-4 text-right text-xs font-bold text-gray-800">
-                          {fmtCurrency(p.amount || 0)}
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusBadge(p.status)}`}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          {p.status === 'pending' && (
-                            <div className="flex flex-col gap-2 max-w-xs">
-                              <input
-                                type="text"
-                                placeholder="Add optional remarks..."
-                                value={cycleRemarks[p.id] || ''}
-                                onChange={(e) => setCycleRemarks(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none"
-                              />
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleCycleAction(p.id, 'approved')}
-                                  disabled={cycleLoading[p.id]}
-                                  className="px-2 py-1 text-[10px] bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => handleCycleAction(p.id, 'rejected')}
-                                  disabled={cycleLoading[p.id]}
-                                  className="px-2 py-1 text-[10px] bg-red-600 text-white font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {p.status === 'approved' && (
-                            <div className="flex flex-col gap-2 max-w-xs">
-                              <input
-                                type="text"
-                                placeholder="Add payment reference / remarks..."
-                                value={cycleRemarks[p.id] || ''}
-                                onChange={(e) => setCycleRemarks(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none"
-                              />
+                    {payments.map((p) => {
+                      const isExpanded = expandedCycleId === p.id
+                      return (
+                        <Fragment key={p.id}>
+                          <tr className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-5 py-4">
+                              <p className="font-semibold text-gray-900 text-xs leading-tight">
+                                {p.internship?.student?.full_name || '—'}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {p.internship?.student?.email || ''}
+                              </p>
+                              <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
+                                MCL/HRD/INT/{p.internship?.serial_no ?? '—'}
+                              </p>
+                            </td>
+                            <td className="px-5 py-4 text-xs text-gray-600">
+                              {p.internship?.area} Area
+                            </td>
+                            <td className="px-5 py-4 text-xs text-gray-600">{p.period_label}</td>
+                            <td className="px-5 py-4 text-right text-xs font-bold text-gray-800">
+                              {fmtCurrency(p.amount || 0)}
+                            </td>
+                            <td className="px-5 py-4 text-center">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusBadge(p.status)}`}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              {p.status === 'pending' && (
+                                <div className="flex flex-col gap-2 max-w-xs">
+                                  <input
+                                    type="text"
+                                    placeholder="Add optional remarks..."
+                                    value={cycleRemarks[p.id] || ''}
+                                    onChange={(e) => setCycleRemarks(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleCycleAction(p.id, 'approved')}
+                                      disabled={cycleLoading[p.id]}
+                                      className="px-2 py-1 text-[10px] bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleCycleAction(p.id, 'rejected')}
+                                      disabled={cycleLoading[p.id]}
+                                      className="px-2 py-1 text-[10px] bg-red-600 text-white font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              {p.status === 'approved' && (
+                                <div className="flex flex-col gap-2 max-w-xs">
+                                  <input
+                                    type="text"
+                                    placeholder="Add payment reference / remarks..."
+                                    value={cycleRemarks[p.id] || ''}
+                                    onChange={(e) => setCycleRemarks(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none"
+                                  />
+                                  <button
+                                    onClick={() => handleCycleAction(p.id, 'disbursed')}
+                                    disabled={cycleLoading[p.id]}
+                                    className="w-fit px-3 py-1 text-[10px] bg-green-600 text-white font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                                  >
+                                    Mark Disbursed
+                                  </button>
+                                </div>
+                              )}
+                              {(p.status === 'disbursed' || p.status === 'rejected') && (
+                                <p className="text-xs text-gray-500 italic max-w-xs truncate">
+                                  {p.remarks || '—'}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 text-center">
                               <button
-                                onClick={() => handleCycleAction(p.id, 'disbursed')}
-                                disabled={cycleLoading[p.id]}
-                                className="w-fit px-3 py-1 text-[10px] bg-green-600 text-white font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                                type="button"
+                                onClick={() => setExpandedCycleId(isExpanded ? null : p.id)}
+                                className={`text-xs font-bold px-2 py-1 rounded border transition-colors ${
+                                  isExpanded
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                }`}
                               >
-                                Mark Disbursed
+                                🏦 {isExpanded ? 'Hide' : 'View'}
                               </button>
-                            </div>
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                            <tr className="bg-blue-50/20 border-b border-blue-100/50">
+                              <td colSpan={7} className="px-5 py-4">
+                                <div className="bg-white rounded-2xl border border-blue-100/40 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-xs font-bold text-gray-800">🏦 Bank account details for Transfer</span>
+                                    <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-bold uppercase">Stipend Account</span>
+                                    {p.internship?.bank_account_no && (
+                                      <span className="text-[10px] text-gray-400 ml-auto">Copy coordinates to transfer funds</span>
+                                    )}
+                                  </div>
+
+                                  {!p.internship?.bank_account_no ? (
+                                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                      ⚠ Bank account details not available for this intern.
+                                    </p>
+                                  ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                      <div>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Beneficiary Name</p>
+                                        <p className="font-bold text-gray-900 mt-0.5">{p.internship?.student?.full_name}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Bank Name</p>
+                                        <p className="font-bold text-gray-900 mt-0.5">{p.internship?.bank_name || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Account Number</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <p className="font-mono font-bold text-gray-900 tracking-wider">{p.internship?.bank_account_no}</p>
+                                          <button
+                                            type="button"
+                                            onClick={() => navigator.clipboard.writeText(p.internship?.bank_account_no || '')}
+                                            className="text-[9px] text-blue-600 hover:text-blue-800 font-bold border border-blue-200 rounded px-1.5 py-0.5 hover:bg-blue-50 transition-colors"
+                                          >
+                                            Copy
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">IFSC Code</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <p className="font-mono font-bold text-gray-900 tracking-widest">{p.internship?.bank_ifsc_code || 'N/A'}</p>
+                                          {p.internship?.bank_ifsc_code && (
+                                            <button
+                                              type="button"
+                                              onClick={() => navigator.clipboard.writeText(p.internship?.bank_ifsc_code || '')}
+                                              className="text-[9px] text-blue-600 hover:text-blue-800 font-bold border border-blue-200 rounded px-1.5 py-0.5 hover:bg-blue-50 transition-colors"
+                                            >
+                                              Copy
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                          {(p.status === 'disbursed' || p.status === 'rejected') && (
-                            <p className="text-xs text-gray-500 italic max-w-xs truncate">
-                              {p.remarks || '—'}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
         *,
         internship:internships(
           area,
+          serial_no,
+          bank_name,
+          bank_account_no,
+          bank_ifsc_code,
+          end_date,
           student:profiles!internships_student_id_fkey(full_name, email, area)
         )
       `)
@@ -83,6 +88,7 @@ export async function GET(req: NextRequest) {
         stipend_frequency,
         bank_name,
         bank_account_no,
+        bank_ifsc_code,
         area,
         student:profiles!internships_student_id_fkey(id, full_name, email, area, wing),
         stipend_payments(created_at)
