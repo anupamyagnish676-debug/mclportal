@@ -75,12 +75,14 @@ export async function GET(req: NextRequest) {
       .from('internships')
       .select(`
         id,
+        created_at,
         stipend_amount,
         stipend_frequency,
         bank_name,
         bank_account_no,
         area,
-        student:profiles!internships_student_id_fkey(id, full_name, email, area, wing)
+        student:profiles!internships_student_id_fkey(id, full_name, email, area, wing),
+        stipend_payments(created_at)
       `)
       .eq('internship_type', 'paid')
       .eq('bank_details_status', 'verified')
@@ -94,10 +96,22 @@ export async function GET(req: NextRequest) {
 
     if (verifiedErr) throw verifiedErr
 
+    const verifiedWithPaymentDate = (verifiedData || []).map((intern: any) => {
+      const payments = intern.stipend_payments || []
+      const latest = payments.sort((a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )[0]
+      return {
+        ...intern,
+        latest_payment_date: latest?.created_at || null,
+        stipend_payments: undefined // remove raw array from response
+      }
+    })
+
     return NextResponse.json({
       payments: filteredPayments,
       pending: internsData || [],
-      verified: verifiedData || []
+      verified: verifiedWithPaymentDate
     })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

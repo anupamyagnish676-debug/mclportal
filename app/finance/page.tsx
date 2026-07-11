@@ -59,6 +59,18 @@ export default function FinanceDashboard() {
   const [createPeriod, setCreatePeriod] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
 
+  // Generate last 12 months as dropdown options (current month first)
+  const monthOptions = (() => {
+    const months = []
+    const now = new Date()
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const label = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+      months.push(label)
+    }
+    return months
+  })()
+
   // Payment cycle action states
   const [cycleRemarks, setCycleRemarks] = useState<Record<string, string>>({})
   const [cycleLoading, setCycleLoading] = useState<Record<string, boolean>>({})
@@ -341,46 +353,73 @@ export default function FinanceDashboard() {
                 <span>No verified paid interns available in your area. Go to the <strong>Bank &amp; Doc Verification</strong> tab to verify student accounts first.</span>
               </p>
             ) : (
-              <form onSubmit={handleCreateCycle} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Select Intern
-                  </label>
-                  <select
-                    value={createInternId}
-                    onChange={(e) => setCreateInternId(e.target.value)}
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">-- Choose Intern --</option>
-                    {verifiedInterns.map((i: any) => (
-                      <option key={i.id} value={i.id}>
-                        {i.student?.full_name} ({fmtCurrency(i.stipend_amount)} / {i.stipend_frequency})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Payout Period (e.g. Month &amp; Year)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. July 2026"
-                    value={createPeriod}
-                    onChange={(e) => setCreatePeriod(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                  />
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    disabled={createLoading}
-                    className="w-full bg-green-700 hover:bg-green-800 text-white rounded-xl py-2 text-xs font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {createLoading ? 'Requesting...' : 'Request Payout Cycle'}
-                  </button>
+              <form onSubmit={handleCreateCycle} className="space-y-4">
+                {/* Warning banner — shown when selected intern was paid within last 30 days */}
+                {(() => {
+                  if (!createInternId) return null
+                  const intern = verifiedInterns.find((i: any) => i.id === createInternId)
+                  if (!intern?.latest_payment_date) return null
+                  const daysSince = Math.floor(
+                    (Date.now() - new Date(intern.latest_payment_date).getTime()) / (1000 * 60 * 60 * 24)
+                  )
+                  if (daysSince >= 30) return null
+                  return (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">
+                        <strong>Warning:</strong> A stipend payout cycle was already initiated for this student{' '}
+                        <strong>{daysSince} day{daysSince !== 1 ? 's' : ''} ago</strong>{' '}
+                        (on {new Date(intern.latest_payment_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}).
+                        Please verify before proceeding.
+                      </p>
+                    </div>
+                  )
+                })()}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                      Select Intern
+                    </label>
+                    <select
+                      value={createInternId}
+                      onChange={(e) => setCreateInternId(e.target.value)}
+                      required
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                    >
+                      <option value="">-- Choose Intern --</option>
+                      {verifiedInterns.map((i: any) => (
+                        <option key={i.id} value={i.id}>
+                          {i.student?.full_name} · ID: {i.id.slice(0, 8)}… · {fmtCurrency(i.stipend_amount)}/{i.stipend_frequency}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                      Payout Month &amp; Year
+                    </label>
+                    <select
+                      value={createPeriod}
+                      onChange={(e) => setCreatePeriod(e.target.value)}
+                      required
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                    >
+                      <option value="">-- Select Month --</option>
+                      {monthOptions.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={createLoading}
+                      className="w-full bg-green-700 hover:bg-green-800 text-white rounded-xl py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {createLoading ? 'Requesting...' : 'Request Payout Cycle'}
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
@@ -418,6 +457,9 @@ export default function FinanceDashboard() {
                           </p>
                           <p className="text-[10px] text-gray-400 mt-0.5">
                             {p.internship?.student?.email || ''}
+                          </p>
+                          <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
+                            ID: {p.internship_id}
                           </p>
                         </td>
                         <td className="px-5 py-4 text-xs text-gray-600">

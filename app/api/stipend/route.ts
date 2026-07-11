@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import nodemailer from 'nodemailer'
 
 export async function GET(req: NextRequest) {
   try {
@@ -104,6 +105,21 @@ export async function POST(req: NextRequest) {
     }
 
     const finalAmount = amount !== undefined ? parseFloat(amount) : (internship.stipend_amount || 0)
+
+    // Check for duplicate period — block if same internship + period_label already exists
+    const { data: existingCycle } = await adminClient
+      .from('stipend_payments')
+      .select('id')
+      .eq('internship_id', internship_id)
+      .eq('period_label', period_label)
+      .maybeSingle()
+
+    if (existingCycle) {
+      return NextResponse.json(
+        { error: `Stipend cycle for "${period_label}" has already been requested for this student.` },
+        { status: 400 }
+      )
+    }
 
     const { error } = await adminClient
       .from('stipend_payments')
@@ -223,6 +239,119 @@ export async function PATCH(req: NextRequest) {
       .eq('id', payment_id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    // --- Send disbursement email when status is 'disbursed' ---
+    if (status === 'disbursed' && process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+      try {
+        // Fetch full payment + internship + student + mentor details
+        const { data: fullPayment } = await adminClient
+          .from('stipend_payments')
+          .select(`
+            period_label,
+            amount,
+            remarks,
+            internship:internships(
+              id,
+              area,
+              bank_name,
+              bank_account_no,
+              mentor_id,
+              student:profiles!internships_student_id_fkey(full_name, email)
+            )
+          `)
+          .eq('id', payment_id)
+          .maybeSingle() as { data: any }
+
+        if (fullPayment) {
+          const studentEmail = fullPayment.internship?.student?.email
+          const studentName = fullPayment.internship?.student?.full_name
+          const internshipId = fullPayment.internship?.id
+          const area = fullPayment.internship?.area
+          const bankName = fullPayment.internship?.bank_name
+          const accountNo = fullPayment.internship?.bank_account_no
+          const lastFour = accountNo ? accountNo.slice(-4) : '****'
+          const amount = fullPayment.amount
+          const period = fullPayment.period_label
+          const utr = fullPayment.remarks || 'N/A'
+
+          // Collect CC recipients: Area Admins + Mentor
+          const ccEmails: string[] = []
+
+          // Fetch area admins
+          if (area) {
+            const { data: areaAdmins } = await adminClient
+              .from('profiles')
+              .select('email')
+              .eq('role', 'admin')
+              .eq('area', area)
+            areaAdmins?.forEach((a: any) => { if (a.email) ccEmails.push(a.email) })
+          }
+
+          // Fetch mentor
+          if (fullPayment.internship?.mentor_id) {
+            const { data: mentor } = await adminClient
+              .from('profiles')
+              .select('email')
+              .eq('id', fullPayment.internship.mentor_id)
+              .maybeSingle()
+            if (mentor?.email) ccEmails.push(mentor.email)
+          }
+
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+          })
+
+          await transporter.sendMail({
+            from: `"MCL Internship Portal" <${process.env.GMAIL_USER}>`,
+            to: studentEmail,
+            cc: ccEmails.length > 0 ? ccEmails.join(',') : undefined,
+            subject: `Stipend Disbursed for ${period} — Mahanadi Coalfields Limited`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                <div style="background: #166534; padding: 24px 32px; color: #fff;">
+                  <h2 style="margin: 0;">Mahanadi Coalfields Limited</h2>
+                  <p style="margin: 4px 0 0; font-size: 12px; opacity: 0.8;">Stipend Disbursement Notification</p>
+                </div>
+                <div style="padding: 32px; color: #374151;">
+                  <p>Dear <strong>${studentName}</strong>,</p>
+                  <p>We are pleased to inform you that your stipend for the period <strong>${period}</strong> has been successfully disbursed to your registered bank account.</p>
+                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+                    <tr style="background: #f9fafb;">
+                      <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Internship ID</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${internshipId}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Period</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${period}</td>
+                    </tr>
+                    <tr style="background: #f9fafb;">
+                      <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Amount Disbursed</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb; color: #166534; font-weight: bold;">₹${amount?.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Bank</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${bankName || 'N/A'} (A/C ending ****${lastFour})</td>
+                    </tr>
+                    <tr style="background: #f9fafb;">
+                      <td style="padding: 10px 14px; font-weight: bold; border: 1px solid #e5e7eb;">Transaction Ref / UTR</td>
+                      <td style="padding: 10px 14px; border: 1px solid #e5e7eb;">${utr}</td>
+                    </tr>
+                  </table>
+                  <p style="font-size: 13px; color: #6b7280;">Please verify the credit in your bank account using the UTR reference number above. If you have any queries, please contact the Finance Department.</p>
+                  <br/>
+                  <p>Regards,<br/><strong>Finance Department</strong><br/>Mahanadi Coalfields Limited</p>
+                </div>
+              </div>
+            `,
+          })
+        }
+      } catch (emailErr: any) {
+        // Email failure should not block the disbursement response
+        console.error('Disbursement email failed:', emailErr.message)
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
