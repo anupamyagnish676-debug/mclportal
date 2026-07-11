@@ -97,9 +97,10 @@ export async function POST(req: NextRequest) {
             },
           })
 
-          const host = req.headers.get('host') || 'mcl-internship-portal-ctvzcbhae-anupamyagnish676-4942s-projects.vercel.app'
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+          const host = req.headers.get('host') || 'mcl-internship-portal-hp9qt2mhb-anupamyagnish676-4942s-projects.vercel.app'
           const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https'
-          const portalUrl = `${protocol}://${host}`
+          const portalUrl = siteUrl || `${protocol}://${host}`
 
           const isStudent = role === 'student'
           const subject = isStudent
