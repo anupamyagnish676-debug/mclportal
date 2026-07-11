@@ -77,6 +77,8 @@ export async function GET(req: NextRequest) {
         id,
         serial_no,
         created_at,
+        start_date,
+        end_date,
         stipend_amount,
         stipend_frequency,
         bank_name,

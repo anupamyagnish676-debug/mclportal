@@ -59,17 +59,37 @@ export default function FinanceDashboard() {
   const [createPeriod, setCreatePeriod] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
 
-  // Generate last 12 months as dropdown options (current month first)
-  const monthOptions = (() => {
+  // Generate months as dropdown options (based on selected intern's end_date boundary)
+  const getMonthOptions = () => {
     const months = []
     const now = new Date()
+    
+    const selected = verifiedInterns.find((i: any) => i.id === createInternId)
+    if (selected && selected.end_date) {
+      try {
+        const endDate = new Date(selected.end_date)
+        if (!isNaN(endDate.getTime())) {
+          // Generate 12 months going backwards from the intern's end date
+          for (let i = 0; i < 12; i++) {
+            const d = new Date(endDate.getFullYear(), endDate.getMonth() - i, 1)
+            const label = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+            months.push(label)
+          }
+          return months
+        }
+      } catch (e) {
+        console.error('Error parsing intern end date for dropdown:', e)
+      }
+    }
+    
+    // Default fallback: last 12 months from today
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const label = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' })
       months.push(label)
     }
     return months
-  })()
+  }
 
   // Payment cycle action states
   const [cycleRemarks, setCycleRemarks] = useState<Record<string, string>>({})
@@ -383,7 +403,10 @@ export default function FinanceDashboard() {
                     </label>
                     <select
                       value={createInternId}
-                      onChange={(e) => setCreateInternId(e.target.value)}
+                      onChange={(e) => {
+                        setCreateInternId(e.target.value)
+                        setCreatePeriod('') // Reset selected month when intern changes
+                      }}
                       required
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                     >
@@ -406,7 +429,7 @@ export default function FinanceDashboard() {
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                     >
                       <option value="">-- Select Month --</option>
-                      {monthOptions.map((m) => (
+                      {getMonthOptions().map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
