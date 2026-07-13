@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
       thickness: 1.5
     })
 
-    drawCenteredText(certTitle, height - 145, 18, boldFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(certTitle, isPaidIntern ? height - 145 : 455, 18, boldFont, rgb(0.2, 0.2, 0.2))
 
     // 6. Metadata (Serial No & Issue Date)
     const serialNo = internship.serial_no || 'N/A'
@@ -261,24 +261,32 @@ export async function POST(req: NextRequest) {
     const area = sanitizeText(internship.student?.area || 'Talcher')
 
     // Structured Centered Text Layout
-    const bodyOffset = isPaidIntern ? 0 : 20
-    drawCenteredText('This is to certify that', 415 + bodyOffset, 13, regularFont, rgb(0.4, 0.4, 0.4))
-    drawCenteredText(student.toUpperCase(), 380 + bodyOffset, 22, boldFont, rgb(0.06, 0.35, 0.18))
-    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 345 + bodyOffset, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    const isUnpaid = !isPaidIntern
+    const certifyY = isUnpaid ? 410 : 415
+    const nameY = isUnpaid ? 380 : 380
+    const uniY = isUnpaid ? 352 : 345
+    const wingY = isUnpaid ? 330 : 320
+    const reportY = isUnpaid ? 305 : 290
+    const titleStartY = isUnpaid ? 280 : 260
+    const nextYOffset = isUnpaid ? 14 : 10
+
+    drawCenteredText('This is to certify that', certifyY, 13, regularFont, rgb(0.4, 0.4, 0.4))
+    drawCenteredText(student.toUpperCase(), nameY, 22, boldFont, rgb(0.06, 0.35, 0.18))
+    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, uniY, 12, regularFont, rgb(0.2, 0.2, 0.2))
     
     const areaText = area === 'Headquarters' ? 'Headquarters' : `${area} Area`
-    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 320 + bodyOffset, 13, boldFont, rgb(0.2, 0.2, 0.2))
-    drawCenteredText('They have submitted a final project report titled', 290 + bodyOffset, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, wingY, 13, boldFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('They have submitted a final project report titled', reportY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Dynamically wrap project title if it is too long
     const wrappedTitle = wrapText(`"${projectTitle}"`, 620, 12, italicFont)
-    let titleY = 260 + bodyOffset
+    let titleY = titleStartY
     for (const titleLine of wrappedTitle) {
       drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
       titleY -= 16
     }
 
-    const nextY = titleY - 10
+    const nextY = titleY - nextYOffset
     drawCenteredText(`on ${projectDate} under the guidance of mentor ${mentorName}.`, nextY, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // For paid interns: add stipend acknowledgment line
@@ -426,10 +434,10 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Unpaid interns layout: 3 columns + QR code centered horizontally (placed higher to avoid overlap)
-      const qrSize = 54
+      const qrSize = 45
       const qrCenterX = width / 2          // 421 — exact horizontal center
       const qrX = qrCenterX - qrSize / 2   // top-left of QR image
-      const qrY = 135                       // placed safely above Area Training Officer's signature (y=80..108)
+      const qrY = 150                       // placed safely above Area Training Officer's signature (y=80..108)
 
       if (qrCodeImg) {
         // Draw white background box
