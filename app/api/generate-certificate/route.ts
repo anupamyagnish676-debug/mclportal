@@ -261,17 +261,18 @@ export async function POST(req: NextRequest) {
     const area = sanitizeText(internship.student?.area || 'Talcher')
 
     // Structured Centered Text Layout
-    drawCenteredText('This is to certify that', 415, 13, regularFont, rgb(0.4, 0.4, 0.4))
-    drawCenteredText(student.toUpperCase(), 380, 22, boldFont, rgb(0.06, 0.35, 0.18))
-    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 345, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    const bodyOffset = isPaidIntern ? 0 : 20
+    drawCenteredText('This is to certify that', 415 + bodyOffset, 13, regularFont, rgb(0.4, 0.4, 0.4))
+    drawCenteredText(student.toUpperCase(), 380 + bodyOffset, 22, boldFont, rgb(0.06, 0.35, 0.18))
+    drawCenteredText(`student of ${university} has successfully completed their internship training in the`, 345 + bodyOffset, 12, regularFont, rgb(0.2, 0.2, 0.2))
     
     const areaText = area === 'Headquarters' ? 'Headquarters' : `${area} Area`
-    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 320, 13, boldFont, rgb(0.2, 0.2, 0.2))
-    drawCenteredText('They have submitted a final project report titled', 290, 12, regularFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText(`${wing} department at ${areaText}, Mahanadi Coalfields Limited from ${startDate} to ${endDate}.`, 320 + bodyOffset, 13, boldFont, rgb(0.2, 0.2, 0.2))
+    drawCenteredText('They have submitted a final project report titled', 290 + bodyOffset, 12, regularFont, rgb(0.2, 0.2, 0.2))
 
     // Dynamically wrap project title if it is too long
     const wrappedTitle = wrapText(`"${projectTitle}"`, 620, 12, italicFont)
-    let titleY = 260
+    let titleY = 260 + bodyOffset
     for (const titleLine of wrappedTitle) {
       drawCenteredText(titleLine, titleY, 12, italicFont, rgb(0.06, 0.35, 0.18))
       titleY -= 16
@@ -424,11 +425,11 @@ export async function POST(req: NextRequest) {
         page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
       }
     } else {
-      // Unpaid interns layout: 3 columns + QR code centered horizontally
+      // Unpaid interns layout: 3 columns + QR code centered horizontally (placed higher to avoid overlap)
       const qrSize = 54
       const qrCenterX = width / 2          // 421 — exact horizontal center
       const qrX = qrCenterX - qrSize / 2   // top-left of QR image
-      const qrY = 83                        // above signature line (y=75)
+      const qrY = 135                       // placed safely above Area Training Officer's signature (y=80..108)
 
       if (qrCodeImg) {
         // Draw white background box
