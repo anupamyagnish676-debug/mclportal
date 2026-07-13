@@ -262,12 +262,12 @@ export async function POST(req: NextRequest) {
 
     // Structured Centered Text Layout
     const isUnpaid = !isPaidIntern
-    const certifyY = isUnpaid ? 410 : 415
-    const nameY = isUnpaid ? 380 : 380
-    const uniY = isUnpaid ? 352 : 345
-    const wingY = isUnpaid ? 330 : 320
-    const reportY = isUnpaid ? 305 : 290
-    const titleStartY = isUnpaid ? 280 : 260
+    const certifyY = isUnpaid ? 420 : 415
+    const nameY = isUnpaid ? 390 : 380
+    const uniY = isUnpaid ? 362 : 345
+    const wingY = isUnpaid ? 340 : 320
+    const reportY = isUnpaid ? 315 : 290
+    const titleStartY = isUnpaid ? 290 : 260
     const nextYOffset = isUnpaid ? 14 : 10
 
     drawCenteredText('This is to certify that', certifyY, 13, regularFont, rgb(0.4, 0.4, 0.4))
@@ -437,7 +437,7 @@ export async function POST(req: NextRequest) {
       const qrSize = 45
       const qrCenterX = width / 2          // 421 — exact horizontal center
       const qrX = qrCenterX - qrSize / 2   // top-left of QR image
-      const qrY = 150                       // placed safely above Area Training Officer's signature (y=80..108)
+      const qrY = 180                       // placed safely above Area Training Officer's signature (y=80..108)
 
       if (qrCodeImg) {
         // Draw white background box
