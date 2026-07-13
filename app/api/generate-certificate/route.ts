@@ -424,18 +424,22 @@ export async function POST(req: NextRequest) {
         page.drawText(col.sublabel, { x: col.x - subW / 2, y: 45, size: 8, font: regularFont, color: rgb(0.4, 0.4, 0.4) })
       }
     } else {
-      // Unpaid interns layout: 3 columns + QR code in the bottom-right corner
+      // Unpaid interns layout: 3 columns + QR code centered horizontally
+      const qrSize = 54
+      const qrCenterX = width / 2          // 421 — exact horizontal center
+      const qrX = qrCenterX - qrSize / 2   // top-left of QR image
+      const qrY = 83                        // above signature line (y=75)
+
       if (qrCodeImg) {
-        const qrSize = 52
-        const qrX = width - 90
-        const qrY = 88
+        // Draw white background box
         page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, color: rgb(1, 1, 1) })
-        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.85, 0.85, 0.85), borderWidth: 0.5 })
+        page.drawRectangle({ x: qrX - 2, y: qrY - 2, width: qrSize + 4, height: qrSize + 4, borderColor: rgb(0.75, 0.6, 0.21), borderWidth: 0.6 })
         page.drawImage(qrCodeImg, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+        
         const scanLabel = 'Scan to Verify'
         const scanLabelWidth = italicFont.widthOfTextAtSize(scanLabel, 6)
         page.drawText(scanLabel, {
-          x: qrX + (qrSize - scanLabelWidth) / 2,
+          x: qrCenterX - scanLabelWidth / 2,
           y: qrY - 9,
           size: 6,
           font: italicFont,
