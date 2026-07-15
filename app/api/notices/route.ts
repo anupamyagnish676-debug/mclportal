@@ -76,21 +76,21 @@ export async function POST(req: NextRequest) {
         if (fetchErr) {
           console.error('[NOTICES] Failed to fetch notice recipients:', fetchErr.message)
         } else if (recipients && recipients.length > 0) {
-          const emails = recipients.map((r: any) => r.email).filter(Boolean)
-          
-          if (emails.length > 0) {
-            const nodemailer = await import('nodemailer')
-            const transporter = nodemailer.createTransport({
-              service: 'gmail',
-              auth: {
-                user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_PASS,
-              },
-            })
+          const nodemailer = await import('nodemailer')
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.GMAIL_USER,
+              pass: process.env.GMAIL_PASS,
+            },
+          })
 
-            const subject = priority === 'urgent'
-              ? `🚨 [URGENT] MCL Notice Board: ${title}`
-              : `📢 MCL Notice Board: ${title}`
+          const subject = priority === 'urgent'
+            ? `🚨 [URGENT] MCL Notice Board: ${title}`
+            : `📢 MCL Notice Board: ${title}`
+
+          const emailPromises = recipients.map(async (r: any) => {
+            if (!r.email) return
 
             const emailHtml = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
@@ -104,6 +104,9 @@ export async function POST(req: NextRequest) {
                   </p>
                 </div>
                 <div style="padding: 32px; color: #374151; background: #ffffff;">
+                  <p style="margin-top: 0; font-size: 15px; font-weight: bold; color: #111827;">
+                    Dear ${r.full_name || 'User'},
+                  </p>
                   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap; color: #1f2937; margin-bottom: 24px;">
                     ${content}
                   </div>
@@ -122,15 +125,20 @@ export async function POST(req: NextRequest) {
               </div>
             `
 
-            await transporter.sendMail({
-              from: `"MCL Notice Board" <${process.env.GMAIL_USER}>`,
-              to: process.env.GMAIL_USER, // Send to sender/system address
-              bcc: emails,                // Send as BCC for privacy and performance
-              subject,
-              html: emailHtml,
-            })
-            console.log(`[NOTICES] Emailed notice "${title}" to ${emails.length} recipients.`)
-          }
+            try {
+              await transporter.sendMail({
+                from: `"MCL Notice Board" <${process.env.GMAIL_USER}>`,
+                to: r.email,
+                subject,
+                html: emailHtml,
+              })
+            } catch (err: any) {
+              console.error(`[NOTICES] Failed to send email to ${r.email}:`, err.message)
+            }
+          })
+
+          await Promise.all(emailPromises)
+          console.log(`[NOTICES] Personal email notifications dispatched to ${recipients.length} recipients.`)
         }
       } catch (err: any) {
         console.error('[NOTICES] Error sending notification email:', err.message)
