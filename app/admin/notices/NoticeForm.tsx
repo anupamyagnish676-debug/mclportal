@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Area {
   name: string
@@ -13,6 +14,7 @@ interface NoticeFormProps {
 }
 
 export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNoticePosted }: NoticeFormProps) {
+  const router = useRouter()
   const [title, setTitle] = useState<string>('')
   const [content, setContent] = useState<string>('')
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
@@ -103,6 +105,8 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
       setContent('')
       setCustomExpiresAt(getDefaultExpiryString())
       setSuccess(true)
+      router.push('/admin/notices?tab=sent')
+      router.refresh()
       if (onNoticePosted) onNoticePosted()
     } catch (e: any) {
       setError(e.message)

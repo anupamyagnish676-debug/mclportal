@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 interface NoticeRead {
   user_id: string
@@ -30,12 +31,25 @@ interface NoticeInboxProps {
 }
 
 export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdminId }: NoticeInboxProps) {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams ? searchParams.get('tab') : null
+
   const [notices, setNotices] = useState<Notice[]>(initialNotices)
   
   // Tab for area admin: 'hq_inbox' or 'sent_by_me'
   const [activeSubTab, setActiveSubTab] = useState<'hq_inbox' | 'sent_by_me'>(
-    isAdminGlobal ? 'sent_by_me' : 'hq_inbox'
+    isAdminGlobal ? 'sent_by_me' : (tabParam === 'sent' ? 'sent_by_me' : 'hq_inbox')
   )
+
+  useEffect(() => {
+    setNotices(initialNotices)
+  }, [initialNotices])
+
+  useEffect(() => {
+    if (tabParam === 'sent') {
+      setActiveSubTab('sent_by_me')
+    }
+  }, [tabParam])
 
   // Forwarding state
   const [forwardNotice, setForwardNotice] = useState<Notice | null>(null)
