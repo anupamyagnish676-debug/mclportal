@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, area')
+      .select('role, area, full_name')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -57,6 +57,86 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    // Send email notification to targeted recipients
+    if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+      try {
+        let recipientQuery = adminClient
+          .from('profiles')
+          .select('email, full_name')
+          .in('role', finalRoles)
+          .not('email', 'is', null)
+
+        if (!finalAreas.includes('all')) {
+          recipientQuery = recipientQuery.in('area', finalAreas)
+        }
+
+        const { data: recipients, error: fetchErr } = await recipientQuery
+
+        if (fetchErr) {
+          console.error('[NOTICES] Failed to fetch notice recipients:', fetchErr.message)
+        } else if (recipients && recipients.length > 0) {
+          const emails = recipients.map((r: any) => r.email).filter(Boolean)
+          
+          if (emails.length > 0) {
+            const nodemailer = await import('nodemailer')
+            const transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_PASS,
+              },
+            })
+
+            const subject = priority === 'urgent'
+              ? `🚨 [URGENT] MCL Notice Board: ${title}`
+              : `📢 MCL Notice Board: ${title}`
+
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                <div style="background: #166534; padding: 24px 32px; color: #fff;">
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #ffffff;">
+                    ${priority === 'urgent' ? '🚨 URGENT NOTICE' : '📢 NOTICE'}
+                  </span>
+                  <h1 style="margin: 8px 0 0; font-size: 20px; font-weight: bold; line-height: 1.3; color: #ffffff;">${title}</h1>
+                  <p style="margin: 6px 0 0; font-size: 12px; opacity: 0.85; color: #ffffff;">
+                    Source: <strong>${profile.area} Area</strong> | Posted by: ${profile.full_name || 'Admin'}
+                  </p>
+                </div>
+                <div style="padding: 32px; color: #374151; background: #ffffff;">
+                  <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap; color: #1f2937; margin-bottom: 24px;">
+                    ${content}
+                  </div>
+                  
+                  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+                  
+                  <div style="text-align: center; margin-top: 24px;">
+                    <a href="${req.nextUrl.origin}/login" style="display: inline-block; background-color: #166534; color: #ffffff; padding: 12px 24px; font-weight: bold; font-size: 14px; text-decoration: none; border-radius: 8px;">
+                      View on Internship Portal
+                    </a>
+                  </div>
+                </div>
+                <div style="background: #f9fafb; padding: 16px 32px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #6b7280;">
+                  This is an automated notification from Mahanadi Coalfields Limited (MCL) Internship Portal. Please do not reply directly to this email.
+                </div>
+              </div>
+            `
+
+            await transporter.sendMail({
+              from: `"MCL Notice Board" <${process.env.GMAIL_USER}>`,
+              to: process.env.GMAIL_USER, // Send to sender/system address
+              bcc: emails,                // Send as BCC for privacy and performance
+              subject,
+              html: emailHtml,
+            })
+            console.log(`[NOTICES] Emailed notice "${title}" to ${emails.length} recipients.`)
+          }
+        }
+      } catch (err: any) {
+        console.error('[NOTICES] Error sending notification email:', err.message)
+      }
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
