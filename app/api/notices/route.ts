@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { title, content, target_roles, target_areas, priority, forwarded_from } = await req.json()
+    const { title, content, target_roles, target_areas, priority, forwarded_from, expires_at } = await req.json()
     if (!title || !content) {
       return NextResponse.json({ error: 'Missing title or content' }, { status: 400 })
     }
@@ -40,6 +40,24 @@ export async function POST(req: NextRequest) {
       finalRoles = finalRoles.filter((r: string) => r !== 'admin')
     }
 
+    let finalExpiresAt = expires_at
+    if (finalExpiresAt === undefined) {
+      if (forwarded_from) {
+        // Fetch original notice's expiry
+        const { data: origNotice } = await adminClient
+          .from('notices')
+          .select('expires_at')
+          .eq('id', forwarded_from)
+          .maybeSingle()
+        if (origNotice) {
+          finalExpiresAt = origNotice.expires_at
+        }
+      } else {
+        // Default to 30 days
+        finalExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    }
+
     const { data, error } = await adminClient
       .from('notices')
       .insert({
@@ -51,7 +69,8 @@ export async function POST(req: NextRequest) {
         target_roles: finalRoles,
         target_areas: finalAreas,
         priority: priority || 'normal',
-        forwarded_from: forwarded_from || null
+        forwarded_from: forwarded_from || null,
+        expires_at: finalExpiresAt
       })
       .select()
       .maybeSingle()
@@ -167,7 +186,7 @@ export async function GET(req: NextRequest) {
 
     const adminClient = createAdminClient()
 
-    // Base query: fetch all notices
+    // Base query: fetch all notices (hiding expired ones)
     let query = adminClient
       .from('notices')
       .select(`
@@ -175,6 +194,7 @@ export async function GET(req: NextRequest) {
         created_by_profile:profiles!notices_created_by_fkey(full_name, role),
         notice_reads(user_id)
       `)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order('created_at', { ascending: false })
 
     const { data: allNotices, error } = await query

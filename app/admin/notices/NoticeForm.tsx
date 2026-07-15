@@ -17,6 +17,20 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
   const [content, setContent] = useState<string>('')
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
   
+  // Expiry configuration state
+  const [expiryType, setExpiryType] = useState<'never' | 'custom'>('custom')
+  const getDefaultExpiryString = () => {
+    const defaultDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    const pad = (num: number) => num.toString().padStart(2, '0')
+    return `${defaultDate.getFullYear()}-${pad(defaultDate.getMonth() + 1)}-${pad(defaultDate.getDate())}T${pad(defaultDate.getHours())}:${pad(defaultDate.getMinutes())}`
+  }
+  const getMinExpiryString = () => {
+    const now = new Date()
+    const pad = (num: number) => num.toString().padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+  }
+  const [customExpiresAt, setCustomExpiresAt] = useState<string>(getDefaultExpiryString())
+
   // Target roles state
   const [targetStudent, setTargetStudent] = useState<boolean>(true)
   const [targetMentor, setTargetMentor] = useState<boolean>(true)
@@ -67,6 +81,8 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
       targetAreas = [currentArea]
     }
 
+    const expiresAt = expiryType === 'never' ? null : new Date(customExpiresAt).toISOString()
+
     try {
       const res = await fetch('/api/notices', {
         method: 'POST',
@@ -76,7 +92,8 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
           content,
           target_roles: roles,
           target_areas: targetAreas,
-          priority
+          priority,
+          expires_at: expiresAt
         })
       })
       const data = await res.json()
@@ -84,6 +101,7 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
 
       setTitle('')
       setContent('')
+      setCustomExpiresAt(getDefaultExpiryString())
       setSuccess(true)
       if (onNoticePosted) onNoticePosted()
     } catch (e: any) {
@@ -100,7 +118,7 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
         <p className="text-xs text-gray-500">Post announcements to intern and mentor feeds.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-2 space-y-1">
           <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">Notice Title</label>
           <input
@@ -123,7 +141,32 @@ export default function NoticeForm({ areas, isAdminGlobal, currentArea, onNotice
             <option value="urgent">🔴 Urgent Announcement</option>
           </select>
         </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">Notice Expiry</label>
+          <select
+            value={expiryType}
+            onChange={(e) => setExpiryType(e.target.value as any)}
+            className="w-full text-sm border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:border-green-600"
+          >
+            <option value="custom">📅 Specific Expiry</option>
+            <option value="never">♾️ No Expiry (Never)</option>
+          </select>
+        </div>
       </div>
+
+      {expiryType === 'custom' && (
+        <div className="space-y-1 max-w-sm">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">Expiry Date & Time</label>
+          <input
+            type="datetime-local"
+            value={customExpiresAt}
+            min={getMinExpiryString()}
+            onChange={(e) => setCustomExpiresAt(e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-xl p-2.5 focus:outline-none focus:border-green-600"
+          />
+        </div>
+      )}
 
       <div className="space-y-1">
         <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">Announcement Content</label>
