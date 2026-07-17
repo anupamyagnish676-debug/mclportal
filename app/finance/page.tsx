@@ -15,8 +15,10 @@ import {
   AlertCircle,
   ChevronRight,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Settings
 } from 'lucide-react'
+import Link from 'next/link'
 
 function fmtCurrency(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
@@ -297,6 +299,34 @@ export default function FinanceDashboard() {
             🏢 Bank &amp; Doc Verification ({pendingInterns.length})
           </button>
         </div>
+      </div>
+
+      {/* Feature Hub */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link
+          href="/finance/payments"
+          className="group flex flex-col gap-3 p-4 rounded-xl border border-gray-100 bg-emerald-50 hover:bg-emerald-100/80 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-transparent"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
+            <DollarSign className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">Payments</p>
+            <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">Manage stipend payout cycles & disbursements</p>
+          </div>
+        </Link>
+        <Link
+          href="/finance/settings"
+          className="group flex flex-col gap-3 p-4 rounded-xl border border-gray-100 bg-slate-50 hover:bg-slate-100/80 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-transparent"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-700">Settings</p>
+            <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">Manage your account & preferences</p>
+          </div>
+        </Link>
       </div>
 
       {error && (

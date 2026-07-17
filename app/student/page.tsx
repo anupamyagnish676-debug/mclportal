@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import ProjectReportUpload from './ProjectReportUpload'
-import { Calendar, ClipboardList, CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
+import {
+  Calendar, ClipboardList, CheckCircle2, BookOpen, Mail,
+  FolderOpen, FileCheck, Clock, Bell, DollarSign,
+  MessageSquare, GraduationCap, Settings
+} from 'lucide-react'
 
 export const revalidate = 0
 
@@ -26,13 +31,135 @@ export default async function StudentDashboard() {
     submitted = s.count ?? 0
   }
 
+  const featureCards = [
+    {
+      label: 'Attendance',
+      desc: 'View your attendance record',
+      href: '/student/attendance',
+      icon: Calendar,
+      color: 'from-emerald-500 to-emerald-600',
+      bg: 'bg-emerald-50 hover:bg-emerald-100/80',
+      text: 'text-emerald-700',
+    },
+    {
+      label: 'Daily Logbook',
+      desc: 'Log your daily work activities',
+      href: '/student/logbook',
+      icon: BookOpen,
+      color: 'from-blue-500 to-blue-600',
+      bg: 'bg-blue-50 hover:bg-blue-100/80',
+      text: 'text-blue-700',
+    },
+    {
+      label: 'Leave Apply',
+      desc: 'Submit a leave application',
+      href: '/student/leaves',
+      icon: Mail,
+      color: 'from-amber-500 to-amber-600',
+      bg: 'bg-amber-50 hover:bg-amber-100/80',
+      text: 'text-amber-700',
+    },
+    {
+      label: 'Assignments',
+      desc: 'View & submit your assignments',
+      href: '/student/assignments',
+      icon: ClipboardList,
+      color: 'from-indigo-500 to-indigo-600',
+      bg: 'bg-indigo-50 hover:bg-indigo-100/80',
+      text: 'text-indigo-700',
+    },
+    {
+      label: 'Materials',
+      desc: 'Download study resources',
+      href: '/student/materials',
+      icon: FolderOpen,
+      color: 'from-teal-500 to-teal-600',
+      bg: 'bg-teal-50 hover:bg-teal-100/80',
+      text: 'text-teal-700',
+    },
+    {
+      label: 'Upload Documents',
+      desc: 'Submit required identity documents',
+      href: '/student/documents',
+      icon: FileCheck,
+      color: 'from-cyan-500 to-cyan-600',
+      bg: 'bg-cyan-50 hover:bg-cyan-100/80',
+      text: 'text-cyan-700',
+    },
+    {
+      label: 'Extension Apply',
+      desc: 'Request an internship extension',
+      href: '/student/extension',
+      icon: Clock,
+      color: 'from-orange-500 to-orange-600',
+      bg: 'bg-orange-50 hover:bg-orange-100/80',
+      text: 'text-orange-700',
+    },
+    {
+      label: 'Notice Board',
+      desc: 'View announcements from admin',
+      href: '/student/notices',
+      icon: Bell,
+      color: 'from-rose-500 to-rose-600',
+      bg: 'bg-rose-50 hover:bg-rose-100/80',
+      text: 'text-rose-700',
+    },
+    {
+      label: 'My Stipend',
+      desc: 'Track stipend payment status',
+      href: '/student/stipend',
+      icon: DollarSign,
+      color: 'from-green-500 to-green-600',
+      bg: 'bg-green-50 hover:bg-green-100/80',
+      text: 'text-green-700',
+    },
+    {
+      label: 'Feedback',
+      desc: 'Share your internship feedback',
+      href: '/student/feedback',
+      icon: MessageSquare,
+      color: 'from-purple-500 to-purple-600',
+      bg: 'bg-purple-50 hover:bg-purple-100/80',
+      text: 'text-purple-700',
+    },
+    {
+      label: 'Grievance',
+      desc: 'Submit a formal grievance',
+      href: '/student/grievance',
+      icon: Mail,
+      color: 'from-pink-500 to-pink-600',
+      bg: 'bg-pink-50 hover:bg-pink-100/80',
+      text: 'text-pink-700',
+    },
+    {
+      label: 'Certificate',
+      desc: 'Download your completion certificate',
+      href: '/student/certificate',
+      icon: GraduationCap,
+      color: 'from-violet-500 to-violet-600',
+      bg: 'bg-violet-50 hover:bg-violet-100/80',
+      text: 'text-violet-700',
+    },
+    {
+      label: 'Settings',
+      desc: 'Manage your account preferences',
+      href: '/student/settings',
+      icon: Settings,
+      color: 'from-slate-500 to-slate-600',
+      bg: 'bg-slate-50 hover:bg-slate-100/80',
+      text: 'text-slate-700',
+    },
+  ]
+
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Student Dashboard</h1>
-      <p className="text-gray-500 text-sm mb-8">Welcome to your MCL internship portal</p>
+    <div className="max-w-4xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Student Dashboard</h1>
+        <p className="text-gray-500 text-sm">Welcome to your MCL internship portal</p>
+      </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">{error.message}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error.message}</div>
       )}
 
       {internship ? (
@@ -88,6 +215,28 @@ export default async function StudentDashboard() {
           No internship record found. Please contact your training office.
         </div>
       )}
+
+      {/* Feature Hub */}
+      <div>
+        <h2 className="font-bold text-gray-800 text-sm mb-4">All Features</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {featureCards.map(card => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className={`group flex flex-col gap-3 p-4 rounded-xl border border-gray-100 ${card.bg} transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-transparent`}
+            >
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200`}>
+                <card.icon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className={`text-sm font-semibold ${card.text}`}>{card.label}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{card.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
