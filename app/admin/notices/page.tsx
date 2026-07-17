@@ -37,7 +37,7 @@ export default async function AdminNoticesPage() {
     areas = [{ name: 'Talcher' }, { name: 'Jagannath' }, { name: 'Lingaraj' }, { name: 'Subhadra' }, { name: 'Headquarters' }]
   }
 
-  // Fetch notices (excluding expired ones)
+  // Fetch all notices
   const adminClient = createAdminClient()
   const { data: notices } = await adminClient
     .from('notices')
@@ -46,7 +46,6 @@ export default async function AdminNoticesPage() {
       created_by_profile:profiles!notices_created_by_fkey(full_name, role),
       notice_reads(user_id)
     `)
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('created_at', { ascending: false })
 
   const typedNotices = (notices || []).map((n: any) => ({

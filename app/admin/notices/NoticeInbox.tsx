@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Trash2 } from 'lucide-react'
 
 interface NoticeRead {
   user_id: string
@@ -33,9 +34,10 @@ interface NoticeInboxProps {
 export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdminId }: NoticeInboxProps) {
   const searchParams = useSearchParams()
   const tabParam = searchParams ? searchParams.get('tab') : null
+  const router = useRouter()
 
   const [notices, setNotices] = useState<Notice[]>(initialNotices)
-  
+
   // Tab for area admin: 'hq_inbox' or 'sent_by_me'
   const [activeSubTab, setActiveSubTab] = useState<'hq_inbox' | 'sent_by_me'>(
     isAdminGlobal ? 'sent_by_me' : (tabParam === 'sent' ? 'sent_by_me' : 'hq_inbox')
@@ -58,6 +60,10 @@ export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdmi
   const [employeeChecked, setEmployeeChecked] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // Filter notices list
   const filteredNotices = notices.filter(n => {
@@ -119,6 +125,29 @@ export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdmi
     }
   }
 
+  async function handleDelete(noticeId: string) {
+    setDeletingId(noticeId)
+    setError('')
+    try {
+      const res = await fetch('/api/notices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notice_id: noticeId })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete notice')
+
+      // Remove from local state immediately
+      setNotices(prev => prev.filter(n => n.id !== noticeId))
+      setConfirmDeleteId(null)
+      router.refresh()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Sub Tabs for Area Admins */}
@@ -143,11 +172,19 @@ export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdmi
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-100">
+          {error}
+        </div>
+      )}
+
       {/* Notices Feed */}
       <div className="space-y-4">
         {filteredNotices.map((n) => {
           const isUrgent = n.priority === 'urgent'
           const readCount = n.notice_reads?.length || 0
+          const isOwnNotice = n.created_by === currentAdminId
+          const isConfirmingDelete = confirmDeleteId === n.id
 
           return (
             <div
@@ -172,20 +209,52 @@ export default function NoticeInbox({ initialNotices, isAdminGlobal, currentAdmi
                 </div>
 
                 {/* Actions / Read receipts */}
-                {n.created_by === currentAdminId ? (
-                  <span className="text-[10px] bg-gray-50 text-gray-400 border border-gray-100 px-2.5 py-1 rounded-full font-bold">
-                    Read by {readCount} users
-                  </span>
-                ) : (
-                  !isAdminGlobal && activeSubTab === 'hq_inbox' && (
-                    <button
-                      onClick={() => { setForwardNotice(n); setError(''); }}
-                      className="text-xs font-bold bg-[#166534] text-white px-3 py-1.5 rounded-xl hover:bg-[#155e2f] transition-colors"
-                    >
-                      Forward to Area
-                    </button>
-                  )
-                )}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {isOwnNotice ? (
+                    <>
+                      <span className="text-[10px] bg-gray-50 text-gray-400 border border-gray-100 px-2.5 py-1 rounded-full font-bold">
+                        Read by {readCount} users
+                      </span>
+
+                      {/* Delete button or confirmation */}
+                      {isConfirmingDelete ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-red-600 font-semibold">Delete?</span>
+                          <button
+                            onClick={() => handleDelete(n.id)}
+                            disabled={deletingId === n.id}
+                            className="text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === n.id ? 'Deleting...' : 'Yes, Delete'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-[10px] border border-gray-200 text-gray-500 hover:bg-gray-50 font-semibold px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(n.id)}
+                          title="Delete this notice"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    !isAdminGlobal && activeSubTab === 'hq_inbox' && (
+                      <button
+                        onClick={() => { setForwardNotice(n); setError(''); }}
+                        className="text-xs font-bold bg-[#166534] text-white px-3 py-1.5 rounded-xl hover:bg-[#155e2f] transition-colors"
+                      >
+                        Forward to Area
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
 
               <p className="text-xs text-gray-600 leading-relaxed bg-gray-50/30 p-3 rounded-xl border border-gray-50">
