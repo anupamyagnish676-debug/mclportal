@@ -49,11 +49,56 @@ export async function POST(request: NextRequest) {
   }
 
   const role = profile.role
-  const redirect =
+  const dashboardUrl =
     role === 'admin' ? '/admin' :
     role === 'mentor' ? '/mentor' :
     role === 'employee' ? '/employee' :
     role === 'finance' ? '/finance' : '/student'
+
+  // MFA check for admin and finance roles
+  if (role === 'admin' || role === 'finance') {
+    try {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (aalData && aalData.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
+        // User has MFA enrolled but this session is only AAL1 — require verification
+        const responseData = {
+          role,
+          redirect: dashboardUrl,
+          requires_mfa: true,
+          mfa_redirect: `/mfa-verify?next=${dashboardUrl}`,
+          session: {
+            access_token: data.session!.access_token,
+            refresh_token: data.session!.refresh_token,
+          },
+        }
+        const response = NextResponse.json(responseData)
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, {
+            ...options,
+            path: '/',
+            httpOnly: false,
+            secure: false,
+            sameSite: 'lax',
+          })
+        })
+        response.cookies.set('mcl-session', JSON.stringify({
+          access_token: data.session!.access_token,
+          refresh_token: data.session!.refresh_token,
+        }), {
+          path: '/',
+          httpOnly: false,
+          secure: false,
+          sameSite: 'lax' as const,
+          maxAge: 60 * 60 * 24 * 7,
+        })
+        return response
+      }
+    } catch {
+      // MFA check failed — proceed with normal login (graceful degradation)
+    }
+  }
+
+  const redirect = dashboardUrl
 
   const responseData = {
     role,

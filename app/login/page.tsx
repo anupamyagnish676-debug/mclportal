@@ -41,8 +41,7 @@ export default function LoginPage() {
 
       setStatus(`Signed in as ${data.role} — redirecting...`)
 
-      // Step 1: Manually set the session cookie from JavaScript
-      // This is the MOST RELIABLE way — bypasses all Set-Cookie header issues
+      // Always set the session cookie so /mfa-verify has an authenticated session
       if (data.session) {
         const cookieVal = encodeURIComponent(JSON.stringify({
           access_token: data.session.access_token,
@@ -54,8 +53,12 @@ export default function LoginPage() {
       // Step 2: Wait for cookie to settle
       await new Promise(resolve => setTimeout(resolve, 300))
 
-      // Step 3: Navigate
-      window.location.href = data.redirect
+      // Step 3: Navigate — to MFA verify page if required, otherwise to dashboard
+      if (data.requires_mfa && data.mfa_redirect) {
+        window.location.href = data.mfa_redirect
+      } else {
+        window.location.href = data.redirect
+      }
 
     } catch (err: any) {
       setError(err.message || 'Network error')

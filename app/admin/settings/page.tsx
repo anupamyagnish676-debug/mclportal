@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SettingsForm from '@/components/SettingsForm'
+import MFAManager from '@/components/MFAManager'
 
 export default function AdminSettingsPage() {
   const supabase = createClient()
@@ -151,9 +152,14 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-6xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Account Settings</h1>
-      <p className="text-gray-500 text-sm mb-8">Manage your password and digital signature settings</p>
+    <div className="max-w-6xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Account Settings</h1>
+        <p className="text-gray-500 text-sm">Manage your password, digital signature, and security settings</p>
+      </div>
+
+      {/* MFA Security Section - full width */}
+      <MFAManager />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         {/* Password settings */}

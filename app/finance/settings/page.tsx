@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SignaturePad from '@/components/SignaturePad'
 import { Lock, PenTool } from 'lucide-react'
+import MFAManager from '@/components/MFAManager'
 
 export default function FinanceSettingsPage() {
   const supabase = createClient()
@@ -60,9 +61,11 @@ export default function FinanceSettingsPage() {
     <div className="space-y-8 max-w-xl">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Account Settings</h1>
-        <p className="text-gray-500 text-sm">Manage your digital signature and account password.</p>
+        <p className="text-gray-500 text-sm">Manage your security, digital signature, and account password.</p>
       </div>
 
+      {/* MFA Security Section */}
+      <MFAManager />
       {/* Digital Signature Section */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
