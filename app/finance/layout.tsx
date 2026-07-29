@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import SessionGuard from '@/components/SessionGuard'
 
 export default async function FinanceLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -9,7 +10,7 @@ export default async function FinanceLayout({ children }: { children: React.Reac
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name')
+    .select('role, full_name, session_nonce')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -21,6 +22,7 @@ export default async function FinanceLayout({ children }: { children: React.Reac
       <div className="absolute top-0 left-56 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-600 to-amber-500 z-20 pointer-events-none" />
       <Sidebar role="finance" userName={profile.full_name || user.email || 'Finance'} />
       <main className="flex-1 ml-56 p-8 relative z-10">{children}</main>
+      <SessionGuard sessionNonce={profile.session_nonce || undefined} />
     </div>
   )
 }

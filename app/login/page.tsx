@@ -1,12 +1,20 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function LoginPage() {
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [status, setStatus]     = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [email, setEmail]             = useState('')
+  const [password, setPassword]       = useState('')
+  const [error, setError]             = useState('')
+  const [status, setStatus]           = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [retryAfter, setRetryAfter]   = useState<number>(0)
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (retryAfter <= 0) return
+    const t = setInterval(() => setRetryAfter(s => s <= 1 ? 0 : s - 1), 1000)
+    return () => clearInterval(t)
+  }, [retryAfter > 0])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -33,6 +41,9 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok || data.error) {
+        if (data.blocked && data.retryAfterSeconds) {
+          setRetryAfter(data.retryAfterSeconds)
+        }
         setError(data.error || 'Login failed')
         setLoading(false)
         setStatus('')
@@ -48,6 +59,11 @@ export default function LoginPage() {
           refresh_token: data.session.refresh_token,
         }))
         document.cookie = `mcl-session=${cookieVal}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+      }
+
+      // Set session nonce cookie (single session enforcement)
+      if (data.session_nonce) {
+        document.cookie = `mcl-session-nonce=${data.session_nonce}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
       }
 
       // Step 2: Wait for cookie to settle
@@ -164,8 +180,13 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-950/40 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-xs backdrop-blur-sm">
-                ⚠️ {error}
+              <div className="bg-red-950/40 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-xs backdrop-blur-sm space-y-1">
+                <p>⚠️ {error}</p>
+                {retryAfter > 0 && (
+                  <p className="text-red-400 font-bold tabular-nums">
+                    Try again in: {Math.floor(retryAfter / 60)}m {retryAfter % 60}s
+                  </p>
+                )}
               </div>
             )}
 

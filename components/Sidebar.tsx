@@ -26,7 +26,8 @@ import {
   FileCheck,
   Bell,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Shield
 } from 'lucide-react'
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
@@ -46,6 +47,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Grievances',        href: '/admin/grievances',       icon: Mail },
     { label: 'Feedback Reports',  href: '/admin/feedback',         icon: MessageSquare },
     { label: 'Create User',       href: '/admin/create-user',      icon: UserPlus },
+    { label: 'Audit Log',         href: '/admin/audit',            icon: Shield },
     { label: 'Settings',          href: '/admin/settings',         icon: Settings },
   ],
   mentor: [
