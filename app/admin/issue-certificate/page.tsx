@@ -54,7 +54,7 @@ export default async function IssueCertificatePage({
   let query = supabase
     .from('internships')
     .select(`
-      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area,
+      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area, serial_no,
       student:profiles!internships_student_id_fkey(id, full_name, email, area),
       mentor:profiles!internships_mentor_id_fkey(full_name)
     `)
@@ -130,6 +130,7 @@ export default async function IssueCertificatePage({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Serial No</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Student</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Mentor</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Period</th>
@@ -140,6 +141,15 @@ export default async function IssueCertificatePage({
             <tbody className="divide-y divide-gray-50">
               {filteredInternships.map((i: any) => (
                 <tr key={i.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    {i.serial_no ? (
+                      <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-mono font-semibold px-2 py-1 rounded-lg">
+                        MCL/HRD/INT/{i.serial_no}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{i.student?.full_name}</p>
                     <p className="text-gray-400 text-xs">{i.student?.email}</p>
