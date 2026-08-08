@@ -16,15 +16,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email not configured (GMAIL_USER / GMAIL_PASS missing)' }, { status: 500 })
   }
 
+  const isHQ = profile?.area === 'Headquarters'
+  const adminArea = profile?.area || ''
+
   const {
     subject,
     message,
-    roles,      // string[] e.g. ['student','mentor'] or ['all']
-    areas,      // string[] e.g. ['Talcher'] or ['all']
+    roles,
+    areas,
   } = await req.json()
 
   if (!subject?.trim()) return NextResponse.json({ error: 'Subject is required' }, { status: 400 })
   if (!message?.trim()) return NextResponse.json({ error: 'Message body is required' }, { status: 400 })
+
+  // ── Server-side area enforcement ─────────────────────────────────────────
+  // Area admins can ONLY send to their own area — enforce on server regardless of UI
+  let enforcedAreas: string[] = areas
+  if (!isHQ) {
+    // Ignore whatever areas was sent — always lock to adminArea
+    enforcedAreas = [adminArea]
+  }
 
   const admin = createAdminClient()
 
