@@ -27,44 +27,21 @@ export default function ProjectReportUpload({
     setSuccess('')
 
     try {
-      const filePath = `project-reports/${internshipId}/${Date.now()}_${file.name}`
-      
-      // 1. Upload to Supabase Storage in 'assignments' bucket
-      const { error: uploadErr } = await supabase.storage
-        .from('assignments')
-        .upload(filePath, file)
+      const formData = new FormData()
+      formData.append('internshipId', internshipId)
+      formData.append('projectTitle', projectTitle)
+      formData.append('file', file)
 
-      if (uploadErr) {
-        setError(uploadErr.message)
-        setUploading(false)
-        return
-      }
-
-      // 2. Generate long-lived signed URL
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from('assignments')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 10) // 10 years
-
-      if (signedErr) {
-        setError(signedErr.message)
-        setUploading(false)
-        return
-      }
-
-      const fileUrl = signedData.signedUrl
-
-      // 3. Update 'internships' table via secure backend API
       const res = await fetch('/api/submit-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ internshipId, fileUrl, projectTitle })
+        body: formData,
       })
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Failed to submit report details to database.')
+        setError(data.error || 'Failed to submit report details.')
       } else {
-        setReportUrl(fileUrl)
+        setReportUrl(data.fileUrl || '')
         setSuccess('Final project report uploaded successfully!')
         setFile(null)
       }

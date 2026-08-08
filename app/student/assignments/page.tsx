@@ -38,27 +38,25 @@ export default function StudentAssignmentsPage() {
     setUploading(assignmentId)
     setError('')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Not signed in'); setUploading(null); return }
+    try {
+      const formData = new FormData()
+      formData.append('assignmentId', assignmentId)
+      formData.append('file', file)
 
-    const filePath = `${user.id}/${assignmentId}/${Date.now()}_${file.name}`
-    const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, file)
-    if (uploadError) { setError(uploadError.message); setUploading(null); return }
+      const res = await fetch('/api/submissions', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
 
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage.from('assignments').createSignedUrl(filePath, 60 * 60 * 24 * 365)
-    if (signedUrlError) { setError(signedUrlError.message); setUploading(null); return }
-
-    const { data: sub, error: insertError } = await supabase.from('submissions').insert({
-      assignment_id: assignmentId,
-      student_id: user.id,
-      file_url: signedUrlData.signedUrl,
-    }).select().single()
-
-    if (insertError) {
-      setError(insertError.message)
-    } else {
-      setSubmissions({ ...submissions, [assignmentId]: sub })
-      setMsg({ ...msg, [assignmentId]: 'Submitted!' })
+      if (!res.ok) {
+        setError(data.error || 'Failed to submit assignment.')
+      } else {
+        setSubmissions({ ...submissions, [assignmentId]: data.submission })
+        setMsg({ ...msg, [assignmentId]: 'Submitted!' })
+      }
+    } catch (err: any) {
+      setError(err.message || 'Upload failed')
     }
     setUploading(null)
   }
