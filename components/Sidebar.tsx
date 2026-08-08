@@ -47,6 +47,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Grievances',        href: '/admin/grievances',       icon: Mail },
     { label: 'Feedback Reports',  href: '/admin/feedback',         icon: MessageSquare },
     { label: 'Create User',       href: '/admin/create-user',      icon: UserPlus },
+    { label: 'Broadcast Email',   href: '/admin/broadcast',        icon: Mail },
     { label: 'Audit Log',         href: '/admin/audit',            icon: Shield },
     { label: 'Settings',          href: '/admin/settings',         icon: Settings },
   ],
