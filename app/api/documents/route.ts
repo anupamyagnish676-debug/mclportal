@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import nodemailer from 'nodemailer'
 import path from 'path'
-import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive } from '@/lib/gdrive'
+import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive, getOrCreateStudentFolder } from '@/lib/gdrive'
 
 const DOC_TYPES = ['affidavit', 'college_id', 'bonafide', 'aadhaar', 'photo'] as const
 type DocType = typeof DOC_TYPES[number]
@@ -56,10 +56,30 @@ export async function POST(req: NextRequest) {
     let storagePath = ''
 
     if (isGDriveConfigured()) {
+      const { data: stuProfile } = await adminClient
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const { data: stuInternship } = await adminClient
+        .from('internships')
+        .select('serial_no')
+        .eq('student_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      const studentFolderId = await getOrCreateStudentFolder({
+        studentName: stuProfile?.full_name || 'Student',
+        studentId: user.id,
+        serialNo: stuInternship?.serial_no,
+      })
+
       const gdriveRes = await uploadFileToGDrive({
         buffer,
-        fileName: `${doc_type}_${user.id}_${timestamp}${ext}`,
+        fileName: `${doc_type}_${timestamp}${ext}`,
         mimeType: file.type || 'application/octet-stream',
+        folderId: studentFolderId,
       })
       fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
       storagePath = `gdrive:${gdriveRes.fileId}`

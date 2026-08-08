@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import QRCode from 'qrcode'
 import { Jimp } from 'jimp'
-import { isGDriveConfigured, uploadFileToGDrive } from '@/lib/gdrive'
+import { isGDriveConfigured, uploadFileToGDrive, getOrCreateStudentFolder } from '@/lib/gdrive'
 
 // Helper to strip white background from signature images using Jimp
 async function makeTransparent(base64Str: string): Promise<Buffer> {
@@ -484,10 +484,16 @@ export async function POST(req: NextRequest) {
 
     if (isGDriveConfigured()) {
       const internCleanName = (studentName || internship.student?.full_name || 'Intern').replace(/\s+/g, '_')
+      const studentFolderId = await getOrCreateStudentFolder({
+        studentName: studentName || internship.student?.full_name || 'Intern',
+        studentId: internship.student_id,
+        serialNo: internship.serial_no,
+      })
       const gdriveRes = await uploadFileToGDrive({
         buffer: pdfBuffer,
         fileName: `Certificate_${internCleanName}_${internship.serial_no || internshipId}.pdf`,
         mimeType: 'application/pdf',
+        folderId: studentFolderId,
       })
       certUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
     } else {

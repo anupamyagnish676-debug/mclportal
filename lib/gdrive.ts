@@ -56,6 +56,54 @@ function getGDriveClient() {
 }
 
 /**
+ * Find or create a dedicated subfolder for a student in Google Drive.
+ * Example Folder Name: "Rahul_Sharma_INT_0042"
+ */
+export async function getOrCreateStudentFolder(params: {
+  studentName: string
+  studentId: string
+  serialNo?: string | null
+}): Promise<string> {
+  const drive = getGDriveClient()
+  const parentFolder = process.env.GDRIVE_FOLDER_ID
+
+  const cleanName = params.studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
+  const refCode = params.serialNo ? `INT_${params.serialNo}` : params.studentId.slice(0, 8)
+  const folderName = `${cleanName}_${refCode}`
+
+  try {
+    // 1. Search if folder already exists under parentFolder
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${folderName}' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    // 2. Create subfolder if not found
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: parentFolder ? [parentFolder] : undefined,
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateStudentFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
  * Upload a file buffer to Google Drive.
  * Supports both Shared Drives and Personal Drives.
  */

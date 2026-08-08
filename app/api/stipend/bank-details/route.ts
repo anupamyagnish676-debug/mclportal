@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import path from 'path'
-import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive } from '@/lib/gdrive'
+import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive, getOrCreateStudentFolder } from '@/lib/gdrive'
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,10 +56,22 @@ export async function POST(req: NextRequest) {
     let storagePath = ''
 
     if (isGDriveConfigured()) {
+      const { data: stuProfile } = await adminClient
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const studentFolderId = await getOrCreateStudentFolder({
+        studentName: stuProfile?.full_name || 'Student',
+        studentId: user.id,
+      })
+
       const gdriveRes = await uploadFileToGDrive({
         buffer,
-        fileName: `bank_cheque_${user.id}_${timestamp}${ext}`,
+        fileName: `bank_cheque_${timestamp}${ext}`,
         mimeType: file.type || 'application/octet-stream',
+        folderId: studentFolderId,
       })
       fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
       storagePath = `gdrive:${gdriveRes.fileId}`
