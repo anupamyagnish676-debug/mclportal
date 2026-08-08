@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Routes that require admin or finance role — enforced with MFA AAL2 check
-const MFA_PROTECTED_PREFIXES = ['/admin', '/finance']
+// Routes that require Email OTP 2FA verification
+const MFA_PROTECTED_PREFIXES = ['/admin', '/finance', '/mentor', '/employee', '/student']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
