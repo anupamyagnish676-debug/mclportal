@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import path from 'path'
+import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive } from '@/lib/gdrive'
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,34 +48,50 @@ export async function POST(req: NextRequest) {
     const adminClient = createAdminClient()
     const ext = path.extname(file.name) || '.bin'
     const timestamp = Date.now()
-    const storagePath = `${user.id}/bank_cheque_${timestamp}${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload new cheque file to Supabase Storage 'documents'
-    const { error: uploadError } = await adminClient.storage
-      .from('documents')
-      .upload(storagePath, buffer, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: false,
+    let fileUrl = ''
+    let storagePath = ''
+
+    if (isGDriveConfigured()) {
+      const gdriveRes = await uploadFileToGDrive({
+        buffer,
+        fileName: `bank_cheque_${user.id}_${timestamp}${ext}`,
+        mimeType: file.type || 'application/octet-stream',
       })
+      fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+      storagePath = `gdrive:${gdriveRes.fileId}`
+    } else {
+      storagePath = `${user.id}/bank_cheque_${timestamp}${ext}`
+      const { error: uploadError } = await adminClient.storage
+        .from('documents')
+        .upload(storagePath, buffer, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: false,
+        })
 
-    if (uploadError) {
-      return NextResponse.json({ error: `Cheque file upload failed: ${uploadError.message}` }, { status: 500 })
+      if (uploadError) {
+        return NextResponse.json({ error: `Cheque file upload failed: ${uploadError.message}` }, { status: 500 })
+      }
+
+      const { data: signedUrlData } = await adminClient.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
+
+      fileUrl = signedUrlData?.signedUrl || ''
     }
-
-    // Get signed URL for the document (1 year expiry)
-    const { data: signedUrlData } = await adminClient.storage
-      .from('documents')
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
-
-    const fileUrl = signedUrlData?.signedUrl || ''
 
     // If student had a previous document, clean it up
     if (internship.bank_document_path) {
       try {
-        await adminClient.storage.from('documents').remove([internship.bank_document_path])
+        if (internship.bank_document_path.startsWith('gdrive:')) {
+          const oldFileId = internship.bank_document_path.replace('gdrive:', '')
+          deleteFileFromGDrive(oldFileId).catch(() => {})
+        } else {
+          await adminClient.storage.from('documents').remove([internship.bank_document_path])
+        }
       } catch (err: any) {
         console.error('Failed to remove old bank cheque file:', err.message)
       }

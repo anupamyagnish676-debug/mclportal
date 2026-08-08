@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import nodemailer from 'nodemailer'
 import path from 'path'
+import { isGDriveConfigured, uploadFileToGDrive, deleteFileFromGDrive } from '@/lib/gdrive'
 
 const DOC_TYPES = ['affidavit', 'college_id', 'bonafide', 'aadhaar', 'photo'] as const
 type DocType = typeof DOC_TYPES[number]
@@ -47,29 +48,40 @@ export async function POST(req: NextRequest) {
     const adminClient = createAdminClient()
     const ext = path.extname(file.name) || '.bin'
     const timestamp = Date.now()
-    const storagePath = `${user.id}/${doc_type}_${timestamp}${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload to Supabase Storage bucket 'documents'
-    const { error: uploadError } = await adminClient.storage
-      .from('documents')
-      .upload(storagePath, buffer, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: false,
+    let fileUrl = ''
+    let storagePath = ''
+
+    if (isGDriveConfigured()) {
+      const gdriveRes = await uploadFileToGDrive({
+        buffer,
+        fileName: `${doc_type}_${user.id}_${timestamp}${ext}`,
+        mimeType: file.type || 'application/octet-stream',
       })
+      fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+      storagePath = `gdrive:${gdriveRes.fileId}`
+    } else {
+      storagePath = `${user.id}/${doc_type}_${timestamp}${ext}`
+      const { error: uploadError } = await adminClient.storage
+        .from('documents')
+        .upload(storagePath, buffer, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: false,
+        })
 
-    if (uploadError) {
-      return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
+      if (uploadError) {
+        return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
+      }
+
+      const { data: signedUrlData } = await adminClient.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
+
+      fileUrl = signedUrlData?.signedUrl || ''
     }
-
-    // Get a signed URL for immediate use (1 year expiry)
-    const { data: signedUrlData } = await adminClient.storage
-      .from('documents')
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
-
-    const fileUrl = signedUrlData?.signedUrl || ''
 
     // Check if a record already exists for same student + doc_type
     const { data: existing } = await adminClient
@@ -80,8 +92,11 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (existing) {
-      // Delete old file from storage
-      if (existing.file_path) {
+      // Delete old file
+      if (existing.file_path?.startsWith('gdrive:')) {
+        const oldFileId = existing.file_path.replace('gdrive:', '')
+        deleteFileFromGDrive(oldFileId).catch(() => {})
+      } else if (existing.file_path) {
         await adminClient.storage.from('documents').remove([existing.file_path])
       }
 
@@ -152,8 +167,8 @@ export async function GET(req: NextRequest) {
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-      // Generate signed URLs in bulk
-      const paths = (data || []).map((d: any) => d.file_path).filter(Boolean)
+      // Generate signed URLs in bulk for non-GDrive paths
+      const paths = (data || []).map((d: any) => d.file_path).filter((p: string) => p && !p.startsWith('gdrive:'))
       let signedDocs = data || []
       if (paths.length > 0) {
         const { data: signedUrls } = await adminClient.storage
@@ -161,6 +176,7 @@ export async function GET(req: NextRequest) {
           .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
 
         signedDocs = (data || []).map((doc: any) => {
+          if (doc.file_path?.startsWith('gdrive:')) return doc
           const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
           return {
             ...doc,
@@ -196,8 +212,8 @@ export async function GET(req: NextRequest) {
 
       if (docErr) return NextResponse.json({ error: docErr.message }, { status: 500 })
 
-      // Generate signed URLs in bulk
-      const paths = (documents || []).map((d: any) => d.file_path).filter(Boolean)
+      // Generate signed URLs in bulk for non-GDrive paths
+      const paths = (documents || []).map((d: any) => d.file_path).filter((p: string) => p && !p.startsWith('gdrive:'))
       let signedDocs = documents || []
       if (paths.length > 0) {
         const { data: signedUrls } = await adminClient.storage
@@ -205,6 +221,7 @@ export async function GET(req: NextRequest) {
           .createSignedUrls(paths, 60 * 60 * 24 * 365) // 1 year expiry
 
         signedDocs = (documents || []).map((doc: any) => {
+          if (doc.file_path?.startsWith('gdrive:')) return doc
           const matched = signedUrls?.find((s: any) => s.path === doc.file_path)
           return {
             ...doc,

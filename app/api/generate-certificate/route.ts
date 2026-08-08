@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import QRCode from 'qrcode'
 import { Jimp } from 'jimp'
+import { isGDriveConfigured, uploadFileToGDrive } from '@/lib/gdrive'
 
 // Helper to strip white background from signature images using Jimp
 async function makeTransparent(base64Str: string): Promise<Buffer> {
@@ -478,23 +479,36 @@ export async function POST(req: NextRequest) {
 
     const pdfBytes = await pdfDoc.save()
     const pdfBuffer = Buffer.from(pdfBytes)
-    const filePath = `${internshipId}/certificate.pdf`
 
-    const { error: uploadError } = await adminClient.storage
-      .from('certificates')
-      .upload(filePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
+    let certUrl = ''
 
-    if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+    if (isGDriveConfigured()) {
+      const internCleanName = (studentName || internship.student?.full_name || 'Intern').replace(/\s+/g, '_')
+      const gdriveRes = await uploadFileToGDrive({
+        buffer: pdfBuffer,
+        fileName: `Certificate_${internCleanName}_${internship.serial_no || internshipId}.pdf`,
+        mimeType: 'application/pdf',
+      })
+      certUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+    } else {
+      const filePath = `${internshipId}/certificate.pdf`
+      const { error: uploadError } = await adminClient.storage
+        .from('certificates')
+        .upload(filePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
 
-    const { data: signedUrlData, error: signedUrlError } = await adminClient.storage
-      .from('certificates')
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365) // 1 year
+      if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-    if (signedUrlError) return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+      const { data: signedUrlData, error: signedUrlError } = await adminClient.storage
+        .from('certificates')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365) // 1 year
+
+      if (signedUrlError) return NextResponse.json({ error: signedUrlError.message }, { status: 500 })
+      certUrl = signedUrlData.signedUrl
+    }
 
     const { error: updateError } = await adminClient
       .from('internships')
-      .update({ certificate_url: signedUrlData.signedUrl })
+      .update({ certificate_url: certUrl })
       .eq('id', internshipId)
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
@@ -554,7 +568,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, certificateUrl: signedUrlData.signedUrl })
+    return NextResponse.json({ success: true, certificateUrl: certUrl })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Unexpected server error' }, { status: 500 })
   }
