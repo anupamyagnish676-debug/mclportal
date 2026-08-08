@@ -35,8 +35,10 @@ export async function POST(request: NextRequest) {
   } catch {}
 
   const response = NextResponse.json({ ok: true })
-  // Clear all session cookies
+  // Clear all session and MFA cookies
   response.cookies.set('mcl-session', '', { path: '/', maxAge: 0 })
   response.cookies.set('mcl-session-nonce', '', { path: '/', maxAge: 0 })
+  response.cookies.set('mcl-email-mfa-verified', '', { path: '/', maxAge: 0 })
+  response.cookies.set('mcl-otp-data', '', { path: '/', maxAge: 0 })
   return response
 }

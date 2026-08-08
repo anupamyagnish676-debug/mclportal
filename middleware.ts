@@ -44,22 +44,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next')
 
   if (requiresMfaCheck && !isMfaExempt) {
-    try {
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-
-      // If the user has MFA enrolled (nextLevel is aal2) but current session is only aal1
-      // force them through the MFA verification step
-      if (
-        aalData &&
-        aalData.nextLevel === 'aal2' &&
-        aalData.currentLevel !== 'aal2'
-      ) {
-        const verifyUrl = new URL('/mfa-verify', request.url)
-        verifyUrl.searchParams.set('next', pathname)
-        return NextResponse.redirect(verifyUrl)
-      }
-    } catch {
-      // If AAL check fails, allow through (graceful degradation)
+    const isMfaVerified = request.cookies.get('mcl-email-mfa-verified')?.value === 'true'
+    if (!isMfaVerified) {
+      const verifyUrl = new URL('/mfa-verify', request.url)
+      verifyUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(verifyUrl)
     }
   }
 

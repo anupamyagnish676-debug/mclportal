@@ -58,9 +58,16 @@ export async function POST(req: NextRequest) {
       ip,
     })
 
-    // Clear mcl-otp-data cookie and confirm success
+    // Clear mcl-otp-data cookie and set mcl-email-mfa-verified cookie for middleware
     const response = NextResponse.json({ success: true, redirect: parsedCookie.redirect || '/admin' })
     response.cookies.delete('mcl-otp-data')
+    response.cookies.set('mcl-email-mfa-verified', 'true', {
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
 
     return response
   } catch (err: any) {
