@@ -4,6 +4,7 @@ import { checkRateLimit, recordLoginAttempt, formatRetryTime } from '@/lib/rate-
 import { logAudit, getClientIp } from '@/lib/audit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import crypto from 'crypto'
+import { generate6DigitOTP, generateOTPHash, sendOTPEmail } from '@/lib/otp'
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json()
@@ -158,31 +159,63 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // ── MFA check for admin and finance ──────────────────────────────────────
+  // ── Email OTP check for admin and finance ──────────────────────────────────
   if (role === 'admin' || role === 'finance') {
-    try {
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      if (aalData && aalData.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
-        const responseData = {
-          role, redirect: dashboardUrl, requires_mfa: true,
-          mfa_redirect: `/mfa-verify?next=${dashboardUrl}`,
-          session: { access_token: data.session!.access_token, refresh_token: data.session!.refresh_token },
-          session_nonce: sessionNonce,
-        }
-        const response = NextResponse.json(responseData)
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, { ...options, path: '/', httpOnly: false, secure: false, sameSite: 'lax' })
-        })
-        response.cookies.set('mcl-session', JSON.stringify({
-          access_token: data.session!.access_token,
-          refresh_token: data.session!.refresh_token,
-        }), { path: '/', httpOnly: false, secure: false, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 7 })
-        response.cookies.set('mcl-session-nonce', sessionNonce, {
-          path: '/', httpOnly: false, secure: false, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 7,
-        })
-        return response
-      }
-    } catch { /* graceful degradation */ }
+    const otpCode = generate6DigitOTP()
+    const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
+    const hash = generateOTPHash(email, otpCode, expiresAt)
+
+    // Send Email OTP via Nodemailer
+    await sendOTPEmail({
+      email,
+      fullName: profile.full_name,
+      otpCode,
+      role,
+    })
+
+    const cookieData = encodeURIComponent(JSON.stringify({
+      email,
+      hash,
+      expiresAt,
+      role,
+      redirect: dashboardUrl,
+    }))
+
+    const responseData = {
+      role,
+      redirect: dashboardUrl,
+      requires_mfa: true,
+      mfa_type: 'email',
+      mfa_redirect: `/mfa-verify?email=${encodeURIComponent(email)}&next=${dashboardUrl}`,
+      email,
+      session: { access_token: data.session!.access_token, refresh_token: data.session!.refresh_token },
+      session_nonce: sessionNonce,
+    }
+
+    const response = NextResponse.json(responseData)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, { ...options, path: '/', httpOnly: false, secure: false, sameSite: 'lax' })
+    })
+
+    // Store temporary OTP session cookie
+    response.cookies.set('mcl-otp-data', cookieData, {
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 60 * 5, // 5 minutes
+    })
+
+    // Store standard session cookies so user is authenticated upon OTP verification
+    response.cookies.set('mcl-session', JSON.stringify({
+      access_token: data.session!.access_token,
+      refresh_token: data.session!.refresh_token,
+    }), { path: '/', httpOnly: false, secure: false, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 7 })
+    response.cookies.set('mcl-session-nonce', sessionNonce, {
+      path: '/', httpOnly: false, secure: false, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 7,
+    })
+
+    return response
   }
 
   // ── Normal login response ─────────────────────────────────────────────────

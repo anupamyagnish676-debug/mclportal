@@ -1,24 +1,32 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Mail, RefreshCw, ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react'
 
 function MFAVerifyContent() {
-  const supabase = createClient()
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams?.get('next') || '/admin'
+  const next  = searchParams?.get('next') || '/admin'
+  const email = searchParams?.get('email') || ''
 
-  const [code, setCode] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
+  const [code, setCode]           = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [status, setStatus]       = useState('')
+  const [resendTimer, setResendTimer] = useState(30)
+  const [resendMsg, setResendMsg]     = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  // Resend cooldown timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setInterval(() => setResendTimer(t => t - 1), 1000)
+      return () => clearInterval(timer)
+    }
+  }, [resendTimer])
 
   async function handleVerify(e?: React.FormEvent) {
     if (e) e.preventDefault()
@@ -29,48 +37,49 @@ function MFAVerifyContent() {
     setStatus('Verifying code...')
 
     try {
-      // List factors to get the factorId
-      const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors()
-      if (listErr) throw listErr
-
-      const totpFactor = factorsData?.totp?.find((f: any) => f.status === 'verified')
-      if (!totpFactor) {
-        throw new Error('No verified authenticator found. Please set up 2FA in Settings first.')
-      }
-
-      // Challenge
-      const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
-        factorId: totpFactor.id,
+      const res = await fetch('/api/auth/verify-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
       })
-      if (challengeErr) throw challengeErr
 
-      // Verify
-      const { data: verifyData, error: verifyErr } = await supabase.auth.mfa.verify({
-        factorId: totpFactor.id,
-        challengeId: challengeData.id,
-        code,
-      })
-      if (verifyErr) throw verifyErr
+      const data = await res.json()
 
-      // Update the mcl-session with new tokens from the verified AAL2 session
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const cookieVal = encodeURIComponent(JSON.stringify({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        }))
-        document.cookie = `mcl-session=${cookieVal}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+      if (!res.ok) {
+        throw new Error(data.error || 'Verification failed')
       }
 
       setStatus('Verified! Redirecting...')
       await new Promise(r => setTimeout(r, 400))
-      window.location.href = next
-    } catch (e: any) {
-      setError(e.message || 'Invalid code. Please try again.')
+      window.location.href = data.redirect || next
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired OTP code.')
       setCode('')
       setStatus('')
       setLoading(false)
       inputRef.current?.focus()
+    }
+  }
+
+  async function handleResend() {
+    if (resendTimer > 0) return
+    setError('')
+    setResendMsg('')
+    try {
+      const res = await fetch('/api/auth/resend-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to resend code')
+      } else {
+        setResendMsg('New 6-digit code sent to your email!')
+        setResendTimer(30)
+      }
+    } catch {
+      setError('Network error. Failed to resend.')
     }
   }
 
@@ -84,41 +93,40 @@ function MFAVerifyContent() {
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-6 overflow-hidden font-sans bg-[#020617]">
-      {/* Background */}
+      {/* Background elements */}
       <div
-        className="absolute inset-0 bg-cover bg-center z-0 scale-105 pointer-events-none select-none brightness-[0.8] animate-kenburns"
+        className="absolute inset-0 bg-cover bg-center z-0 scale-105 pointer-events-none select-none brightness-[0.8]"
         style={{ backgroundImage: "url('/login-bg.jpg')" }}
       />
       <div className="absolute inset-0 bg-gradient-to-tr from-[#021f18]/95 via-[#020617]/80 to-[#030712]/50 z-0 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020617]/40 to-[#020617]/90 z-0 pointer-events-none" />
-      <div className="absolute inset-0 bg-premium-grid z-0 pointer-events-none opacity-60" />
-      <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] z-0 pointer-events-none animate-float-1" />
-      <div className="absolute -bottom-20 right-10 w-[600px] h-[600px] bg-green-900/20 rounded-full blur-[140px] z-0 pointer-events-none animate-float-2" />
+      <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] z-0 pointer-events-none" />
 
       {/* Card */}
-      <div className="z-10 w-full max-w-sm bg-[#040f0c]/60 border border-white/10 backdrop-blur-2xl p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.6)] relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="z-10 w-full max-w-sm bg-[#040f0c]/70 border border-white/10 backdrop-blur-2xl p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.6)] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
         {/* Icon */}
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center backdrop-blur-sm">
-            <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3.75h3m-3 3.75h.008v.008H10.5v-.008zm3.75 0h.008v.008h-.008v-.008z" />
-            </svg>
+          <div className="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center backdrop-blur-sm shadow-inner">
+            <Mail className="w-8 h-8 text-emerald-400" />
           </div>
         </div>
 
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-white tracking-tight">Two-Factor Authentication</h1>
-          <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
-            Open your authenticator app and enter the 6-digit code for <strong className="text-slate-300">MCL Portal</strong>.
+          <h1 className="text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+            Email OTP Verification
+          </h1>
+          <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+            We sent a 6-digit verification code to
+            {email ? <strong className="block text-emerald-400 font-semibold mt-0.5">{email}</strong> : ' your email inbox'}.
           </p>
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 text-center">
-              Verification Code
+            <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2 text-center">
+              Enter 6-Digit Code
             </label>
             <input
               ref={inputRef}
@@ -130,48 +138,56 @@ function MFAVerifyContent() {
               placeholder="000000"
               maxLength={6}
               disabled={loading}
-              className="w-full text-center text-3xl font-bold tracking-[0.6em] bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 disabled:opacity-50"
+              className="w-full text-center text-3xl font-mono font-bold tracking-[0.6em] bg-[#020617]/70 border border-emerald-500/30 rounded-xl px-4 py-4 text-white placeholder-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 disabled:opacity-50"
             />
           </div>
 
           {error && (
-            <div className="bg-red-950/40 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-xs backdrop-blur-sm flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              {error}
+            <div className="bg-red-950/60 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl text-xs backdrop-blur-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {resendMsg && !error && (
+            <div className="bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span>{resendMsg}</span>
             </div>
           )}
 
           {status && !error && (
-            <div className="bg-blue-950/40 border border-blue-500/20 text-blue-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm">
-              <svg className="animate-spin h-4 w-4 text-blue-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              {status}
+            <div className="bg-blue-950/60 border border-blue-500/30 text-blue-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 flex-shrink-0" />
+              <span>{status}</span>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading || code.length !== 6}
-            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(16,185,129,0.25)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.45)] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(16,185,129,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading ? 'Verifying...' : 'Verify →'}
+            {loading ? 'Verifying...' : 'Verify OTP →'}
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-          <a
-            href="/login"
-            className="text-[10px] text-slate-500 hover:text-slate-400 transition-colors"
-          >
-            ← Back to login
+        {/* Resend button */}
+        <div className="mt-5 text-center flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-white/5">
+          <a href="/login" className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to login
           </a>
+          <button
+            onClick={handleResend}
+            disabled={resendTimer > 0}
+            className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 disabled:text-slate-500 font-medium transition-colors disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${resendTimer === 0 ? 'animate-spin-slow' : ''}`} />
+            {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+          </button>
         </div>
 
-        <p className="text-center text-[10px] text-slate-500 mt-6 leading-normal border-t border-white/5 pt-4">
+        <p className="text-center text-[10px] text-slate-500 mt-6 leading-normal">
           Training &amp; Development Department, MCL
         </p>
       </div>
