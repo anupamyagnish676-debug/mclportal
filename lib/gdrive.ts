@@ -2,19 +2,47 @@ import { google } from 'googleapis'
 import { Readable } from 'stream'
 
 export function isGDriveConfigured(): boolean {
-  return (
-    process.env.USE_GDRIVE_STORAGE === 'true' &&
-    Boolean(process.env.GDRIVE_CLIENT_EMAIL) &&
-    Boolean(process.env.GDRIVE_PRIVATE_KEY) &&
-    Boolean(process.env.GDRIVE_FOLDER_ID)
+  if (process.env.USE_GDRIVE_STORAGE !== 'true') return false
+
+  // Method 1: OAuth2 (User Account - Works on Personal @gmail.com)
+  const hasOAuth = Boolean(
+    process.env.GDRIVE_CLIENT_ID &&
+    process.env.GDRIVE_CLIENT_SECRET &&
+    process.env.GDRIVE_REFRESH_TOKEN &&
+    process.env.GDRIVE_FOLDER_ID
   )
+
+  // Method 2: Service Account (Works on Shared Drives / Google Workspace)
+  const hasServiceAccount = Boolean(
+    process.env.GDRIVE_CLIENT_EMAIL &&
+    process.env.GDRIVE_PRIVATE_KEY &&
+    process.env.GDRIVE_FOLDER_ID
+  )
+
+  return hasOAuth || hasServiceAccount
 }
 
 function getGDriveClient() {
+  // Prefer OAuth2 if configured (solves Service Account quota limits)
+  if (
+    process.env.GDRIVE_CLIENT_ID &&
+    process.env.GDRIVE_CLIENT_SECRET &&
+    process.env.GDRIVE_REFRESH_TOKEN
+  ) {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GDRIVE_CLIENT_ID,
+      process.env.GDRIVE_CLIENT_SECRET
+    )
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GDRIVE_REFRESH_TOKEN,
+    })
+    return google.drive({ version: 'v3', auth: oauth2Client })
+  }
+
+  // Fallback to Service Account JWT
   const clientEmail = process.env.GDRIVE_CLIENT_EMAIL
   let privateKey = process.env.GDRIVE_PRIVATE_KEY
   if (privateKey) {
-    // Handle escaped newlines from environment variables
     privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n')
   }
 
@@ -29,7 +57,7 @@ function getGDriveClient() {
 
 /**
  * Upload a file buffer to Google Drive.
- * Makes the file readable via link and returns fileId and view links.
+ * Supports both Shared Drives and Personal Drives.
  */
 export async function uploadFileToGDrive(params: {
   buffer: Buffer
@@ -44,7 +72,7 @@ export async function uploadFileToGDrive(params: {
   fileStream.push(params.buffer)
   fileStream.push(null)
 
-  // 1. Create file in Drive
+  // 1. Create file in Drive (with supportsAllDrives for Shared Drives)
   const res = await drive.files.create({
     requestBody: {
       name: params.fileName,
@@ -54,6 +82,7 @@ export async function uploadFileToGDrive(params: {
       mimeType: params.mimeType,
       body: fileStream,
     },
+    supportsAllDrives: true,
     fields: 'id, webViewLink, webContentLink',
   })
 
@@ -63,6 +92,7 @@ export async function uploadFileToGDrive(params: {
   try {
     await drive.permissions.create({
       fileId,
+      supportsAllDrives: true,
       requestBody: {
         role: 'reader',
         type: 'anyone',
@@ -90,7 +120,7 @@ export async function uploadFileToGDrive(params: {
 export async function deleteFileFromGDrive(fileId: string): Promise<void> {
   try {
     const drive = getGDriveClient()
-    await drive.files.delete({ fileId })
+    await drive.files.delete({ fileId, supportsAllDrives: true })
   } catch (err: any) {
     console.error('[GDRIVE] Failed to delete file:', err.message)
   }
