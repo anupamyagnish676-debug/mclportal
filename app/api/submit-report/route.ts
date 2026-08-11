@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
       const { data: internship, error: fetchErr } = await adminClient
         .from('internships')
-        .select('*, student:profiles!internships_student_id_fkey(full_name)')
+        .select('*, student:profiles!internships_student_id_fkey(full_name, area)')
         .eq('id', internshipId)
         .maybeSingle()
 
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
           studentName: internship.student?.full_name || 'Student',
           studentId: user.id,
           serialNo: internship.serial_no,
+          area: internship.area || internship.student?.area || 'Headquarters',
         })
         const gdriveRes = await uploadFileToGDrive({
           buffer,

@@ -4,8 +4,6 @@ import Link from 'next/link'
 
 export const revalidate = 0
 
-// Recompute HMAC for a given serial_no and compare with the token in the URL.
-// This is a constant-time comparison to prevent timing attacks.
 function computeToken(serialNo: number | string): string {
   const secret = process.env.CERT_HMAC_SECRET || ''
   return createHmac('sha256', secret).update(String(serialNo)).digest('hex')
@@ -13,45 +11,90 @@ function computeToken(serialNo: number | string): string {
 
 export default async function PublicVerificationPage({ params }: { params: { serial: string } }) {
   const supabase = createAdminClient()
-  const tokenFromUrl = params.serial  // This is the HMAC hex token or fallback UUID
+  const tokenFromUrl = params.serial
 
-  // We cannot reverse HMAC — so we find internships and verify the token matches.
-  // For efficiency, we fetch all issued certificates and check HMAC match server-side.
-  const { data: allInternships } = await supabase
-    .from('internships')
-    .select('id, serial_no')
+  let displayData: any = null
 
-  // Find the internship using multiple fallback routes to be extremely robust:
-  // 1. Current environment secret HMAC
-  // 2. Empty secret fallback HMAC (if Vercel var not set)
-  // 3. Local dev secret fallback HMAC (if cert generated in dev)
-  // 4. Raw serial number match (manual entry / direct links)
-  // 5. Raw UUID match (legacy dashboard QR codes)
-  const matched = allInternships?.find((i) => {
-    // 1. Current environment hmac
-    if (computeToken(i.serial_no) === tokenFromUrl) return true
+  // 1. Try fetching from permanent verified_certificates snapshot table
+  try {
+    const { data: allVerifiedCerts } = await supabase
+      .from('verified_certificates')
+      .select('*')
 
-    // 2. Empty hmac fallback
-    const emptySecretToken = createHmac('sha256', '').update(String(i.serial_no)).digest('hex')
-    if (emptySecretToken === tokenFromUrl) return true
+    const snapshotCert = allVerifiedCerts?.find((c) => {
+      if (computeToken(c.serial_no) === tokenFromUrl) return true
+      const emptySecretToken = createHmac('sha256', '').update(String(c.serial_no)).digest('hex')
+      if (emptySecretToken === tokenFromUrl) return true
+      const devSecretToken = createHmac('sha256', 'oTmpJ2idZbx3I9yaKqwHNV7kWC8rMng05cjhYU1EBQftsL4X').update(String(c.serial_no)).digest('hex')
+      if (devSecretToken === tokenFromUrl) return true
+      if (String(c.serial_no) === tokenFromUrl) return true
+      return false
+    })
 
-    // 3. Local dev secret fallback
-    const devSecretToken = createHmac('sha256', 'oTmpJ2idZbx3I9yaKqwHNV7kWC8rMng05cjhYU1EBQftsL4X').update(String(i.serial_no)).digest('hex')
-    if (devSecretToken === tokenFromUrl) return true
+    if (snapshotCert) {
+      displayData = {
+        serial_no: snapshotCert.serial_no,
+        studentName: snapshotCert.full_name,
+        roll_no: snapshotCert.roll_no,
+        university: snapshotCert.university,
+        wing: snapshotCert.wing,
+        area: snapshotCert.area,
+        start_date: snapshotCert.start_date,
+        end_date: snapshotCert.end_date,
+        certificate_url: snapshotCert.certificate_url,
+        isCertified: true,
+      }
+    }
+  } catch (e: any) {
+    console.warn('[VERIFY] Error querying verified_certificates table:', e.message)
+  }
 
-    // 4. Raw serial number
-    if (String(i.serial_no) === tokenFromUrl) return true
+  // 2. Fallback to active internships table if not found in verified_certificates
+  if (!displayData) {
+    const { data: allInternships } = await supabase
+      .from('internships')
+      .select('id, serial_no')
 
-    // 5. Raw internship UUID (for dashboard compatibility)
-    if (i.id === tokenFromUrl) return true
+    const matched = allInternships?.find((i) => {
+      if (computeToken(i.serial_no) === tokenFromUrl) return true
+      const emptySecretToken = createHmac('sha256', '').update(String(i.serial_no)).digest('hex')
+      if (emptySecretToken === tokenFromUrl) return true
+      const devSecretToken = createHmac('sha256', 'oTmpJ2idZbx3I9yaKqwHNV7kWC8rMng05cjhYU1EBQftsL4X').update(String(i.serial_no)).digest('hex')
+      if (devSecretToken === tokenFromUrl) return true
+      if (String(i.serial_no) === tokenFromUrl) return true
+      if (i.id === tokenFromUrl) return true
+      return false
+    })
 
-    return false
-  })
+    if (matched) {
+      const { data: internship } = await supabase
+        .from('internships')
+        .select('id, start_date, end_date, serial_no, certificate_url, certificate_approved, student:profiles!internships_student_id_fkey(full_name, roll_no, university, wing, area)')
+        .eq('id', matched.id)
+        .maybeSingle()
 
-  if (!matched) {
+      if (internship) {
+        const student = (internship as any).student
+        displayData = {
+          serial_no: internship.serial_no,
+          studentName: student?.full_name || 'N/A',
+          roll_no: student?.roll_no,
+          university: student?.university,
+          wing: student?.wing,
+          area: student?.area,
+          start_date: internship.start_date,
+          end_date: internship.end_date,
+          certificate_url: internship.certificate_url,
+          isCertified: Boolean(internship.certificate_approved && internship.certificate_url),
+        }
+      }
+    }
+  }
+
+  if (!displayData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center space-y-4 shadow-sm">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto font-bold">
             ✗
           </div>
@@ -69,35 +112,14 @@ export default async function PublicVerificationPage({ params }: { params: { ser
     )
   }
 
-  // Now fetch full details for the matched internship
-  const { data: internship } = await supabase
-    .from('internships')
-    .select('id, start_date, end_date, serial_no, certificate_url, certificate_approved, student:profiles!internships_student_id_fkey(full_name, roll_no, university, wing, area)')
-    .eq('id', matched.id)
-    .maybeSingle()
-
-  if (!internship) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center space-y-4">
-          <h1 className="text-xl font-bold text-gray-900">Record Not Found</h1>
-          <p className="text-sm text-gray-500">The internship record could not be retrieved.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const { student } = internship as any
-  const isCertified = internship.certificate_approved && internship.certificate_url
-
   const formatDate = (d: string | null) => {
     if (!d) return 'N/A'
     return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const areaText = student?.area === 'Headquarters'
+  const areaText = displayData.area === 'Headquarters'
     ? 'MCL Headquarters, Sambalpur'
-    : `${student?.area || 'Talcher'} Area, MCL`
+    : `${displayData.area || 'Talcher'} Area, MCL`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
@@ -123,7 +145,7 @@ export default async function PublicVerificationPage({ params }: { params: { ser
             This page confirms that the individual listed below has officially completed an internship at Mahanadi Coalfields Limited.
           </p>
           <span className="text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold tracking-wide uppercase">
-            Certificate Ref: MCL/HRD/INT/{internship.serial_no}
+            Certificate Ref: MCL/HRD/INT/{displayData.serial_no}
           </span>
         </div>
 
@@ -133,31 +155,31 @@ export default async function PublicVerificationPage({ params }: { params: { ser
 
             <div>
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Candidate Name</span>
-              <p className="font-semibold text-gray-900 mt-0.5">{student?.full_name || 'N/A'}</p>
+              <p className="font-semibold text-gray-900 mt-0.5">{displayData.studentName}</p>
             </div>
 
             <div>
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Serial Number</span>
-              <p className="font-bold text-green-700 mt-0.5">MCL/HRD/INT/{internship.serial_no}</p>
+              <p className="font-bold text-green-700 mt-0.5">MCL/HRD/INT/{displayData.serial_no}</p>
             </div>
 
-            {student?.roll_no && (
+            {displayData.roll_no && (
               <div>
                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Roll Number</span>
-                <p className="font-semibold text-gray-800 mt-0.5">{student.roll_no}</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{displayData.roll_no}</p>
               </div>
             )}
 
-            {student?.university && (
+            {displayData.university && (
               <div>
                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">University / College</span>
-                <p className="font-semibold text-gray-800 mt-0.5">{student.university}</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{displayData.university}</p>
               </div>
             )}
 
             <div>
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Training Wing / Department</span>
-              <p className="font-semibold text-gray-800 mt-0.5">{student?.wing || 'N/A'}</p>
+              <p className="font-semibold text-gray-800 mt-0.5">{displayData.wing || 'N/A'}</p>
             </div>
 
             <div>
@@ -168,7 +190,7 @@ export default async function PublicVerificationPage({ params }: { params: { ser
             <div>
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Internship Period</span>
               <p className="font-semibold text-gray-800 mt-0.5">
-                {formatDate(internship.start_date)} &nbsp;–&nbsp; {formatDate(internship.end_date)}
+                {formatDate(displayData.start_date)} &nbsp;–&nbsp; {formatDate(displayData.end_date)}
               </p>
             </div>
 
@@ -176,8 +198,8 @@ export default async function PublicVerificationPage({ params }: { params: { ser
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certificate Status</span>
               <p className="mt-0.5">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold
-                  ${isCertified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                  {isCertified ? '✓  Issued & Approved' : '⏳  In Progress / Pending'}
+                  ${displayData.isCertified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {displayData.isCertified ? '✓  Issued & Approved' : '⏳  In Progress / Pending'}
                 </span>
               </p>
             </div>
@@ -185,14 +207,14 @@ export default async function PublicVerificationPage({ params }: { params: { ser
           </div>
 
           {/* Certificate Download */}
-          {isCertified && (
+          {displayData.isCertified && displayData.certificate_url && (
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <p className="text-xs font-bold text-gray-700">Official Internship Certificate</p>
                 <p className="text-[10px] text-gray-400">Verified digital certificate issued by the HRD Department, MCL.</p>
               </div>
               <a
-                href={internship.certificate_url}
+                href={displayData.certificate_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-shrink-0 px-4 py-2 bg-green-700 text-white text-xs font-semibold rounded-lg hover:bg-green-800 transition-colors"

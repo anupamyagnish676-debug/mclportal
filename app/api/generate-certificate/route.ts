@@ -488,6 +488,7 @@ export async function POST(req: NextRequest) {
         studentName: studentName || internship.student?.full_name || 'Intern',
         studentId: internship.student_id,
         serialNo: internship.serial_no,
+        area: internship.area || internship.student?.area || 'Headquarters',
       })
       const gdriveRes = await uploadFileToGDrive({
         buffer: pdfBuffer,
@@ -518,6 +519,25 @@ export async function POST(req: NextRequest) {
       .eq('id', internshipId)
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+    // Save permanent snapshot in verified_certificates table (persists even if student is deleted)
+    try {
+      await adminClient.from('verified_certificates').upsert({
+        serial_no: String(internship.serial_no),
+        full_name: studentName || internship.student?.full_name || 'Intern',
+        university: internship.student?.university || '',
+        roll_no: internship.student?.roll_no || '',
+        wing: internship.student?.wing || '',
+        area: internship.area || internship.student?.area || 'Headquarters',
+        start_date: internship.start_date,
+        end_date: internship.end_date,
+        certificate_url: certUrl,
+        is_approved: true,
+        issued_at: new Date().toISOString(),
+      }, { onConflict: 'serial_no' })
+    } catch (certErr: any) {
+      console.warn('[VERIFIED_CERTS] Snapshot save skipped:', certErr.message)
+    }
 
     // Send the generated certificate via email to the student
     const studentEmail = internship.student?.email

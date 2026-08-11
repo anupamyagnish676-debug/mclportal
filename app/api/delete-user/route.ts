@@ -19,6 +19,20 @@ export async function POST(req: NextRequest) {
 
     const adminClient = createAdminClient()
 
+    // 0. Delete student folder from Google Drive
+    const { data: stuProfile } = await adminClient.from('profiles').select('full_name, area').eq('id', studentId).maybeSingle()
+    const { data: stuInternship } = await adminClient.from('internships').select('serial_no, area').eq('student_id', studentId).limit(1).maybeSingle()
+
+    if (stuProfile) {
+      const { deleteStudentFolderGDrive } = await import('@/lib/gdrive')
+      await deleteStudentFolderGDrive({
+        studentName: stuProfile.full_name,
+        studentId: studentId,
+        serialNo: stuInternship?.serial_no,
+        area: stuProfile.area || stuInternship?.area,
+      })
+    }
+
     // 1. Delete associated data to prevent foreign key constraint violations
     if (internshipId) {
       // Delete submissions

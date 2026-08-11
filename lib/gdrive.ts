@@ -4,7 +4,6 @@ import { Readable } from 'stream'
 export function isGDriveConfigured(): boolean {
   if (process.env.USE_GDRIVE_STORAGE !== 'true') return false
 
-  // Method 1: OAuth2 (User Account - Works on Personal @gmail.com)
   const hasOAuth = Boolean(
     process.env.GDRIVE_CLIENT_ID &&
     process.env.GDRIVE_CLIENT_SECRET &&
@@ -12,7 +11,6 @@ export function isGDriveConfigured(): boolean {
     process.env.GDRIVE_FOLDER_ID
   )
 
-  // Method 2: Service Account (Works on Shared Drives / Google Workspace)
   const hasServiceAccount = Boolean(
     process.env.GDRIVE_CLIENT_EMAIL &&
     process.env.GDRIVE_PRIVATE_KEY &&
@@ -23,7 +21,6 @@ export function isGDriveConfigured(): boolean {
 }
 
 function getGDriveClient() {
-  // Prefer OAuth2 if configured (solves Service Account quota limits)
   if (
     process.env.GDRIVE_CLIENT_ID &&
     process.env.GDRIVE_CLIENT_SECRET &&
@@ -39,7 +36,6 @@ function getGDriveClient() {
     return google.drive({ version: 'v3', auth: oauth2Client })
   }
 
-  // Fallback to Service Account JWT
   const clientEmail = process.env.GDRIVE_CLIENT_EMAIL
   let privateKey = process.env.GDRIVE_PRIVATE_KEY
   if (privateKey) {
@@ -57,23 +53,106 @@ function getGDriveClient() {
 
 /**
  * Find or create a dedicated subfolder for a student in Google Drive.
- * Example Folder Name: "Rahul_Sharma_INT_0042"
+ * Structure: Area -> StudentName_Area_INT_SerialNo
+ * Example: "Talcher/Rahul_Sharma_Talcher_INT_5"
  */
 export async function getOrCreateStudentFolder(params: {
   studentName: string
   studentId: string
   serialNo?: string | null
+  area?: string | null
 }): Promise<string> {
   const drive = getGDriveClient()
   const parentFolder = process.env.GDRIVE_FOLDER_ID
 
+  const rawArea = params.area && params.area.trim() ? params.area.trim() : 'Headquarters'
+  const cleanArea = rawArea.replace(/[^a-zA-Z0-9]/g, '_')
+
   const cleanName = params.studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
-  const refCode = params.serialNo ? `INT_${params.serialNo}` : params.studentId.slice(0, 8)
-  const folderName = `${cleanName}_${refCode}`
+  const refCode = params.serialNo ? `INT_${params.serialNo}` : `INT_${params.studentId.slice(0, 8)}`
+  
+  // Format: StudentName_Area_INT_SerialNo
+  const studentFolderName = `${cleanName}_${cleanArea}_${refCode}`
 
   try {
-    // 1. Search if folder already exists under parentFolder
-    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${folderName}' and trashed = false`
+    // Step 1: Find or Create Area Subfolder inside parentFolder
+    let areaFolderId = parentFolder
+    if (parentFolder) {
+      const areaQuery = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${cleanArea}' and trashed = false`
+      const areaSearchRes = await drive.files.list({
+        q: areaQuery,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
+
+      if (areaSearchRes.data.files && areaSearchRes.data.files.length > 0) {
+        areaFolderId = areaSearchRes.data.files[0].id!
+      } else {
+        const areaCreateRes = await drive.files.create({
+          requestBody: {
+            name: cleanArea,
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [parentFolder],
+          },
+          supportsAllDrives: true,
+          fields: 'id',
+        })
+        areaFolderId = areaCreateRes.data.id!
+      }
+    }
+
+    // Step 2: Find or Create Student Subfolder inside areaFolderId
+    const studentQuery = `'${areaFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${studentFolderName}' and trashed = false`
+    const studentSearchRes = await drive.files.list({
+      q: studentQuery,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (studentSearchRes.data.files && studentSearchRes.data.files.length > 0) {
+      return studentSearchRes.data.files[0].id!
+    }
+
+    const studentCreateRes = await drive.files.create({
+      requestBody: {
+        name: studentFolderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: areaFolderId ? [areaFolderId] : undefined,
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+
+    return studentCreateRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateStudentFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
+ * Delete a student's subfolder from Google Drive when an admin deletes the student.
+ */
+export async function deleteStudentFolderGDrive(params: {
+  studentName: string
+  studentId: string
+  serialNo?: string | null
+  area?: string | null
+}): Promise<void> {
+  if (!isGDriveConfigured()) return
+  try {
+    const drive = getGDriveClient()
+
+    const rawArea = params.area && params.area.trim() ? params.area.trim() : 'Headquarters'
+    const cleanArea = rawArea.replace(/[^a-zA-Z0-9]/g, '_')
+    const cleanName = params.studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
+    const refCode = params.serialNo ? `INT_${params.serialNo}` : `INT_${params.studentId.slice(0, 8)}`
+    
+    const studentFolderName = `${cleanName}_${cleanArea}_${refCode}`
+
+    const q = `mimeType = 'application/vnd.google-apps.folder' and name = '${studentFolderName}' and trashed = false`
     const searchRes = await drive.files.list({
       q,
       fields: 'files(id, name)',
@@ -82,30 +161,20 @@ export async function getOrCreateStudentFolder(params: {
     })
 
     if (searchRes.data.files && searchRes.data.files.length > 0) {
-      return searchRes.data.files[0].id!
+      for (const file of searchRes.data.files) {
+        if (file.id) {
+          await drive.files.delete({ fileId: file.id, supportsAllDrives: true })
+          console.log(`[GDRIVE] Deleted student folder: ${file.name} (${file.id})`)
+        }
+      }
     }
-
-    // 2. Create subfolder if not found
-    const createRes = await drive.files.create({
-      requestBody: {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: parentFolder ? [parentFolder] : undefined,
-      },
-      supportsAllDrives: true,
-      fields: 'id',
-    })
-
-    return createRes.data.id!
   } catch (err: any) {
-    console.error('[GDRIVE] Error in getOrCreateStudentFolder:', err.message)
-    return parentFolder || ''
+    console.error('[GDRIVE] Error deleting student folder from Drive:', err.message)
   }
 }
 
 /**
  * Upload a file buffer to Google Drive.
- * Supports both Shared Drives and Personal Drives.
  */
 export async function uploadFileToGDrive(params: {
   buffer: Buffer
@@ -120,7 +189,6 @@ export async function uploadFileToGDrive(params: {
   fileStream.push(params.buffer)
   fileStream.push(null)
 
-  // 1. Create file in Drive (with supportsAllDrives for Shared Drives)
   const res = await drive.files.create({
     requestBody: {
       name: params.fileName,
@@ -136,7 +204,6 @@ export async function uploadFileToGDrive(params: {
 
   const fileId = res.data.id!
 
-  // 2. Make file readable by anyone with the link
   try {
     await drive.permissions.create({
       fileId,
@@ -163,7 +230,7 @@ export async function uploadFileToGDrive(params: {
 }
 
 /**
- * Delete a file from Google Drive
+ * Delete a single file from Google Drive
  */
 export async function deleteFileFromGDrive(fileId: string): Promise<void> {
   try {

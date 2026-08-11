@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
 
     const { data: stuProfile } = await adminClient
       .from('profiles')
-      .select('full_name')
+      .select('full_name, area')
       .eq('id', user.id)
       .maybeSingle()
 
     const { data: stuInternship } = await adminClient
       .from('internships')
-      .select('serial_no')
+      .select('serial_no, area')
       .eq('student_id', user.id)
       .limit(1)
       .maybeSingle()
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         studentName: stuProfile?.full_name || 'Student',
         studentId: user.id,
         serialNo: stuInternship?.serial_no,
+        area: stuProfile?.area || stuInternship?.area || 'Headquarters',
       })
       const gdriveRes = await uploadFileToGDrive({
         buffer,
