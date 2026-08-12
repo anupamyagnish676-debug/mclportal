@@ -19,34 +19,66 @@ export async function POST(req: NextRequest) {
 
     const adminClient = createAdminClient()
 
-    // 0. Delete student folder from Google Drive
-    const { data: stuProfile } = await adminClient.from('profiles').select('full_name, area').eq('id', studentId).maybeSingle()
-    const { data: stuInternship } = await adminClient.from('internships').select('serial_no, area').eq('student_id', studentId).limit(1).maybeSingle()
+    // 0. Fetch full student profile and internship for certificate snapshot preservation
+    const { data: stuProfile } = await adminClient
+      .from('profiles')
+      .select('full_name, email, university, roll_no, wing, area')
+      .eq('id', studentId)
+      .maybeSingle()
 
-    if (stuProfile) {
-      const { deleteStudentFolderGDrive } = await import('@/lib/gdrive')
-      await deleteStudentFolderGDrive({
-        studentName: stuProfile.full_name,
-        studentId: studentId,
-        serialNo: stuInternship?.serial_no,
-        area: stuProfile.area || stuInternship?.area,
-      })
+    const { data: stuInternship } = await adminClient
+      .from('internships')
+      .select('id, serial_no, area, start_date, end_date, certificate_url, certificate_approved')
+      .eq('student_id', studentId)
+      .limit(1)
+      .maybeSingle()
+
+    // Preserve permanent Certificate snapshot in verified_certificates table before deleting account
+    if (stuInternship?.serial_no) {
+      try {
+        await adminClient.from('verified_certificates').upsert({
+          serial_no: String(stuInternship.serial_no),
+          full_name: stuProfile?.full_name || 'Intern',
+          university: stuProfile?.university || '',
+          roll_no: stuProfile?.roll_no || '',
+          wing: stuProfile?.wing || '',
+          area: stuInternship.area || stuProfile?.area || 'Headquarters',
+          start_date: stuInternship.start_date,
+          end_date: stuInternship.end_date,
+          certificate_url: stuInternship.certificate_url || '',
+          is_approved: true,
+          issued_at: new Date().toISOString(),
+        }, { onConflict: 'serial_no' })
+      } catch (certSnapshotErr: any) {
+        console.warn('[DELETE_USER] Certificate snapshot preserve notice:', certSnapshotErr.message)
+      }
     }
 
-    // 1. Delete associated data to prevent foreign key constraint violations
-    if (internshipId) {
-      // Delete submissions
+    // Delete student folder from Google Drive if configured
+    if (stuProfile) {
+      try {
+        const { deleteStudentFolderGDrive } = await import('@/lib/gdrive')
+        await deleteStudentFolderGDrive({
+          studentName: stuProfile.full_name,
+          studentId: studentId,
+          serialNo: stuInternship?.serial_no,
+          area: stuProfile.area || stuInternship?.area,
+        })
+      } catch (gdriveErr: any) {
+        console.warn('[DELETE_USER] GDrive cleanup notice:', gdriveErr.message)
+      }
+    }
+
+    // 1. Delete student operational data (submissions, attendance, leaves, logbooks, materials, internships)
+    // Note: verified_certificates is explicitly PRESERVED so physical certificate QR verification remains valid forever.
+    if (internshipId || stuInternship?.id) {
+      const targetInternshipId = internshipId || stuInternship?.id
       await adminClient.from('submissions').delete().eq('student_id', studentId)
-      // Delete attendance
-      await adminClient.from('attendance').delete().eq('internship_id', internshipId)
-      // Delete leaves
-      await adminClient.from('leaves').delete().eq('internship_id', internshipId)
-      // Delete logbooks
-      await adminClient.from('logbooks').delete().eq('internship_id', internshipId)
-      // Delete materials (if any are tied to this internship)
-      await adminClient.from('materials').delete().eq('internship_id', internshipId)
-      // Delete internship
-      await adminClient.from('internships').delete().eq('id', internshipId)
+      await adminClient.from('attendance').delete().eq('internship_id', targetInternshipId)
+      await adminClient.from('leaves').delete().eq('internship_id', targetInternshipId)
+      await adminClient.from('logbooks').delete().eq('internship_id', targetInternshipId)
+      await adminClient.from('materials').delete().eq('internship_id', targetInternshipId)
+      await adminClient.from('internships').delete().eq('id', targetInternshipId)
     }
 
     // Unlink the student from any approved LOR applications
