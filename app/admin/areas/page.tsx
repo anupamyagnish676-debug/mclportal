@@ -281,15 +281,6 @@ export default function AdminAreasPage() {
                             {hasCustomDrive ? '✓ Area Google Drive Connected' : '⚡ Using Fallback HQ Drive'}
                           </span>
                         </div>
-
-                        {!area.id.startsWith('default-') && (
-                          <button
-                            onClick={() => handleDelete(area.id, area.name)}
-                            className="px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                          >
-                            Delete
-                          </button>
-                        )}
                       </div>
 
                       <div className="space-y-1.5 pt-1">
