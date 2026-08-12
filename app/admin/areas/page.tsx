@@ -15,6 +15,8 @@ export default function AdminAreasPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  const [userArea, setUserArea] = useState<string>('')
+  const [isHqAdmin, setIsHqAdmin] = useState(false)
   const [editingFolderId, setEditingFolderId] = useState<Record<string, string>>({})
   const [updatingArea, setUpdatingArea] = useState<string | null>(null)
 
@@ -39,9 +41,14 @@ export default function AdminAreasPage() {
         return
       }
 
+      const userAreaName = profile.area || ''
+      const isHq = userAreaName === 'Headquarters'
+      setUserArea(userAreaName)
+      setIsHqAdmin(isHq)
+
       setIsAuthorized(true)
       setAuthLoading(false)
-      await loadAreas()
+      await loadAreas(userAreaName, isHq)
     } catch (err: any) {
       setError(err.message)
       setAuthLoading(false)
@@ -49,15 +56,24 @@ export default function AdminAreasPage() {
     }
   }
 
-  async function loadAreas() {
+  async function loadAreas(areaName?: string, isHq?: boolean) {
     setLoading(true)
     try {
       const res = await fetch('/api/areas')
       const data = await res.json()
       if (res.ok) {
-        setAreas(data.areas || [])
+        let allAreas = data.areas || []
+        const currentIsHq = isHq ?? isHqAdmin
+        const currentArea = areaName ?? userArea
+        
+        // Scope to user's area if not HQ Admin
+        if (!currentIsHq && currentArea) {
+          allAreas = allAreas.filter((a: any) => a.name === currentArea)
+        }
+
+        setAreas(allAreas)
         const initMap: Record<string, string> = {}
-        ;(data.areas || []).forEach((a: any) => {
+        allAreas.forEach((a: any) => {
           initMap[a.name] = a.gdrive_folder_id || ''
         })
         setEditingFolderId(initMap)
@@ -192,31 +208,33 @@ export default function AdminAreasPage() {
 
       <div className="grid md:grid-cols-5 gap-6">
         {/* Create Area Form & GDrive Instructions */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <h2 className="font-bold text-gray-800 text-sm mb-4">Add Training Area</h2>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Area Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Ib Valley"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
+        <div className={`${isHqAdmin ? 'md:col-span-2' : 'md:col-span-5 lg:col-span-2'} space-y-6`}>
+          {isHqAdmin && (
+            <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+              <h2 className="font-bold text-gray-800 text-sm mb-4">Add Training Area</h2>
+              <form onSubmit={handleAdd} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Area Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="e.g. Ib Valley"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={saving || !name.trim()}
-                className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
-              >
-                {saving ? 'Creating...' : 'Create Area'}
-              </button>
-            </form>
-          </div>
+                <button
+                  type="submit"
+                  disabled={saving || !name.trim()}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? 'Creating...' : 'Create Area'}
+                </button>
+              </form>
+            </div>
+          )}
 
           <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2">
@@ -224,7 +242,7 @@ export default function AdminAreasPage() {
               <h3 className="font-bold text-emerald-900 text-xs uppercase tracking-wide">Decentralized Drive Setup Guide</h3>
             </div>
             <ol className="text-xs text-emerald-800 space-y-2 list-decimal list-inside leading-relaxed font-medium">
-              <li>Open your Area&apos;s Google Drive (<code className="bg-white/80 px-1 py-0.5 rounded text-[11px]">drive.google.com</code>) &amp; create a folder (e.g. <strong>MCL Talcher Storage</strong>).</li>
+              <li>Open your Area&apos;s Google Drive (<code className="bg-white/80 px-1 py-0.5 rounded text-[11px]">drive.google.com</code>) &amp; create a folder (e.g. <strong>MCL {userArea || 'Talcher'} Storage</strong>).</li>
               <li>Right-click folder → <strong>Share</strong> → add system email with <strong>Editor</strong> permission.</li>
               <li>Open the folder and copy the ID from URL (<code className="bg-white/80 px-1 py-0.5 rounded text-[10px]">drive.google.com/drive/folders/<strong>1A2b3C...</strong></code>).</li>
               <li>Paste the Folder ID next to your area on the right and click <strong>Save Storage</strong>.</li>
@@ -233,7 +251,7 @@ export default function AdminAreasPage() {
         </div>
 
         {/* Areas List with GDrive Folder Configuration */}
-        <div className="md:col-span-3">
+        <div className={`${isHqAdmin ? 'md:col-span-3' : 'md:col-span-5 lg:col-span-3'}`}>
           <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
             <h2 className="font-bold text-gray-800 text-sm">Decentralized Area Storage Configuration</h2>
 
