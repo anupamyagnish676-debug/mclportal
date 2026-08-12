@@ -243,7 +243,7 @@ export default function AdminAreasPage() {
             </div>
             <ol className="text-xs text-emerald-800 space-y-2 list-decimal list-inside leading-relaxed font-medium">
               <li>Open your Area&apos;s Google Drive (<code className="bg-white/80 px-1 py-0.5 rounded text-[11px]">drive.google.com</code>) &amp; create a folder (e.g. <strong>MCL {userArea || 'Talcher'} Storage</strong>).</li>
-              <li>Right-click folder → <strong>Share</strong> → add system email with <strong>Editor</strong> permission.</li>
+              <li>Right-click folder → <strong>Share</strong> → add system email <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold text-emerald-900 border border-emerald-200 select-all">mclinternshipportal@gmail.com</code> with <strong>Editor</strong> permission.</li>
               <li>Open the folder and copy the ID from URL (<code className="bg-white/80 px-1 py-0.5 rounded text-[10px]">drive.google.com/drive/folders/<strong>1A2b3C...</strong></code>).</li>
               <li>Paste the Folder ID next to your area on the right and click <strong>Save Storage</strong>.</li>
             </ol>
