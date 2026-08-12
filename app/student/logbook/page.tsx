@@ -34,10 +34,10 @@ export default function StudentLogbookPage() {
           if (data.adminName) setAdminName(data.adminName)
           if (data.adminSignature) setAdminSig(data.adminSignature)
         } else {
-          setError(data.error || 'Failed to load logbook from Google Drive')
+          setError(data.error || 'Failed to load logbook entries')
         }
       } catch (err: any) {
-        setError(err.message || 'Error connecting to Google Drive logbook storage')
+        setError(err.message || 'Error loading logbook entries')
       }
       setLoading(false)
     }
@@ -327,19 +327,19 @@ export default function StudentLogbookPage() {
 
       const data = await res.json()
       if (res.ok) {
-        setSuccess('Daily logbook entry saved directly to Google Drive successfully!')
+        setSuccess('Daily logbook entry saved successfully!')
         setContent('')
-        // Refresh list from Google Drive
+        // Refresh list
         const refreshRes = await fetch('/api/student/logbook')
         const refreshData = await refreshRes.json()
         if (refreshRes.ok) {
           setLogbooks(refreshData.logs || [])
         }
       } else {
-        setError(data.error || 'Failed to save logbook to Google Drive')
+        setError(data.error || 'Failed to save logbook entry')
       }
     } catch (err: any) {
-      setError(err.message || 'Error connecting to Google Drive logbook storage')
+      setError(err.message || 'Error saving logbook entry')
     }
     setSaving(false)
   }
