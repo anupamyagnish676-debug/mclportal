@@ -169,6 +169,12 @@ export default async function StudentDashboard() {
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
               <h2 className="font-semibold text-gray-800 mb-3">Internship Details</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400 text-xs">Serial Number</p>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 mt-1">
+                    MCL/HRD/INT/{internship.serial_no || 'N/A'}
+                  </span>
+                </div>
                 <div><p className="text-gray-400 text-xs">Mentor</p><p className="font-semibold text-gray-800 mt-0.5">{internship.mentor?.full_name || 'Not assigned yet'}</p></div>
                 <div><p className="text-gray-400 text-xs">Period</p><p className="font-semibold text-gray-800 mt-0.5">{internship.start_date} → {internship.end_date}</p></div>
                 <div><p className="text-gray-400 text-xs">Status</p>

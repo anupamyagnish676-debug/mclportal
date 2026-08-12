@@ -66,8 +66,19 @@ export default async function AdminDocumentsPage({
 
   const studentIds = (students || []).map(s => s.id)
   let documents: any[] = []
+  let enrichedStudents: any[] = students || []
 
   if (studentIds.length > 0) {
+    const { data: internships } = await adminClient
+      .from('internships')
+      .select('student_id, serial_no')
+      .in('student_id', studentIds)
+
+    enrichedStudents = (students || []).map(s => {
+      const match = internships?.find(i => i.student_id === s.id)
+      return { ...s, serial_no: match?.serial_no || null }
+    })
+
     const { data, error: docErr } = await adminClient
       .from('student_documents')
       .select('*')
@@ -117,7 +128,7 @@ export default async function AdminDocumentsPage({
       </div>
 
       <DocumentVerifier
-        students={students || []}
+        students={enrichedStudents}
         initialDocuments={documents}
       />
     </div>

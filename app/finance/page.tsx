@@ -567,11 +567,11 @@ export default function FinanceDashboard() {
                               <p className="font-semibold text-gray-900 text-xs leading-tight">
                                 {p.internship?.student?.full_name || '—'}
                               </p>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-50 text-green-700 border border-green-200 mt-0.5">
+                                MCL/HRD/INT/{p.internship?.serial_no || 'N/A'}
+                              </span>
                               <p className="text-[10px] text-gray-400 mt-0.5">
                                 {p.internship?.student?.email || ''}
-                              </p>
-                              <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
-                                MCL/HRD/INT/{p.internship?.serial_no ?? '—'}
                               </p>
                             </td>
                             <td className="px-5 py-4 text-xs text-gray-600">
@@ -755,6 +755,11 @@ export default function FinanceDashboard() {
                         <p className="font-semibold text-gray-900 text-xs truncate">
                           {intern.student?.full_name || 'Student'}
                         </p>
+                        {intern.serial_no && (
+                          <span className="text-[9px] font-bold text-green-700 block">
+                            MCL/HRD/INT/{intern.serial_no}
+                          </span>
+                        )}
                         <p className="text-[10px] text-gray-400 truncate mt-0.5">{intern.student?.email}</p>
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide mt-1.5 border ${
                           intern.bank_details_status === 'submitted'

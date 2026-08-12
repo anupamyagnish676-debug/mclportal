@@ -5,6 +5,7 @@ interface Student {
   full_name: string
   area: string
   university: string
+  serial_no?: string | null
 }
 
 interface Request {
@@ -82,7 +83,12 @@ export default function AdminExtensionActions({ initialRequests }: AdminExtensio
                   <tr key={r.id} className="hover:bg-gray-50/50">
                     <td className="p-4">
                       <div className="font-semibold text-gray-900">{r.student.full_name}</div>
-                      <div className="text-[10px] text-gray-400">{r.student.university} · {r.student.area} Area</div>
+                      {r.student.serial_no && (
+                        <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full inline-block mt-0.5">
+                          MCL/HRD/INT/{r.student.serial_no}
+                        </span>
+                      )}
+                      <div className="text-[10px] text-gray-400 mt-0.5">{r.student.university} · {r.student.area} Area</div>
                     </td>
                     <td className="p-4 font-semibold text-green-700">{r.requested_end_date}</td>
                     <td className="p-4 text-xs text-gray-500 italic max-w-xs truncate">

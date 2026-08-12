@@ -6,6 +6,7 @@ interface Student {
   full_name: string
   email: string
   area: string
+  serial_no?: string | null
 }
 
 interface DocumentRecord {
@@ -105,7 +106,14 @@ export default function DocumentVerifier({ students, initialDocuments }: Documen
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="truncate block font-medium max-w-[140px]">{s.full_name}</span>
+                  <div className="truncate max-w-[140px]">
+                    <span className="truncate block font-medium">{s.full_name}</span>
+                    {s.serial_no && (
+                      <span className="text-[9px] font-bold text-green-700 block">
+                        MCL/HRD/INT/{s.serial_no}
+                      </span>
+                    )}
+                  </div>
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                     isDone ? 'bg-green-100 text-green-700' :
                     s.pendingCount > 0 ? 'bg-amber-100 text-amber-700 animate-pulse' :
@@ -125,9 +133,16 @@ export default function DocumentVerifier({ students, initialDocuments }: Documen
       <div className="lg:col-span-2 space-y-6">
         {selectedStudent ? (
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-            <div className="border-b border-gray-100 pb-4">
-              <h2 className="text-lg font-bold text-gray-900">Document Verification Review</h2>
-              <p className="text-xs text-gray-500 mt-1">Review student submitted credentials for candidate: <strong>{selectedStudent.full_name}</strong> ({selectedStudent.email})</p>
+            <div className="border-b border-gray-100 pb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Document Verification Review</h2>
+                <p className="text-xs text-gray-500 mt-1">Review student submitted credentials for candidate: <strong>{selectedStudent.full_name}</strong> ({selectedStudent.email})</p>
+              </div>
+              {selectedStudent.serial_no && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                  MCL/HRD/INT/{selectedStudent.serial_no}
+                </span>
+              )}
             </div>
 
             {error && (

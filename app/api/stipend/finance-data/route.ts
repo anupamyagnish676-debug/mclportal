@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
       .from('internships')
       .select(`
         id,
+        serial_no,
         start_date,
         end_date,
         internship_type,

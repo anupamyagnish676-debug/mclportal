@@ -56,7 +56,8 @@ export default async function AdminExtensionRequestsPage({
       mentor_remarks,
       admin_status,
       admin_remarks,
-      student:profiles!extension_requests_student_id_fkey(full_name, university, area)
+      student:profiles!extension_requests_student_id_fkey(full_name, university, area),
+      internship:internships(serial_no)
     `)
     .eq('mentor_status', 'approved')
     .order('created_at', { ascending: false })
@@ -79,7 +80,8 @@ export default async function AdminExtensionRequestsPage({
     student: {
       full_name: r.student.full_name || 'N/A',
       university: r.student.university || 'N/A',
-      area: r.student.area || 'N/A'
+      area: r.student.area || 'N/A',
+      serial_no: Array.isArray(r.internship) ? r.internship[0]?.serial_no : r.internship?.serial_no
     }
   }))
 

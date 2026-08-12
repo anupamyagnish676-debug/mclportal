@@ -11,7 +11,7 @@ export default async function MentorDashboard() {
 
   const { data: internships, error } = await supabase
     .from('internships')
-    .select(`id, start_date, end_date, is_active, student:profiles!internships_student_id_fkey(full_name, email)`)
+    .select(`id, start_date, end_date, is_active, serial_no, student:profiles!internships_student_id_fkey(full_name, email)`)
     .eq('mentor_id', user!.id)
 
   const activeCount = internships?.filter((i: any) => i.is_active).length ?? 0
@@ -175,7 +175,12 @@ export default async function MentorDashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{i.student?.full_name}</p>
-                  <p className="text-xs text-gray-400">{i.student?.email}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                      MCL/HRD/INT/{i.serial_no || 'N/A'}
+                    </span>
+                    <span className="text-xs text-gray-400">{i.student?.email}</span>
+                  </div>
                 </div>
               </div>
               <div className="text-right">

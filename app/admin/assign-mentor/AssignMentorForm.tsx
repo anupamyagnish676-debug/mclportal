@@ -10,6 +10,7 @@ type Internship = {
   is_active: boolean
   mentor_id: string | null
   area: string | null
+  serial_no?: string | null
   student: { full_name: string; email: string } | null
   mentor: { full_name: string } | null
 }
@@ -150,6 +151,7 @@ export default function AssignMentorForm({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
+              <th className="text-left px-4 py-3 font-semibold text-gray-700">Serial No</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Student</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Training Area</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700">Period</th>
@@ -162,6 +164,11 @@ export default function AssignMentorForm({
           <tbody className="divide-y divide-gray-50">
             {internships.map(intern => (
               <tr key={intern.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                    MCL/HRD/INT/{intern.serial_no || 'N/A'}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{intern.student?.full_name || '—'}</p>
                   <p className="text-xs text-gray-400">{intern.student?.email || ''}</p>

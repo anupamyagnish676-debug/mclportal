@@ -55,7 +55,7 @@ export default async function InternsPage({
   let query = supabase
     .from('internships')
     .select(`
-      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area,
+      id, start_date, end_date, is_active, certificate_url, certificate_approved, student_id, area, serial_no,
       internship_type, stipend_amount, stipend_frequency,
       student:profiles!internships_student_id_fkey(id, full_name, email, area),
       mentor:profiles!internships_mentor_id_fkey(full_name)
@@ -131,6 +131,7 @@ export default async function InternsPage({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Serial No</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Student</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Mentor</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Period</th>
@@ -141,6 +142,11 @@ export default async function InternsPage({
             <tbody className="divide-y divide-gray-50">
               {filteredInternships.map((i: any) => (
                 <tr key={i.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                      MCL/HRD/INT/{i.serial_no || 'N/A'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{i.student?.full_name}</p>
                     <p className="text-gray-400 text-xs">{i.student?.email}</p>

@@ -64,7 +64,7 @@ export default async function AssignMentorPage({
   // 3. Build internships query
   let internshipsQuery = supabase
     .from('internships')
-    .select('id, start_date, end_date, is_active, mentor_id, area, student:profiles!internships_student_id_fkey(full_name, email, area), mentor:profiles!internships_mentor_id_fkey(full_name)')
+    .select('id, start_date, end_date, is_active, mentor_id, area, serial_no, student:profiles!internships_student_id_fkey(full_name, email, area), mentor:profiles!internships_mentor_id_fkey(full_name)')
     .order('is_active', { ascending: false })
 
   if (selectedArea) {
@@ -80,6 +80,7 @@ export default async function AssignMentorPage({
     is_active: i.is_active,
     mentor_id: i.mentor_id,
     area: i.area,
+    serial_no: i.serial_no,
     student: Array.isArray(i.student) ? i.student[0] : i.student,
     mentor: Array.isArray(i.mentor) ? i.mentor[0] : i.mentor,
   }))
