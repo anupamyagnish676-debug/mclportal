@@ -15,19 +15,19 @@ export async function GET() {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('areas')
-      .select('id, name, created_at')
+      .select('id, name, created_at, gdrive_folder_id')
       .order('name', { ascending: true })
 
     if (error) {
       console.warn('[GET-AREAS] Table not found or error, using defaults:', error.message)
       // Map to same object structure
-      return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString() })) })
+      return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null })) })
     }
 
     return NextResponse.json({ areas: data || [] })
   } catch (err: any) {
     console.error('[GET-AREAS] Unexpected error:', err.message)
-    return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString() })) })
+    return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null })) })
   }
 }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { name } = await req.json()
+    const { name, gdrive_folder_id } = await req.json()
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Area name is required' }, { status: 400 })
     }
@@ -48,7 +48,10 @@ export async function POST(req: NextRequest) {
     const adminClient = createAdminClient()
     const { error: insertError } = await adminClient
       .from('areas')
-      .insert({ name: name.trim() })
+      .insert({
+        name: name.trim(),
+        gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null
+      })
 
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 400 })
@@ -57,6 +60,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Unexpected server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: profile } = await supabase.from('profiles').select('role, area').eq('id', user.id).maybeSingle()
+    if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
+
+    const { areaName, gdrive_folder_id } = await req.json()
+    if (!areaName) {
+      return NextResponse.json({ error: 'Area name is required' }, { status: 400 })
+    }
+
+    // Area admin can only update their own area, HQ admin can update any area
+    if (profile.area !== 'Headquarters' && profile.area !== areaName) {
+      return NextResponse.json({ error: 'Forbidden — You can only manage your own training office area' }, { status: 403 })
+    }
+
+    const adminClient = createAdminClient()
+    
+    // First try updating existing row in areas table
+    const { data: existing } = await adminClient
+      .from('areas')
+      .select('id')
+      .eq('name', areaName)
+      .maybeSingle()
+
+    if (existing) {
+      const { error: updateError } = await adminClient
+        .from('areas')
+        .update({ gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null })
+        .eq('id', existing.id)
+
+      if (updateError) throw updateError
+    } else {
+      // Upsert default seed area into DB table
+      const { error: insertError } = await adminClient
+        .from('areas')
+        .insert({
+          name: areaName,
+          gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null
+        })
+
+      if (insertError) throw insertError
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Failed to update area drive settings' }, { status: 500 })
   }
 }
 

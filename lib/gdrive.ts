@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import { Readable } from 'stream'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export function isGDriveConfigured(): boolean {
   if (process.env.USE_GDRIVE_STORAGE !== 'true') return false
@@ -52,6 +53,28 @@ function getGDriveClient() {
 }
 
 /**
+ * Helper to fetch custom area Google Drive folder ID from Supabase
+ */
+export async function getAreaDriveFolderId(areaName?: string | null): Promise<string | undefined> {
+  if (!areaName) return process.env.GDRIVE_FOLDER_ID
+  try {
+    const adminClient = createAdminClient()
+    const { data } = await adminClient
+      .from('areas')
+      .select('gdrive_folder_id')
+      .eq('name', areaName.trim())
+      .maybeSingle()
+
+    if (data?.gdrive_folder_id && data.gdrive_folder_id.trim()) {
+      return data.gdrive_folder_id.trim()
+    }
+  } catch (err) {
+    console.error('[GDRIVE] Error fetching area folder ID from DB:', err)
+  }
+  return process.env.GDRIVE_FOLDER_ID
+}
+
+/**
  * Find or create a dedicated subfolder for a student in Google Drive.
  * Structure: Area -> StudentName_Area_INT_SerialNo
  * Example: "Talcher/Rahul_Sharma_Talcher_INT_5"
@@ -63,7 +86,8 @@ export async function getOrCreateStudentFolder(params: {
   area?: string | null
 }): Promise<string> {
   const drive = getGDriveClient()
-  const parentFolder = process.env.GDRIVE_FOLDER_ID
+  const areaCustomFolder = await getAreaDriveFolderId(params.area)
+  const parentFolder = areaCustomFolder || process.env.GDRIVE_FOLDER_ID
 
   const rawArea = params.area && params.area.trim() ? params.area.trim() : 'Headquarters'
   const cleanArea = rawArea.replace(/[^a-zA-Z0-9]/g, '_')

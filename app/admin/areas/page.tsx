@@ -15,6 +15,9 @@ export default function AdminAreasPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  const [editingFolderId, setEditingFolderId] = useState<Record<string, string>>({})
+  const [updatingArea, setUpdatingArea] = useState<string | null>(null)
+
   async function checkAuthAndLoad() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +32,7 @@ export default function AdminAreasPage() {
         .eq('id', user.id)
         .maybeSingle()
 
-      if (!profile || profile.role !== 'admin' || profile.area !== 'Headquarters') {
+      if (!profile || profile.role !== 'admin') {
         setIsAuthorized(false)
         setAuthLoading(false)
         setLoading(false)
@@ -53,6 +56,11 @@ export default function AdminAreasPage() {
       const data = await res.json()
       if (res.ok) {
         setAreas(data.areas || [])
+        const initMap: Record<string, string> = {}
+        ;(data.areas || []).forEach((a: any) => {
+          initMap[a.name] = a.gdrive_folder_id || ''
+        })
+        setEditingFolderId(initMap)
       } else {
         setError(data.error || 'Failed to load areas')
       }
@@ -60,6 +68,32 @@ export default function AdminAreasPage() {
       setError(err.message)
     }
     setLoading(false)
+  }
+
+  async function handleSaveDriveFolder(areaName: string) {
+    setUpdatingArea(areaName)
+    setError('')
+    setSuccess('')
+
+    try {
+      const folderId = editingFolderId[areaName] || ''
+      const res = await fetch('/api/areas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ areaName, gdrive_folder_id: folderId })
+      })
+      const data = await res.json()
+
+      if (res.ok) {
+        setSuccess(`Google Drive storage updated for ${areaName} Area!`)
+        await loadAreas()
+      } else {
+        setError(data.error || 'Failed to update Google Drive settings')
+      }
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setUpdatingArea(null)
   }
 
   useEffect(() => {
@@ -157,9 +191,9 @@ export default function AdminAreasPage() {
       )}
 
       <div className="grid md:grid-cols-5 gap-6">
-        {/* Create Area Form */}
-        <div className="md:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+        {/* Create Area Form & GDrive Instructions */}
+        <div className="md:col-span-2 space-y-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
             <h2 className="font-bold text-gray-800 text-sm mb-4">Add Training Area</h2>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
@@ -183,12 +217,25 @@ export default function AdminAreasPage() {
               </button>
             </form>
           </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📁</span>
+              <h3 className="font-bold text-emerald-900 text-xs uppercase tracking-wide">Decentralized Drive Setup Guide</h3>
+            </div>
+            <ol className="text-xs text-emerald-800 space-y-2 list-decimal list-inside leading-relaxed font-medium">
+              <li>Open your Area&apos;s Google Drive (<code className="bg-white/80 px-1 py-0.5 rounded text-[11px]">drive.google.com</code>) &amp; create a folder (e.g. <strong>MCL Talcher Storage</strong>).</li>
+              <li>Right-click folder → <strong>Share</strong> → add system email with <strong>Editor</strong> permission.</li>
+              <li>Open the folder and copy the ID from URL (<code className="bg-white/80 px-1 py-0.5 rounded text-[10px]">drive.google.com/drive/folders/<strong>1A2b3C...</strong></code>).</li>
+              <li>Paste the Folder ID next to your area on the right and click <strong>Save Storage</strong>.</li>
+            </ol>
+          </div>
         </div>
 
-        {/* Areas List */}
+        {/* Areas List with GDrive Folder Configuration */}
         <div className="md:col-span-3">
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h2 className="font-bold text-gray-800 text-sm mb-4">Existing Areas / Offices</h2>
+          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
+            <h2 className="font-bold text-gray-800 text-sm">Decentralized Area Storage Configuration</h2>
 
             {loading ? (
               <div className="text-center py-6 text-gray-400 text-sm">Loading areas...</div>
@@ -197,31 +244,60 @@ export default function AdminAreasPage() {
                 No areas registered yet.
               </div>
             ) : (
-              <div className="border border-gray-100 rounded-lg divide-y divide-gray-50">
-                {areas.map(area => (
-                  <div key={area.id} className="flex items-center justify-between p-3.5 hover:bg-gray-50/55 transition-colors">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{area.name} Area</p>
-                      {area.id.startsWith('default-') ? (
-                        <span className="text-[9px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                          Seed Default
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-400">
-                          Added on {new Date(area.created_at).toLocaleDateString('en-IN')}
-                        </span>
-                      )}
+              <div className="space-y-4">
+                {areas.map(area => {
+                  const currentFolderId = editingFolderId[area.name] ?? (area.gdrive_folder_id || '')
+                  const isUpdating = updatingArea === area.name
+                  const hasCustomDrive = Boolean(area.gdrive_folder_id)
+
+                  return (
+                    <div key={area.id} className="p-4 rounded-xl border border-gray-150 bg-gray-50/40 space-y-3 hover:border-green-200 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{area.name} Area</p>
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-0.5 border ${
+                            hasCustomDrive 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {hasCustomDrive ? '✓ Area Google Drive Connected' : '⚡ Using Fallback HQ Drive'}
+                          </span>
+                        </div>
+
+                        {!area.id.startsWith('default-') && (
+                          <button
+                            onClick={() => handleDelete(area.id, area.name)}
+                            className="px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                          Google Drive Folder ID ({area.name} Area)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={currentFolderId}
+                            onChange={e => setEditingFolderId(prev => ({ ...prev, [area.name]: e.target.value }))}
+                            placeholder="e.g. 1A2b3C4d5e6F7g8H9i..."
+                            className="flex-1 font-mono text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                          <button
+                            onClick={() => handleSaveDriveFolder(area.name)}
+                            disabled={isUpdating}
+                            className="bg-green-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50 transition-colors flex-shrink-0"
+                          >
+                            {isUpdating ? 'Saving...' : 'Save Storage'}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    {!area.id.startsWith('default-') && (
-                      <button
-                        onClick={() => handleDelete(area.id, area.name)}
-                        className="px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
