@@ -18,42 +18,17 @@ export default function StudentLogbookPage() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setLoading(false)
-        return
-      }
-
-      // Fetch internship
-      const { data: intern, error: intErr } = await supabase
-        .from('internships')
-        .select('id, start_date, end_date, serial_no, area, student:profiles!internships_student_id_fkey(full_name, email, university, roll_no, wing)')
-        .eq('student_id', user.id)
-        .maybeSingle()
-
-      if (intErr) {
-        setError(intErr.message)
-        setLoading(false)
-        return
-      }
-
-      if (intern) {
-        setInternship({
-          ...intern,
-          student: Array.isArray(intern.student) ? intern.student[0] : intern.student
-        })
-        // Fetch logbooks
-        const { data: logs, error: logsErr } = await supabase
-          .from('logbooks')
-          .select('*')
-          .eq('internship_id', intern.id)
-          .order('date', { ascending: false })
-
-        if (logsErr) {
-          setError(logsErr.message)
+      try {
+        const res = await fetch('/api/student/logbook')
+        const data = await res.json()
+        if (res.ok) {
+          setInternship(data.internship)
+          setLogbooks(data.logs || [])
         } else {
-          setLogbooks(logs || [])
+          setError(data.error || 'Failed to load logbook from Google Drive')
         }
+      } catch (err: any) {
+        setError(err.message || 'Error connecting to Google Drive logbook storage')
       }
       setLoading(false)
     }
@@ -307,26 +282,31 @@ export default function StudentLogbookPage() {
       }
     }
 
-    const { error: upsertErr } = await supabase
-      .from('logbooks')
-      .upsert({
-        internship_id: internship.id,
-        date: selectedDate,
-        content: content.trim()
-      }, { onConflict: 'internship_id,date' })
+    try {
+      const res = await fetch('/api/student/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDate,
+          content: content.trim()
+        })
+      })
 
-    if (upsertErr) {
-      setError(upsertErr.message)
-    } else {
-      setSuccess('Daily logbook entry saved successfully!')
-      setContent('')
-      // Refresh list
-      const { data: logs } = await supabase
-        .from('logbooks')
-        .select('*')
-        .eq('internship_id', internship.id)
-        .order('date', { ascending: false })
-      setLogbooks(logs || [])
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess('Daily logbook entry saved directly to Google Drive successfully!')
+        setContent('')
+        // Refresh list from Google Drive
+        const refreshRes = await fetch('/api/student/logbook')
+        const refreshData = await refreshRes.json()
+        if (refreshRes.ok) {
+          setLogbooks(refreshData.logs || [])
+        }
+      } else {
+        setError(data.error || 'Failed to save logbook to Google Drive')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error connecting to Google Drive logbook storage')
     }
     setSaving(false)
   }

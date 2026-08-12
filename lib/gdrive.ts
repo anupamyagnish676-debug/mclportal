@@ -264,3 +264,122 @@ export async function deleteFileFromGDrive(fileId: string): Promise<void> {
     console.error('[GDRIVE] Failed to delete file:', err.message)
   }
 }
+
+/**
+ * Save or Update a student's daily log entry directly inside their Google Drive folder (Daily_Logbook.json).
+ */
+export async function saveStudentLogbookToGDrive(params: {
+  studentName: string
+  studentId: string
+  serialNo?: string | null
+  area?: string | null
+  date: string
+  content: string
+}): Promise<void> {
+  const drive = getGDriveClient()
+  const studentFolderId = await getOrCreateStudentFolder({
+    studentName: params.studentName,
+    studentId: params.studentId,
+    serialNo: params.serialNo,
+    area: params.area
+  })
+
+  const fileName = 'Daily_Logbook.json'
+  const q = `'${studentFolderId}' in parents and name = '${fileName}' and trashed = false`
+
+  let fileId: string | null = null
+  let existingLogs: any[] = []
+
+  try {
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      if (typeof getRes.data === 'string') {
+        try { existingLogs = JSON.parse(getRes.data) } catch (e) { existingLogs = [] }
+      } else if (typeof getRes.data === 'object' && getRes.data !== null) {
+        existingLogs = Array.isArray(getRes.data) ? getRes.data : []
+      }
+    }
+  } catch (e) {
+    existingLogs = []
+  }
+
+  const existingIdx = existingLogs.findIndex((item: any) => item.date === params.date)
+  const updatedItem = {
+    date: params.date,
+    content: params.content,
+    updated_at: new Date().toISOString()
+  }
+
+  if (existingIdx >= 0) {
+    existingLogs[existingIdx] = updatedItem
+  } else {
+    existingLogs.push(updatedItem)
+  }
+
+  existingLogs.sort((a: any, b: any) => (b.date > a.date ? 1 : -1))
+
+  const jsonBuffer = Buffer.from(JSON.stringify(existingLogs, null, 2), 'utf-8')
+  const fileStream = new Readable()
+  fileStream.push(jsonBuffer)
+  fileStream.push(null)
+
+  if (fileId) {
+    await drive.files.update({
+      fileId,
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  } else {
+    await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [studentFolderId],
+        mimeType: 'application/json'
+      },
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  }
+}
+
+/**
+ * Fetch a student's daily logbook entries directly from their Google Drive folder (Daily_Logbook.json).
+ */
+export async function getStudentLogbookFromGDrive(params: {
+  studentName: string
+  studentId: string
+  serialNo?: string | null
+  area?: string | null
+}): Promise<any[]> {
+  try {
+    const drive = getGDriveClient()
+    const studentFolderId = await getOrCreateStudentFolder({
+      studentName: params.studentName,
+      studentId: params.studentId,
+      serialNo: params.serialNo,
+      area: params.area
+    })
+
+    const fileName = 'Daily_Logbook.json'
+    const q = `'${studentFolderId}' in parents and name = '${fileName}' and trashed = false`
+
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      const fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      let logs: any[] = []
+      if (typeof getRes.data === 'string') {
+        logs = JSON.parse(getRes.data)
+      } else if (Array.isArray(getRes.data)) {
+        logs = getRes.data
+      }
+      return logs
+    }
+  } catch (err: any) {
+    console.error('[GDRIVE] Error loading logbook from Drive:', err.message)
+  }
+  return []
+}
+
