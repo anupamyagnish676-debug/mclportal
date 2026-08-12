@@ -15,6 +15,11 @@ export default function StudentLogbookPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [content, setContent] = useState('')
 
+  const [mentorName, setMentorName] = useState<string>('Assigned Mentor')
+  const [mentorSig, setMentorSig] = useState<string | null>(null)
+  const [adminName, setAdminName] = useState<string>('Area Training Officer')
+  const [adminSig, setAdminSig] = useState<string | null>(null)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -24,6 +29,10 @@ export default function StudentLogbookPage() {
         if (res.ok) {
           setInternship(data.internship)
           setLogbooks(data.logs || [])
+          if (data.mentorName) setMentorName(data.mentorName)
+          if (data.mentorSignature) setMentorSig(data.mentorSignature)
+          if (data.adminName) setAdminName(data.adminName)
+          if (data.adminSignature) setAdminSig(data.adminSignature)
         } else {
           setError(data.error || 'Failed to load logbook from Google Drive')
         }
@@ -132,13 +141,15 @@ export default function StudentLogbookPage() {
         <table class="sig-table">
           <tr>
             <td class="sig-cell">
-              <div class="sig-line">Candidate Signature</div>
+              <div class="sig-line">Candidate Signature<br/><span style="font-size: 10px; color: #6b7280; font-weight: normal;">(${studentName})</span></div>
             </td>
             <td class="sig-cell">
-              <div class="sig-line">Assigned Mentor Signature</div>
+              ${mentorSig ? `<img src="${mentorSig}" style="height: 40px; margin-bottom: 5px;" /><br/>` : ''}
+              <div class="sig-line">Assigned Mentor Signature<br/><span style="font-size: 10px; color: #6b7280; font-weight: normal;">(${mentorName})</span></div>
             </td>
             <td class="sig-cell">
-              <div class="sig-line">GM (HRD) / Training Officer</div>
+              ${adminSig ? `<img src="${adminSig}" style="height: 40px; margin-bottom: 5px;" /><br/>` : ''}
+              <div class="sig-line">Area Training Officer Signature<br/><span style="font-size: 10px; color: #6b7280; font-weight: normal;">(${adminName})</span></div>
             </td>
           </tr>
         </table>
@@ -242,9 +253,31 @@ export default function StudentLogbookPage() {
         </table>
 
         <div class="sig-section">
-          <div class="sig-box">Candidate Signature</div>
-          <div class="sig-box">Assigned Mentor Signature</div>
-          <div class="sig-box">GM (HRD) / Training Officer</div>
+          <div class="sig-box">
+            <div style="height: 40px;"></div>
+            <div style="border-top: 1px solid #9ca3af; padding-top: 4px;">
+              Candidate Signature<br/>
+              <span style="font-size: 9px; color: #6b7280; font-weight: normal;">(${studentName})</span>
+            </div>
+          </div>
+          <div class="sig-box">
+            <div style="height: 40px; display: flex; align-items: center; justify-content: center;">
+              ${mentorSig ? `<img src="${mentorSig}" style="max-height: 40px; max-width: 120px;" />` : ''}
+            </div>
+            <div style="border-top: 1px solid #9ca3af; padding-top: 4px;">
+              Assigned Mentor Signature<br/>
+              <span style="font-size: 9px; color: #6b7280; font-weight: normal;">(${mentorName})</span>
+            </div>
+          </div>
+          <div class="sig-box">
+            <div style="height: 40px; display: flex; align-items: center; justify-content: center;">
+              ${adminSig ? `<img src="${adminSig}" style="max-height: 40px; max-width: 120px;" />` : ''}
+            </div>
+            <div style="border-top: 1px solid #9ca3af; padding-top: 4px;">
+              Area Training Officer Signature<br/>
+              <span style="font-size: 9px; color: #6b7280; font-weight: normal;">(${adminName})</span>
+            </div>
+          </div>
         </div>
 
         <div class="footer">
