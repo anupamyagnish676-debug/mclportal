@@ -242,6 +242,15 @@ export default async function AdminDashboard({
       text: 'text-purple-700',
     },
     {
+      label: 'Areas & Storage',
+      desc: 'Configure area Google Drive storage',
+      href: '/admin/areas',
+      icon: Building2,
+      color: 'from-emerald-500 to-teal-600',
+      bg: 'bg-emerald-50 hover:bg-emerald-100/80',
+      text: 'text-emerald-700',
+    },
+    {
       label: 'Create User',
       desc: 'Add student, mentor or employee',
       href: '/admin/create-user',
