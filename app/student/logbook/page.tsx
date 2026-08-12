@@ -14,17 +14,6 @@ export default function StudentLogbookPage() {
   // Form state
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [content, setContent] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string>('💻 Task / Work')
-  const [searchQuery, setSearchQuery] = useState<string>('')
-
-  const categoryTags = [
-    '💻 Task / Work',
-    '📚 Research',
-    '🔍 Field Visit',
-    '🤝 Meeting',
-    '📊 Data Analysis',
-    '✨ Learnings'
-  ]
 
   useEffect(() => {
     async function load() {
@@ -342,215 +331,62 @@ export default function StudentLogbookPage() {
     setSaving(false)
   }
 
-  // Filtered logbooks for search
-  const filteredLogbooks = logbooks.filter(log => {
-    if (!searchQuery.trim()) return true
-    return log.content.toLowerCase().includes(searchQuery.toLowerCase()) || log.date.includes(searchQuery)
-  })
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex items-center gap-3 text-emerald-600 font-semibold text-sm animate-pulse">
-          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          Loading your logbook diary...
-        </div>
-      </div>
-    )
+    return <div className="text-gray-500 text-sm">Loading logbook data...</div>
   }
 
   if (!internship) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center max-w-lg mx-auto space-y-3">
-        <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
-          ⚠️
-        </div>
-        <h2 className="text-lg font-bold text-gray-800">No Active Internship Record</h2>
-        <p className="text-xs text-gray-500">Your profile is not linked to an active internship tenure. Please contact your training coordinator.</p>
+      <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
+        No active internship record found. Please contact the administrator.
       </div>
     )
   }
 
-  // Calculate statistics
-  const totalDays = internship.start_date && internship.end_date 
-    ? Math.ceil((new Date(internship.end_date).getTime() - new Date(internship.start_date).getTime()) / (1000 * 3600 * 24))
-    : 30
-  const completionPercent = Math.min(100, Math.round((logbooks.length / Math.max(1, totalDays)) * 100))
-
   return (
-    <div className="max-w-6xl space-y-6 pb-12">
-      {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-emerald-850 via-emerald-800 to-teal-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-md">
-                📖 Student Logbook &amp; Learning Diary
-              </span>
-              {internship.serial_no && (
-                <span className="bg-white/10 text-white border border-white/20 text-xs font-mono px-3 py-1 rounded-full">
-                  MCL/HRD/INT/{internship.serial_no}
-                </span>
-              )}
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Daily Training Logbook
-            </h1>
-            <p className="text-emerald-100/80 text-xs md:text-sm max-w-xl leading-relaxed">
-              Log your daily accomplishments, technical learnings, and field observations. These entries are periodically reviewed by your assigned mentor for internship certification.
-            </p>
-          </div>
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Daily Logbook</h1>
+      <p className="text-gray-500 text-sm mb-6">Maintain your daily learning diary. Your assigned mentor reviews these logs periodically.</p>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={handleDownloadPDF}
-              disabled={!logbooks.length}
-              className="bg-white hover:bg-emerald-50 text-emerald-900 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:pointer-events-none"
-            >
-              <span className="text-base">📄</span> Export PDF
-            </button>
-            <button
-              onClick={handleDownloadWord}
-              disabled={!logbooks.length}
-              className="bg-emerald-700/80 hover:bg-emerald-700 text-white border border-emerald-400/30 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:pointer-events-none"
-            >
-              <span className="text-base">📝</span> Export Word
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-lg">
-            📝
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total Entries</p>
-            <p className="text-lg font-black text-gray-900">{logbooks.length} Days</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-lg">
-            📅
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Tenure Range</p>
-            <p className="text-xs font-bold text-gray-800">{internship.start_date} → {internship.end_date}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 font-bold flex items-center justify-center text-lg">
-            📊
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Consistency</p>
-            <p className="text-lg font-black text-gray-900">{completionPercent}% Recorded</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 font-bold flex items-center justify-center text-lg">
-            🏛️
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Training Office</p>
-            <p className="text-xs font-bold text-gray-800">{internship.area || 'Headquarters'} Area</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
-          <span>⚠️</span> {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+          {error}
         </div>
       )}
+
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
-          <span>✓</span> {success}
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
+          {success}
         </div>
       )}
 
-      {/* Main Grid: Form + Timeline */}
-      <div className="grid md:grid-cols-5 gap-6 items-start">
-        {/* Editor Form Column */}
-        <div className="md:col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-              <h2 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                <span>✍️</span> Write Daily Entry
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                className="text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors"
-              >
-                Today
-              </button>
-            </div>
-
+      <div className="grid md:grid-cols-5 gap-6">
+        {/* Logbook Editor */}
+        <div className="md:col-span-2 space-y-4">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h2 className="font-semibold text-gray-800 mb-4">Write Daily Log</h2>
             <form onSubmit={handleSaveLog} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Select Date
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Date</label>
                 <input
                   type="date"
                   value={selectedDate}
                   min={internship.start_date}
                   max={internship.end_date}
                   onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Category Tag
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {categoryTags.map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTag(tag)
-                        if (!content.startsWith(`[${tag}]`)) {
-                          setContent(prev => `[${tag}] ` + prev.replace(/^\[.*?\]\s*/, ''))
-                        }
-                      }}
-                      className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors border ${
-                        selectedTag === tag 
-                          ? 'bg-emerald-600 text-white border-emerald-600 font-semibold'
-                          : 'bg-gray-50 text-gray-600 border-gray-150 hover:bg-gray-100'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Tasks &amp; Learnings
-                  </label>
-                  <span className="text-[10px] text-gray-400">{content.length} chars</span>
-                </div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Work Description &amp; Learnings</label>
                 <textarea
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  placeholder="Describe the tasks completed today, guidance received from mentor, and key learnings..."
-                  rows={7}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none leading-relaxed"
+                  placeholder="What tasks did you work on today? What did you learn?"
+                  rows={6}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   required
                 />
               </div>
@@ -558,102 +394,75 @@ export default function StudentLogbookPage() {
               <button
                 type="submit"
                 disabled={saving || !content.trim()}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
-                {saving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Saving Entry...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>💾</span> Save Log Entry
-                  </>
-                )}
+                {saving ? 'Saving log...' : 'Save Log Entry'}
               </button>
             </form>
           </div>
 
-          <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 text-xs text-emerald-900 space-y-1">
-            <p className="font-bold flex items-center gap-1.5">
-              <span>💡</span> Pro Tip
-            </p>
-            <p className="text-emerald-700 leading-relaxed">
-              Writing a log entry for a date you already submitted will automatically update that day&apos;s record!
+          <div className="bg-green-50/50 border border-green-100 rounded-xl p-4">
+            <p className="text-xs text-green-800 leading-relaxed font-medium">
+              💡 <strong>Note:</strong> Logs are indexed per day. Writing a log for an existing date will overwrite/update the entry for that day.
             </p>
           </div>
         </div>
 
-        {/* Logbook Timeline Column */}
-        <div className="md:col-span-3 space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-50 pb-3">
+        {/* Previous Log Entries */}
+        <div className="md:col-span-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
               <div>
-                <h2 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                  <span>📜</span> Timeline Logs ({logbooks.length})
-                </h2>
+                <h2 className="font-semibold text-gray-800">Logbook Timeline</h2>
+                <span className="text-[11px] text-gray-400 font-normal">{logbooks.length} entries recorded</span>
               </div>
-
-              {/* Search Bar */}
               {logbooks.length > 0 && (
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search logs by keyword..."
-                    className="w-full sm:w-56 text-xs border border-gray-200 rounded-xl px-3 py-1.5 pl-8 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <span className="absolute left-2.5 top-1.5 text-xs text-gray-400">🔍</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors border border-red-200 flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>📄</span> Export PDF
+                  </button>
+                  <button
+                    onClick={handleDownloadWord}
+                    className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors border border-blue-200 flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>📝</span> Export Word
+                  </button>
                 </div>
               )}
             </div>
-
+            
             {!logbooks.length ? (
-              <div className="text-center py-16 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto text-xl">
-                  📖
-                </div>
-                <p className="text-sm font-bold text-gray-800">No Daily Logs Recorded Yet</p>
-                <p className="text-xs text-gray-400 max-w-xs mx-auto">Use the log editor on the left to write your first entry for today!</p>
-              </div>
-            ) : !filteredLogbooks.length ? (
-              <div className="text-center py-12 text-xs text-gray-400">
-                No logbook entries match your search query &quot;{searchQuery}&quot;.
+              <div className="text-center py-12 text-gray-400 text-sm">
+                No daily logs recorded yet. Use the editor to submit your first entry!
               </div>
             ) : (
-              <div className="relative border-l-2 border-emerald-100 pl-5 ml-3 space-y-6 pt-2">
-                {filteredLogbooks.map((log) => {
-                  const dateObj = new Date(log.date)
-                  const formattedDate = dateObj.toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    weekday: 'short'
-                  })
-
-                  return (
-                    <div key={log.id} className="relative group">
-                      {/* Circle Timeline Marker */}
-                      <div className="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-600 ring-4 ring-emerald-50 group-hover:ring-emerald-100 transition-all" />
-
-                      <div className="bg-gray-50/60 hover:bg-emerald-50/30 border border-gray-150 hover:border-emerald-200 rounded-2xl p-4 transition-all space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                            {formattedDate}
-                          </span>
-                          <span className="text-[10px] font-semibold text-gray-400">
-                            Logged {new Date(log.created_at || log.date).toLocaleDateString('en-IN')}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed pt-1">
-                          {log.content}
-                        </p>
-                      </div>
+              <div className="relative border-l border-gray-100 pl-4 ml-2 space-y-6">
+                {logbooks.map(log => (
+                  <div key={log.id} className="relative">
+                    {/* Circle marker */}
+                    <div className="absolute -left-[21px] mt-1.5 w-3 h-3 rounded-full bg-green-600 border-2 border-white ring-4 ring-green-50" />
+                    
+                    <div>
+                      <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                        {new Date(log.date).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          weekday: 'short'
+                        })}
+                      </span>
+                      <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {log.content}
+                      </p>
+                      <span className="block text-[10px] text-gray-400 mt-1">
+                        Logged on {new Date(log.created_at).toLocaleDateString('en-IN')}
+                      </span>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
