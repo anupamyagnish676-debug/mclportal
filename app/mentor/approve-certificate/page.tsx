@@ -11,6 +11,7 @@ type Intern = {
   is_active: boolean
   certificate_approved: boolean
   certificate_url: string | null
+  serial_no?: string | null
   student: { full_name: string; email: string } | null
 }
 
@@ -41,7 +42,7 @@ export default function ApproveCertificatePage() {
 
     const { data, error } = await supabase
       .from('internships')
-      .select('id, student_id, start_date, end_date, is_active, certificate_approved, certificate_url, student:profiles!internships_student_id_fkey(full_name, email)')
+      .select('id, student_id, start_date, end_date, is_active, certificate_approved, certificate_url, serial_no, student:profiles!internships_student_id_fkey(full_name, email)')
       .eq('mentor_id', user.id)
       .order('is_active', { ascending: false })
 
@@ -190,7 +191,12 @@ export default function ApproveCertificatePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="font-semibold text-gray-900">{intern.student?.full_name || '—'}</h3>
-                    <p className="text-xs text-gray-400">{intern.student?.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                        MCL/HRD/INT/{intern.serial_no || 'N/A'}
+                      </span>
+                      <span className="text-xs text-gray-400">{intern.student?.email}</span>
+                    </div>
                     <p className="text-xs text-gray-400 mt-1">{intern.start_date} → {intern.end_date}</p>
                   </div>
                   <div className="flex items-center gap-2">
