@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
           .from('applications')
           .update({
             status: 'pending_area',
-            target_area: targetArea,
             referred_by: adminProfile.id,
             lor_url: lorUrl,
             applied_at: new Date().toISOString()
@@ -63,7 +62,6 @@ export async function POST(req: NextRequest) {
             student_name: studentProfile.full_name,
             student_email: studentProfile.email,
             referred_by: adminProfile.id,
-            target_area: targetArea,
             lor_url: lorUrl,
             status: 'pending_area',
             roll_no: studentProfile.roll_no || null,
@@ -78,7 +76,6 @@ export async function POST(req: NextRequest) {
           student_name: candidateName,
           student_email: candidateEmail,
           referred_by: adminProfile.id,
-          target_area: targetArea,
           lor_url: lorUrl,
           status: 'pending_area',
           roll_no: rollNo || null,

@@ -33,13 +33,11 @@ export default async function ApplicationsPage() {
       // Area Admins see pending area applications OR approved applications with no student account linked yet
       const studentArea = app.student?.area ? app.student.area.trim().toLowerCase() : ''
       const referrerArea = (app.referrer?.area && app.referrer.area !== 'Headquarters') ? app.referrer.area.trim().toLowerCase() : ''
-      const targetArea = (app.target_area || '').trim().toLowerCase()
       const adminArea = (profile?.area || '').trim().toLowerCase()
 
-      // If specific area is set, match admin's area; if unassigned/HQ-forwarded, show to local Area Admin
-      const matchesArea = targetArea 
-        ? (targetArea === adminArea)
-        : (studentArea ? studentArea === adminArea : (referrerArea ? referrerArea === adminArea : true))
+      const matchesArea = studentArea 
+        ? (studentArea === adminArea)
+        : (referrerArea ? referrerArea === adminArea : true)
 
       const isPendingArea = app.status === 'pending_area'
       const isApprovedButNotRegistered = app.status === 'approved' && !app.student_id
