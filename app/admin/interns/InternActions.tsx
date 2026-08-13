@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { DollarSign, Trash2, Shield, Settings, Check } from 'lucide-react'
 
+import ShiftAreaModal from '@/components/ShiftAreaModal'
+
 export default function InternActions({
   internshipId,
   studentId,
@@ -11,7 +13,9 @@ export default function InternActions({
   isActive,
   initialType,
   initialAmount,
-  initialFrequency
+  initialFrequency,
+  wing,
+  area
 }: {
   internshipId: string
   studentId: string
@@ -20,12 +24,15 @@ export default function InternActions({
   initialType: 'paid' | 'unpaid'
   initialAmount: number
   initialFrequency: 'monthly' | 'lumpsum'
+  wing?: string
+  area?: string
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [active, setActive] = useState(isActive)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showShiftModal, setShowShiftModal] = useState(false)
   const supabase = createClient()
 
   // Stipend state
@@ -113,6 +120,14 @@ export default function InternActions({
     <div className="relative">
       <div className="flex gap-1.5 flex-wrap items-center">
         <button
+          onClick={() => setShowShiftModal(true)}
+          className="px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg flex items-center gap-1 border border-blue-200 transition-colors"
+          title="Shift Student to Another Area"
+        >
+          🔄 Shift Area
+        </button>
+
+        <button
           onClick={() => { setShowConfig(!showConfig); setError(''); setSuccess(''); }}
           className="px-2 py-1 text-xs bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-1 border border-slate-200 transition-colors"
         >
@@ -135,6 +150,20 @@ export default function InternActions({
           Delete
         </button>
       </div>
+
+      {showShiftModal && (
+        <ShiftAreaModal
+          isOpen={showShiftModal}
+          onClose={() => setShowShiftModal(false)}
+          student={{
+            id: studentId,
+            full_name: studentName,
+            wing,
+            area
+          }}
+          onSuccess={() => router.refresh()}
+        />
+      )}
 
       {error && <p className="text-red-500 text-[10px] mt-1 font-semibold">{error}</p>}
       {success && <p className="text-green-600 text-[10px] mt-1 font-semibold">{success}</p>}
