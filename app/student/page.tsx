@@ -31,6 +31,14 @@ export default async function StudentDashboard() {
     submitted = s.count ?? 0
   }
 
+  // Check if student has an inter-area transfer record
+  const { data: transferRecord } = await supabase
+    .from('applications')
+    .select('*, referrer:profiles!applications_referred_by_fkey(full_name, area)')
+    .eq('student_id', user!.id)
+    .not('referred_by', 'is', null)
+    .maybeSingle()
+
   const featureCards = [
     {
       label: 'Attendance',
@@ -160,6 +168,30 @@ export default async function StudentDashboard() {
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error.message}</div>
+      )}
+
+      {transferRecord && (
+        <div className="bg-gradient-to-r from-emerald-850 via-emerald-800 to-teal-900 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-700/50">
+          <div className="space-y-1">
+            <span className="bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              🔄 Official Inter-Area Transfer Order
+            </span>
+            <p className="text-sm font-extrabold tracking-tight mt-1">
+              Training Office: {transferRecord.referrer?.area || 'Origin'} Area ➔ {internship?.area || 'Target'} Area
+            </p>
+            <p className="text-xs text-emerald-100/80">
+              Digitally signed &amp; issued by Area Training Officer / General Manager (HRD)
+            </p>
+          </div>
+          <a
+            href={`/api/student/transfer-slip?student_id=${user!.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-white hover:bg-emerald-50 text-emerald-950 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm flex-shrink-0"
+          >
+            <span>📄</span> Download Relieving Slip PDF
+          </a>
+        </div>
       )}
 
       {internship ? (

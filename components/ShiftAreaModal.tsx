@@ -246,12 +246,12 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               required
             >
-              <option value="">-- Choose New Training Area --</option>
+              <option value="">-- Select Active Target Area --</option>
               {areasList.filter(a => a !== studentArea).map(areaName => {
-                const isSupported = availableAreasForDept.includes(areaName)
+                const isSupported = availableAreasForDept.length === 0 || availableAreasForDept.includes(areaName)
                 return (
-                  <option key={areaName} value={areaName}>
-                    {areaName} Area {isSupported ? '⭐ (Department Active)' : ''}
+                  <option key={areaName} value={areaName} disabled={!isSupported}>
+                    {areaName} Area {isSupported ? '✅ (Department Active)' : '🔒 (Department Inactive in Area)'}
                   </option>
                 )
               })}
