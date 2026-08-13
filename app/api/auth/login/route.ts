@@ -159,7 +159,28 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // ── Email OTP check for ALL user roles (Admin, Finance, Mentor, Employee, Student) ──
+  const ENABLE_2FA = process.env.ENABLE_2FA === 'true'
+
+  if (!ENABLE_2FA) {
+    // Direct instant login without 2FA OTP requirement
+    const responseData = {
+      role,
+      redirect: dashboardUrl,
+      requires_mfa: false,
+      email,
+      session: { access_token: data.session!.access_token, refresh_token: data.session!.refresh_token },
+      session_nonce: sessionNonce,
+    }
+
+    const response = NextResponse.json(responseData)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, { ...options, path: '/', httpOnly: false, secure: false, sameSite: 'lax' })
+    })
+
+    return response
+  }
+
+  // ── Email OTP check for ALL user roles when ENABLE_2FA=true ──
   const otpCode = generate6DigitOTP()
   const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
   const hash = generateOTPHash(email, otpCode, expiresAt)
