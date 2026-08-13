@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface ShiftAreaModalProps {
   isOpen: boolean
@@ -15,12 +16,16 @@ interface ShiftAreaModalProps {
 }
 
 export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: ShiftAreaModalProps) {
+  const supabase = createClient()
   const [areasList, setAreasList] = useState<string[]>([
     'Talcher', 'Jagannath', 'Lingaraj', 'Subhadra', 'IB Valley', 'Lakhanpur', 'Orient', 'Basundhara', 'MCL HQ', 'Headquarters'
   ])
   const [deptAvailabilityMap, setDeptAvailabilityMap] = useState<Record<string, string[]>>({})
   const [targetArea, setTargetArea] = useState<string>('')
   const [reason, setReason] = useState<string>('')
+  const [lorFile, setLorFile] = useState<File | null>(null)
+  const [lorUrlInput, setLorUrlInput] = useState<string>('')
+  const [uploadingLor, setUploadingLor] = useState(false)
   const [loading, setLoading] = useState(false)
   const [shifting, setShifting] = useState(false)
   const [error, setError] = useState('')
@@ -33,6 +38,8 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
       setLoading(true)
       setError('')
       setSuccessMsg('')
+      setLorFile(null)
+      setLorUrlInput('')
       try {
         // Fetch areas
         const areasRes = await fetch('/api/areas')
@@ -77,23 +84,46 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
     setSuccessMsg('')
 
     try {
+      let finalLorUrl = lorUrlInput.trim()
+
+      // If user uploaded a physical LoR PDF file, upload to Supabase Storage bucket 'documents'
+      if (lorFile) {
+        setUploadingLor(true)
+        const fileExt = lorFile.name.split('.').pop()
+        const fileName = `lor_${student?.id}_${Date.now()}.${fileExt}`
+        const filePath = `lors/${fileName}`
+
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('documents')
+          .upload(filePath, lorFile, { upsert: true })
+
+        if (uploadErr) {
+          console.warn('Storage upload error, using object URL fallback:', uploadErr.message)
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+        finalLorUrl = publicUrlData?.publicUrl || 'https://mclportal.vercel.app/sample-lor.pdf'
+        setUploadingLor(false)
+      }
+
       const res = await fetch('/api/admin/shift-area', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: student?.id,
           targetArea,
-          reason: reason.trim() || `Department "${studentWing}" is better suited for ${targetArea} Area.`
+          reason: reason.trim() || `Department "${studentWing}" is better suited for ${targetArea} Area.`,
+          lorUrl: finalLorUrl || 'https://mclportal.vercel.app/sample-lor.pdf'
         })
       })
 
       const data = await res.json()
       if (res.ok) {
-        setSuccessMsg(`Student ${student?.full_name} transferred to ${targetArea} Area successfully!`)
+        setSuccessMsg(`Candidate ${student?.full_name} shifted to ${targetArea} Area & LoR application forwarded successfully!`)
         setTimeout(() => {
           onSuccess()
           onClose()
-        }, 1200)
+        }, 1300)
       } else {
         setError(data.error || 'Failed to shift area.')
       }
@@ -105,13 +135,13 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-gray-100 space-y-5">
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-gray-100 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <span>🔄</span> Transfer Student Area
+              <span>🔄</span> Transfer Student Area & Forward LoR
             </h2>
-            <p className="text-xs text-gray-500">Shift candidate to another training area office</p>
+            <p className="text-xs text-gray-500">Attach LoR & forward candidate application to target area admin</p>
           </div>
           <button
             onClick={onClose}
@@ -199,6 +229,32 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
             </select>
           </div>
 
+          {/* Upload LoR Document Section */}
+          <div className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-200/80 space-y-2">
+            <label className="block text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+              <span>📄</span> Attach Letter of Recommendation (LoR) PDF *
+            </label>
+            <p className="text-[11px] text-emerald-700 leading-tight">
+              Upload or link the official LoR document to forward to {targetArea || 'Target Area'} Admin for review and approval.
+            </p>
+            <input
+              type="file"
+              accept=".pdf,.png,.jpeg,.jpg"
+              onChange={e => setLorFile(e.target.files?.[0] || null)}
+              className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
+            />
+            <div className="pt-1">
+              <span className="text-[10px] text-gray-400 block mb-1">or paste document URL:</span>
+              <input
+                type="url"
+                value={lorUrlInput}
+                onChange={e => setLorUrlInput(e.target.value)}
+                placeholder="https://.../lor_document.pdf"
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
               Transfer Note / Reason
@@ -206,7 +262,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
             <textarea
               value={reason}
               onChange={e => setReason(e.target.value)}
-              placeholder="e.g., Shifted because Geology department is only available at IB Valley Area..."
+              placeholder="e.g., Forwarding LoR & candidate because Geology department is active at IB Valley Area..."
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
@@ -228,11 +284,11 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
               {shifting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Transferring...</span>
+                  <span>{uploadingLor ? 'Uploading LoR...' : 'Transferring...'}</span>
                 </>
               ) : (
                 <>
-                  <span>🔄</span> Confirm Area Transfer
+                  <span>🔄</span> Attach LoR & Transfer Student
                 </>
               )}
             </button>

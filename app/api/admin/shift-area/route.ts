@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden — Admin access required' }, { status: 403 })
     }
 
-    const { studentId, targetArea, reason } = await req.json()
+    const { studentId, targetArea, reason, lorUrl: requestLorUrl } = await req.json()
     if (!studentId || !targetArea) {
       return NextResponse.json({ error: 'studentId and targetArea are required' }, { status: 400 })
     }
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     const defaultLorUrl = 'https://mclportal.vercel.app/sample-lor.pdf'
-    const lorUrl = existingApp?.lor_url || defaultLorUrl
+    const lorUrl = requestLorUrl || existingApp?.lor_url || defaultLorUrl
 
     if (existingApp) {
       await adminClient
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         .update({
           status: 'pending_area',
           referred_by: adminProfile.id,
+          lor_url: lorUrl,
           applied_at: new Date().toISOString()
         })
         .eq('id', existingApp.id)
