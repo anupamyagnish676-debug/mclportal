@@ -31,7 +31,7 @@ export default async function ApplicationsPage() {
       return app.status === 'pending_hq' || app.status === 'pending'
     } else {
       // Area Admins see pending area applications OR approved applications with no student account linked yet
-      const matchesArea = app.referrer?.area === profile?.area
+      const matchesArea = app.referrer?.area?.trim().toLowerCase() === profile?.area?.trim().toLowerCase()
       const isPendingArea = app.status === 'pending_area'
       const isApprovedButNotRegistered = app.status === 'approved' && !app.student_id
       return matchesArea && (isPendingArea || isApprovedButNotRegistered)

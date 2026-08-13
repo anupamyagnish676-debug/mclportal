@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const previousArea = studentProfile.area || 'Unassigned'
 
     // Area admin security check: can only shift student from their own area unless HQ Admin
-    if (adminProfile.area !== 'Headquarters' && adminProfile.area !== previousArea) {
+    if (adminProfile.area !== 'Headquarters' && adminProfile.area?.trim().toLowerCase() !== previousArea?.trim().toLowerCase()) {
       return NextResponse.json({ error: 'Forbidden — You can only shift students belonging to your area' }, { status: 403 })
     }
 

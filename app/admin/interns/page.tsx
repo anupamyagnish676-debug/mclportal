@@ -62,7 +62,7 @@ export default async function InternsPage({
     `)
 
   if (selectedArea) {
-    query = query.eq('area', selectedArea)
+    query = query.ilike('area', selectedArea)
   }
 
   const { data: internships, error } = await query.order('start_date', { ascending: false })
