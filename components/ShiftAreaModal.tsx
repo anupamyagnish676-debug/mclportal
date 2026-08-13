@@ -139,7 +139,12 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentId: student?.id,
+          studentId: student?.id || null,
+          candidateName: student?.full_name,
+          candidateEmail: student?.email,
+          rollNo: (student as any)?.roll_no || null,
+          university: (student as any)?.university || null,
+          wing: studentWing,
           targetArea,
           reason: reason.trim() || `Department "${studentWing}" is better suited for ${targetArea} Area.`,
           lorUrl: finalLorUrl || 'https://mclportal.vercel.app/sample-lor.pdf'

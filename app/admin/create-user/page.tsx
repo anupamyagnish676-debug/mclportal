@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ShiftAreaModal from '@/components/ShiftAreaModal'
 
 export default function CreateUserPage() {
   const supabase = createClient()
@@ -26,6 +27,10 @@ export default function CreateUserPage() {
   const [areaStatusMap, setAreaStatusMap] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Shift Area Modal state for forwarding candidate with LoR
+  const [shiftModalOpen, setShiftModalOpen] = useState(false)
+  const [shiftCandidate, setShiftCandidate] = useState<any>(null)
 
   useEffect(() => {
     async function loadAreas() {
@@ -76,7 +81,6 @@ export default function CreateUserPage() {
     }
   }
 
-  // When area changes, fetch area-specific department configuration
   function handleAreaChange(newArea: string) {
     setForm(prev => ({ ...prev, area: newArea }))
     fetchDepartments(newArea)
@@ -84,17 +88,33 @@ export default function CreateUserPage() {
 
   const selectedAreaName = form.area || adminProfile?.area || 'Headquarters'
   const activeAreasForWing = form.wing ? (deptAvailabilityMap[form.wing] || []) : []
-  const explicitStatus = form.wing ? areaStatusMap[form.wing] : undefined
+  const statusInArea = form.wing ? areaStatusMap[form.wing] : undefined
   const isWingActiveInCurrentArea = form.wing 
-    ? (explicitStatus !== undefined ? explicitStatus : (activeAreasForWing.length === 0 || activeAreasForWing.includes(selectedAreaName)))
+    ? (statusInArea !== undefined ? statusInArea : (activeAreasForWing.length === 0 || activeAreasForWing.includes(selectedAreaName)))
     : true
+
+  function openForwardLoRModal() {
+    if (!form.full_name || !form.email) {
+      setMessage({ type: 'error', text: 'Please fill candidate Full Name and Email address first before forwarding LoR.' })
+      return
+    }
+    setShiftCandidate({
+      id: '',
+      full_name: form.full_name,
+      email: form.email,
+      wing: form.wing,
+      area: selectedAreaName,
+      roll_no: form.roll_no,
+      university: form.university
+    })
+    setShiftModalOpen(true)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
-    // For Headquarters admins, require selecting an area
     if (adminProfile?.area === 'Headquarters' && !form.area) {
       setMessage({ type: 'error', text: 'Please select an Office / Area Location' })
       setLoading(false)
@@ -137,8 +157,8 @@ export default function CreateUserPage() {
 
   return (
     <div className="max-w-xl pb-12">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Create User</h1>
-      <p className="text-gray-500 text-sm mb-6">Add a new student, mentor, employee, or admin to the portal</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Create User &amp; Forward Referral</h1>
+      <p className="text-gray-500 text-sm mb-6">Add a new student, mentor, employee, or forward an LoR referral to an active Area</p>
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-xs">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -228,34 +248,35 @@ export default function CreateUserPage() {
             </select>
           </div>
 
-          {/* Smart Department Warning & Shift Area Option */}
+          {/* Smart Department Warning & Forward LoR Page Modal Option */}
           {form.wing && !isWingActiveInCurrentArea && (
-            <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-xs text-amber-900 space-y-2 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <p className="font-bold flex items-center gap-1 text-amber-900">
-                    <span>⚠️</span> Department &quot;{form.wing}&quot; is NOT active in {selectedAreaName} Area.
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 space-y-2.5 animate-in fade-in duration-200">
+              <div>
+                <p className="font-bold flex items-center gap-1.5 text-amber-950 text-xs">
+                  <span>⚠️</span> Department &quot;{form.wing}&quot; is NOT active in {selectedAreaName} Area.
+                </p>
+                {activeAreasForWing.length > 0 ? (
+                  <p className="text-[11px] text-emerald-800 font-medium mt-1">
+                    ✅ Active &amp; Operational in: <span className="underline font-bold">{activeAreasForWing.join(', ')}</span>
                   </p>
-                  {activeAreasForWing.length > 0 ? (
-                    <p className="text-[11px] text-emerald-800 font-medium mt-0.5">
-                      Active in: <span className="underline font-bold">{activeAreasForWing.join(', ')}</span>
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-gray-500 italic mt-0.5">
-                      No Area has enabled this department yet.
-                    </p>
-                  )}
-                </div>
-
-                {activeAreasForWing.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => handleAreaChange(activeAreasForWing[0])}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-xs flex items-center justify-center gap-1 flex-shrink-0"
-                  >
-                    <span>🔄</span> Shift Area to {activeAreasForWing[0]}
-                  </button>
+                ) : (
+                  <p className="text-[11px] text-gray-500 italic mt-1">
+                    No Area has enabled this department yet.
+                  </p>
                 )}
+              </div>
+
+              <div className="pt-1 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[11px] text-amber-800">
+                  Forward candidate &amp; attach LoR to target area admin inbox:
+                </span>
+                <button
+                  type="button"
+                  onClick={openForwardLoRModal}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 flex-shrink-0"
+                >
+                  <span>📄</span> Attach LoR &amp; Send to Active Area Modal ↗
+                </button>
               </div>
             </div>
           )}
@@ -313,6 +334,34 @@ export default function CreateUserPage() {
           </button>
         </form>
       </div>
+
+      {/* Shift Area Modal with LoR Upload for Forwarding Candidate */}
+      <ShiftAreaModal
+        isOpen={shiftModalOpen}
+        onClose={() => setShiftModalOpen(false)}
+        student={shiftCandidate}
+        onSuccess={() => {
+          setMessage({
+            type: 'success',
+            text: `Candidate ${shiftCandidate?.full_name} & LoR PDF successfully forwarded to Target Area Admin Inbox!`
+          })
+          setForm({ 
+            full_name: '', 
+            email: '', 
+            password: '', 
+            role: 'student', 
+            wing: '', 
+            start_date: '', 
+            end_date: '', 
+            roll_no: '', 
+            university: '', 
+            serial_no: '',
+            employee_code: '',
+            area: adminProfile?.area !== 'Headquarters' ? (adminProfile?.area || '') : '',
+            internship_type: 'unpaid'
+          })
+        }}
+      />
     </div>
   )
 }
