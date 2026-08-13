@@ -1,22 +1,26 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 
 interface ShiftAreaModalProps {
   isOpen: boolean
   onClose: () => void
   student: {
-    id: string
+    id?: string
     full_name: string
     wing?: string
     area?: string
     email?: string
+    roll_no?: string
+    university?: string
   } | null
   onSuccess: () => void
 }
 
 export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: ShiftAreaModalProps) {
   const supabase = createClient()
+  const [mounted, setMounted] = useState(false)
   const [areasList, setAreasList] = useState<string[]>([
     'Talcher', 'Jagannath', 'Lingaraj', 'Subhadra', 'IB Valley', 'Lakhanpur', 'Orient', 'Basundhara', 'MCL HQ', 'Headquarters'
   ])
@@ -32,6 +36,11 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
   const [shifting, setShifting] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
   useEffect(() => {
     if (!isOpen || !student) return
@@ -65,7 +74,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
         const { data: existingApp } = await supabase
           .from('applications')
           .select('lor_url, employee_code')
-          .or(`student_id.eq.${student?.id},student_email.eq.${student?.email || ''}`)
+          .or(`student_id.eq.${student?.id || ''},student_email.eq.${student?.email || ''}`)
           .maybeSingle()
 
         if (existingApp?.lor_url) {
@@ -81,7 +90,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
     loadData()
   }, [isOpen, student])
 
-  if (!isOpen || !student) return null
+  if (!isOpen || !student || !mounted) return null
 
   const studentWing = student.wing || 'Technical'
   const studentArea = student.area || 'Headquarters'
@@ -115,7 +124,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
           const base64DataUrl = await dataUrlPromise
           
           const fileExt = lorFile.name.split('.').pop()
-          const fileName = `lor_${student?.id}_${Date.now()}.${fileExt}`
+          const fileName = `lor_${student?.id || 'new'}_${Date.now()}.${fileExt}`
           const filePath = `lors/${fileName}`
 
           const { error: uploadErr } = await supabase.storage
@@ -167,13 +176,13 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
     setShifting(false)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-gray-100 space-y-5 max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 space-y-5 max-h-[90vh] overflow-y-auto relative text-gray-900">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <span>🔄</span> Transfer Student Area & Forward LoR
+              <span>🔄</span> Transfer Student Area &amp; Forward LoR
             </h2>
             <p className="text-xs text-gray-500">Auto-detects employee LoR or attach custom LoR to forward to target area</p>
           </div>
@@ -212,7 +221,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
                 </p>
                 {availableAreasForDept.length > 0 ? (
                   <p className="font-semibold text-emerald-800 pt-1">
-                    ✅ Active in: <span className="underline">{availableAreasForDept.join(', ')}</span>
+                    ✅ Active in: <span className="underline font-bold">{availableAreasForDept.join(', ')}</span>
                   </p>
                 ) : (
                   <p className="text-gray-500 italic pt-1">
@@ -362,13 +371,14 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
                 </>
               ) : (
                 <>
-                  <span>🔄</span> Forward LoR & Transfer Student
+                  <span>🔄</span> Forward LoR &amp; Transfer Student
                 </>
               )}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
