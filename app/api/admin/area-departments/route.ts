@@ -17,12 +17,8 @@ export async function GET(req: NextRequest) {
     const { data: allDepts } = await adminClient.from('departments').select('*').order('name')
     const departmentsList = allDepts || []
 
-    // Fetch area_departments mappings
-    let query = adminClient.from('area_departments').select('*')
-    if (area) {
-      query = query.eq('area', area)
-    }
-    const { data: areaDeptsData } = await query
+    // Fetch ALL area_departments mappings to compute global availability across all areas
+    const { data: areaDeptsData } = await adminClient.from('area_departments').select('*')
 
     // Build department availability mapping across all areas
     // Map: { [deptName]: [area1, area2, ...] }

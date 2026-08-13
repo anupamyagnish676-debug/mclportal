@@ -23,6 +23,7 @@ export default function CreateUserPage() {
   const [areas, setAreas] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [deptAvailabilityMap, setDeptAvailabilityMap] = useState<Record<string, string[]>>({})
+  const [areaStatusMap, setAreaStatusMap] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -68,6 +69,7 @@ export default function CreateUserPage() {
       if (res.ok) {
         setDepartments(data.departments || [])
         setDeptAvailabilityMap(data.deptAvailabilityMap || {})
+        setAreaStatusMap(data.areaStatusMap || {})
       }
     } catch (err) {
       console.error('Failed to load area departments:', err)
@@ -82,7 +84,10 @@ export default function CreateUserPage() {
 
   const selectedAreaName = form.area || adminProfile?.area || 'Headquarters'
   const activeAreasForWing = form.wing ? (deptAvailabilityMap[form.wing] || []) : []
-  const isWingActiveInCurrentArea = form.wing ? activeAreasForWing.includes(selectedAreaName) : true
+  const explicitStatus = form.wing ? areaStatusMap[form.wing] : undefined
+  const isWingActiveInCurrentArea = form.wing 
+    ? (explicitStatus !== undefined ? explicitStatus : (activeAreasForWing.length === 0 || activeAreasForWing.includes(selectedAreaName)))
+    : true
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -208,11 +213,15 @@ export default function CreateUserPage() {
               <option value="">-- Select Wing / Department --</option>
               {departments.map(dept => {
                 const activeAreas = deptAvailabilityMap[dept.name] || []
-                const isActiveInCurrentArea = activeAreas.length === 0 || activeAreas.includes(selectedAreaName)
+                const statusInArea = areaStatusMap[dept.name]
+                const isActiveInCurrentArea = statusInArea !== undefined ? statusInArea : (activeAreas.length === 0 || activeAreas.includes(selectedAreaName))
 
                 return (
                   <option key={dept.id || dept.name} value={dept.name}>
-                    {dept.name} {isActiveInCurrentArea ? `⭐ (Active in ${selectedAreaName})` : `🔒 (Not Active in ${selectedAreaName})`}
+                    {dept.name} {isActiveInCurrentArea 
+                      ? `⭐ (Active in ${selectedAreaName})` 
+                      : `🔒 (Not Active in ${selectedAreaName}${activeAreas.length > 0 ? ` — Active in: ${activeAreas.join(', ')}` : ''})`
+                    }
                   </option>
                 )
               })}
