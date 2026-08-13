@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import ShiftAreaModal from '@/components/ShiftAreaModal'
 
 export default function ApplicationActions({
   applicationId, 
@@ -51,6 +52,10 @@ export default function ApplicationActions({
   const [accountLoading, setAccountLoading] = useState(false)
   const [accountError, setAccountError] = useState('')
 
+  // Shift Area Modal state for forwarding candidate when wing is inactive
+  const [shiftModalOpen, setShiftModalOpen] = useState(false)
+  const [shiftCandidate, setShiftCandidate] = useState<any>(null)
+
   useEffect(() => {
     if (!showRegisterForm) return
     async function loadDepts() {
@@ -67,6 +72,9 @@ export default function ApplicationActions({
     }
     loadDepts()
   }, [showRegisterForm, area])
+
+  const activeAreasForWing = wing ? (deptAvailabilityMap[wing] || []) : []
+  const isWingActiveInCurrentArea = wing ? (activeAreasForWing.length === 0 || activeAreasForWing.includes(area || '')) : true
 
   async function handleAction(action: 'approved' | 'rejected') {
     setLoading(true)
@@ -226,9 +234,9 @@ export default function ApplicationActions({
       {/* Account Registration Modal via React Portal */}
       {showRegisterForm && mounted && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-100 shadow-xl relative text-gray-900">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Create Student Account</h3>
-            <p className="text-xs text-gray-500 mb-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-100 shadow-xl relative text-gray-900 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Create Student Account</h3>
+            <p className="text-xs text-gray-500 mb-2">
               Register <strong>{studentName}</strong> and configure their training schedule. Credentials and reporting letter details will be sent to <strong>{studentEmail}</strong>.
             </p>
 
@@ -292,6 +300,42 @@ export default function ApplicationActions({
                 </select>
               </div>
 
+              {/* Smart Department Inactive Alert & LoR Forwarding Button */}
+              {wing && !isWingActiveInCurrentArea && (
+                <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-xs text-amber-900 space-y-2 animate-in fade-in duration-200">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-950 text-xs">
+                    <span>⚠️</span> Department &quot;{wing}&quot; is NOT active in {area || 'this'} Area.
+                  </p>
+                  {activeAreasForWing.length > 0 ? (
+                    <p className="text-[11px] text-emerald-800 font-medium">
+                      ✅ Active &amp; Operational in: <span className="underline font-bold">{activeAreasForWing.join(', ')}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-500 italic">No Area has enabled this department yet.</p>
+                  )}
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRegisterForm(false)
+                      setShiftCandidate({
+                        id: studentId || '',
+                        full_name: studentName,
+                        email: studentEmail,
+                        wing: wing,
+                        area: area || 'Talcher',
+                        roll_no: rollNo,
+                        university: university
+                      })
+                      setShiftModalOpen(true)
+                    }}
+                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 rounded-xl text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 mt-1"
+                  >
+                    <span>📄</span> Attach LoR &amp; Send to Active Area Modal ↗
+                  </button>
+                </div>
+              )}
+
               {accountError && (
                 <p className="text-red-500 text-xs font-medium">{accountError}</p>
               )}
@@ -307,7 +351,7 @@ export default function ApplicationActions({
                 </button>
                 <button
                   type="submit"
-                  disabled={accountLoading}
+                  disabled={accountLoading || (Boolean(wing) && !isWingActiveInCurrentArea)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
                 >
                   {accountLoading ? 'Creating...' : 'Register Student'}
@@ -318,6 +362,16 @@ export default function ApplicationActions({
         </div>,
         document.body
       )}
+
+      {/* Shift Area Modal with LoR Upload for Forwarding Candidate */}
+      <ShiftAreaModal
+        isOpen={shiftModalOpen}
+        onClose={() => setShiftModalOpen(false)}
+        student={shiftCandidate}
+        onSuccess={() => {
+          router.refresh()
+        }}
+      />
     </div>
   )
 }
