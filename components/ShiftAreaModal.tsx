@@ -86,23 +86,35 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
     try {
       let finalLorUrl = lorUrlInput.trim()
 
-      // If user uploaded a physical LoR PDF file, upload to Supabase Storage bucket 'documents'
+      // If user uploaded a physical LoR PDF file, convert to Data URL with Supabase Storage upload
       if (lorFile) {
         setUploadingLor(true)
-        const fileExt = lorFile.name.split('.').pop()
-        const fileName = `lor_${student?.id}_${Date.now()}.${fileExt}`
-        const filePath = `lors/${fileName}`
+        try {
+          const reader = new FileReader()
+          const dataUrlPromise = new Promise<string>((resolve) => {
+            reader.onload = (evt) => resolve(evt.target?.result as string || '')
+            reader.readAsDataURL(lorFile)
+          })
+          const base64DataUrl = await dataUrlPromise
+          
+          const fileExt = lorFile.name.split('.').pop()
+          const fileName = `lor_${student?.id}_${Date.now()}.${fileExt}`
+          const filePath = `lors/${fileName}`
 
-        const { data: uploadData, error: uploadErr } = await supabase.storage
-          .from('documents')
-          .upload(filePath, lorFile, { upsert: true })
+          const { error: uploadErr } = await supabase.storage
+            .from('documents')
+            .upload(filePath, lorFile, { upsert: true })
 
-        if (uploadErr) {
-          console.warn('Storage upload error, using object URL fallback:', uploadErr.message)
+          if (!uploadErr) {
+            const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+            finalLorUrl = publicUrlData?.publicUrl || base64DataUrl
+          } else {
+            finalLorUrl = base64DataUrl
+          }
+        } catch (err) {
+          console.warn('Fallback to base64 Data URL:', err)
+          finalLorUrl = '/sample-lor.pdf'
         }
-
-        const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath)
-        finalLorUrl = publicUrlData?.publicUrl || 'https://mclportal.vercel.app/sample-lor.pdf'
         setUploadingLor(false)
       }
 
