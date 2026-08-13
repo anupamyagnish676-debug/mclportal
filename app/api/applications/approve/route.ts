@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Verify requesting user is an admin
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    const { data: profile } = await supabase.from('profiles').select('role, area').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden — Admins only' }, { status: 403 })
     }
@@ -53,6 +53,18 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: `Failed to update application: ${updateError.message}` }, { status: 400 })
+    }
+
+    // 3. If linked to an existing student profile & internship, activate internship under target area
+    if (app.student_id) {
+      const targetArea = app.student?.area || profile?.area || ''
+      if (targetArea) {
+        await adminClient.from('profiles').update({ area: targetArea }).eq('id', app.student_id)
+      }
+      await adminClient
+        .from('internships')
+        .update({ is_active: true })
+        .eq('student_id', app.student_id)
     }
 
     return NextResponse.json({ success: true })

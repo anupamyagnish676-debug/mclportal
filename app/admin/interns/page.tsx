@@ -85,7 +85,7 @@ export default async function InternsPage({
   // Filter interns based on the active tab
   const filteredInternships = (internships || []).filter((i: any) => {
     if (activeTab === 'active') {
-      return i.is_active === true
+      return i.is_active === true || (selectedArea && i.student?.area?.trim().toLowerCase() === selectedArea.trim().toLowerCase())
     } else {
       return i.is_active === false
     }
