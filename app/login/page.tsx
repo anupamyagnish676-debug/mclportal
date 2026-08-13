@@ -61,6 +61,9 @@ export default function LoginPage() {
         document.cookie = `mcl-session=${cookieVal}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
       }
 
+      // Set MFA verified cookie on client
+      document.cookie = `mcl-email-mfa-verified=true; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+
       // Set session nonce cookie (single session enforcement)
       if (data.session_nonce) {
         document.cookie = `mcl-session-nonce=${data.session_nonce}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
