@@ -46,8 +46,27 @@ export default function ApplicationActions({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [wing, setWing] = useState('')
+  const [departments, setDepartments] = useState<any[]>([])
+  const [deptAvailabilityMap, setDeptAvailabilityMap] = useState<Record<string, string[]>>({})
   const [accountLoading, setAccountLoading] = useState(false)
   const [accountError, setAccountError] = useState('')
+
+  useEffect(() => {
+    if (!showRegisterForm) return
+    async function loadDepts() {
+      try {
+        const res = await fetch(`/api/admin/area-departments?area=${encodeURIComponent(area || '')}`)
+        const data = await res.json()
+        if (res.ok) {
+          setDepartments(data.departments || [])
+          setDeptAvailabilityMap(data.deptAvailabilityMap || {})
+        }
+      } catch (err) {
+        console.error('Error fetching area departments:', err)
+      }
+    }
+    loadDepts()
+  }, [showRegisterForm, area])
 
   async function handleAction(action: 'approved' | 'rejected') {
     setLoading(true)
@@ -250,14 +269,27 @@ export default function ApplicationActions({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Wing / Department (Optional)</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Wing / Department</label>
+                <select
                   value={wing}
                   onChange={e => setWing(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900"
-                  placeholder="Excavation / Mining / HRD"
-                />
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900 font-medium"
+                >
+                  <option value="">-- Select Wing / Department --</option>
+                  {departments.map(dept => {
+                    const activeAreas = deptAvailabilityMap[dept.name] || []
+                    const isActiveInArea = activeAreas.length === 0 || activeAreas.includes(area || '')
+
+                    return (
+                      <option key={dept.id || dept.name} value={dept.name}>
+                        {dept.name} {isActiveInArea 
+                          ? `⭐ (Active in ${area || 'Area'})` 
+                          : `🔒 (Not Active in ${area || 'Area'}${activeAreas.length > 0 ? ` — Active in: ${activeAreas.join(', ')}` : ''})`
+                        }
+                      </option>
+                    )
+                  })}
+                </select>
               </div>
 
               {accountError && (
