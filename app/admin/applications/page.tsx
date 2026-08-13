@@ -19,7 +19,7 @@ export default async function ApplicationsPage() {
     .from('applications')
     .select(`
       id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university,
-      student:profiles!applications_student_id_fkey(full_name, email),
+      student:profiles!applications_student_id_fkey(full_name, email, area),
       referrer:profiles!applications_referred_by_fkey(full_name, area)
     `)
     .order('applied_at', { ascending: false })
@@ -31,7 +31,8 @@ export default async function ApplicationsPage() {
       return app.status === 'pending_hq' || app.status === 'pending'
     } else {
       // Area Admins see pending area applications OR approved applications with no student account linked yet
-      const matchesArea = app.referrer?.area?.trim().toLowerCase() === profile?.area?.trim().toLowerCase()
+      const studentArea = (app.student?.area || app.referrer?.area || '').trim().toLowerCase()
+      const matchesArea = studentArea === (profile?.area || '').trim().toLowerCase()
       const isPendingArea = app.status === 'pending_area'
       const isApprovedButNotRegistered = app.status === 'approved' && !app.student_id
       return matchesArea && (isPendingArea || isApprovedButNotRegistered)
