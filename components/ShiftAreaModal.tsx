@@ -23,6 +23,8 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
   const [deptAvailabilityMap, setDeptAvailabilityMap] = useState<Record<string, string[]>>({})
   const [targetArea, setTargetArea] = useState<string>('')
   const [reason, setReason] = useState<string>('')
+  const [existingLorUrl, setExistingLorUrl] = useState<string | null>(null)
+  const [existingEmployeeCode, setExistingEmployeeCode] = useState<string | null>(null)
   const [lorFile, setLorFile] = useState<File | null>(null)
   const [lorUrlInput, setLorUrlInput] = useState<string>('')
   const [uploadingLor, setUploadingLor] = useState(false)
@@ -40,8 +42,11 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
       setSuccessMsg('')
       setLorFile(null)
       setLorUrlInput('')
+      setExistingLorUrl(null)
+      setExistingEmployeeCode(null)
+
       try {
-        // Fetch areas
+        // 1. Fetch areas
         const areasRes = await fetch('/api/areas')
         const areasData = await areasRes.json()
         if (areasRes.ok && areasData.areas) {
@@ -49,14 +54,26 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
           if (names.length) setAreasList(names)
         }
 
-        // Fetch department availability map
+        // 2. Fetch department availability map
         const deptRes = await fetch(`/api/admin/area-departments?area=${encodeURIComponent(student?.area || '')}`)
         const deptData = await deptRes.json()
         if (deptRes.ok) {
           setDeptAvailabilityMap(deptData.deptAvailabilityMap || {})
         }
+
+        // 3. Auto-detect existing employee-submitted LoR for this student
+        const { data: existingApp } = await supabase
+          .from('applications')
+          .select('lor_url, employee_code')
+          .or(`student_id.eq.${student?.id},student_email.eq.${student?.email || ''}`)
+          .maybeSingle()
+
+        if (existingApp?.lor_url) {
+          setExistingLorUrl(existingApp.lor_url)
+          setExistingEmployeeCode(existingApp.employee_code || null)
+        }
       } catch (err: any) {
-        console.error('Error fetching area department data:', err)
+        console.error('Error fetching area department or existing LoR data:', err)
       }
       setLoading(false)
     }
@@ -84,9 +101,9 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
     setSuccessMsg('')
 
     try {
-      let finalLorUrl = lorUrlInput.trim()
+      let finalLorUrl = lorUrlInput.trim() || existingLorUrl || ''
 
-      // If user uploaded a physical LoR PDF file, convert to Data URL with Supabase Storage upload
+      // If Area Admin uploaded a physical LoR PDF file to replace or attach
       if (lorFile) {
         setUploadingLor(true)
         try {
@@ -112,8 +129,8 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
             finalLorUrl = base64DataUrl
           }
         } catch (err) {
-          console.warn('Fallback to base64 Data URL:', err)
-          finalLorUrl = '/sample-lor.pdf'
+          console.warn('Fallback to base64 Data URL or sample PDF:', err)
+          finalLorUrl = existingLorUrl || '/sample-lor.pdf'
         }
         setUploadingLor(false)
       }
@@ -153,7 +170,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <span>🔄</span> Transfer Student Area & Forward LoR
             </h2>
-            <p className="text-xs text-gray-500">Attach LoR & forward candidate application to target area admin</p>
+            <p className="text-xs text-gray-500">Auto-detects employee LoR or attach custom LoR to forward to target area</p>
           </div>
           <button
             onClick={onClose}
@@ -241,29 +258,69 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
             </select>
           </div>
 
-          {/* Upload LoR Document Section */}
-          <div className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-200/80 space-y-2">
-            <label className="block text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-              <span>📄</span> Attach Letter of Recommendation (LoR) PDF *
-            </label>
-            <p className="text-[11px] text-emerald-700 leading-tight">
-              Upload or link the official LoR document to forward to {targetArea || 'Target Area'} Admin for review and approval.
-            </p>
-            <input
-              type="file"
-              accept=".pdf,.png,.jpeg,.jpg"
-              onChange={e => setLorFile(e.target.files?.[0] || null)}
-              className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
-            />
-            <div className="pt-1">
-              <span className="text-[10px] text-gray-400 block mb-1">or paste document URL:</span>
+          {/* Auto-Fetched Employee LoR / Admin Upload Section */}
+          <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                <span>📄</span> Letter of Recommendation (LoR) Status
+              </label>
+              {existingLorUrl && (
+                <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold shadow-xs">
+                  ✓ Employee LoR Auto-Detected
+                </span>
+              )}
+            </div>
+
+            {existingLorUrl ? (
+              <div className="bg-white p-3 rounded-lg border border-emerald-200 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-800">Submitted LoR Document:</span>
+                  <a
+                    href={existingLorUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-700 hover:text-emerald-800 font-bold underline text-xs flex items-center gap-1"
+                  >
+                    <span>📄</span> View Employee Submitted LoR ↗
+                  </a>
+                </div>
+                {existingEmployeeCode && (
+                  <p className="text-[11px] text-gray-500">
+                    Referred by Employee Code: <strong className="text-gray-700">{existingEmployeeCode}</strong>
+                  </p>
+                )}
+                <p className="text-[10px] text-emerald-700 font-medium pt-1 border-t border-gray-100 mt-1">
+                  ✓ This LoR will be automatically forwarded to {targetArea || 'Target Area'} Admin.
+                </p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 leading-tight font-medium">
+                ℹ️ No prior employee LoR detected. You can upload an LoR PDF below to attach with this transfer.
+              </p>
+            )}
+
+            <div className="pt-1 space-y-1">
+              <label className="block text-[11px] font-bold text-gray-700">
+                {existingLorUrl ? 'Replace / Upload New LoR PDF (Optional):' : 'Upload LoR PDF Document:'}
+              </label>
               <input
-                type="url"
-                value={lorUrlInput}
-                onChange={e => setLorUrlInput(e.target.value)}
-                placeholder="https://.../lor_document.pdf"
-                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                type="file"
+                accept=".pdf,.png,.jpeg,.jpg"
+                onChange={e => setLorFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
               />
+              {!lorFile && (
+                <div className="pt-1">
+                  <span className="text-[10px] text-gray-400 block mb-1">or paste custom document URL:</span>
+                  <input
+                    type="url"
+                    value={lorUrlInput}
+                    onChange={e => setLorUrlInput(e.target.value)}
+                    placeholder="https://.../lor_document.pdf"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -300,7 +357,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
                 </>
               ) : (
                 <>
-                  <span>🔄</span> Attach LoR & Transfer Student
+                  <span>🔄</span> Forward LoR & Transfer Student
                 </>
               )}
             </button>
