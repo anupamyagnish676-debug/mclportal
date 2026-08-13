@@ -43,7 +43,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next')
 
-  if (requiresMfaCheck && !isMfaExempt) {
+  const ENABLE_2FA = process.env.ENABLE_2FA === 'true'
+
+  if (ENABLE_2FA && requiresMfaCheck && !isMfaExempt) {
     const isMfaVerified = request.cookies.get('mcl-email-mfa-verified')?.value === 'true'
     if (!isMfaVerified) {
       const verifyUrl = new URL('/mfa-verify', request.url)

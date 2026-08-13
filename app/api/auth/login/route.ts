@@ -177,6 +177,15 @@ export async function POST(request: NextRequest) {
       response.cookies.set(name, value, { ...options, path: '/', httpOnly: false, secure: false, sameSite: 'lax' })
     })
 
+    // Set mcl-email-mfa-verified cookie to true so middleware allows immediate access
+    response.cookies.set('mcl-email-mfa-verified', 'true', {
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
     return response
   }
 
