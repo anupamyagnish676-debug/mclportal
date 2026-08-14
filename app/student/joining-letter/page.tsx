@@ -51,6 +51,40 @@ export default async function JoiningLetterPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 print:bg-white print:py-0 print:px-0">
+      
+      {/* Global CSS Overrides for Perfect Print Layout */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          /* Hide all outer components, sidebars, headers, and dashboard wrapping UI */
+          body * {
+            visibility: hidden !important;
+          }
+          /* Selectively make only the letterhead card container and its contents visible */
+          .print-letter-container,
+          .print-letter-container * {
+            visibility: visible !important;
+          }
+          /* Reposition the printable container to match A4 print margins perfectly */
+          .print-letter-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          /* Enforce printing of images and graphic backgrounds */
+          img {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            display: inline-block !important;
+          }
+        }
+      `}} />
+
       {/* Action Header Banner (Hidden during Print) */}
       <div className="max-w-4xl mx-auto mb-6 bg-white border border-gray-200 p-4 rounded-2xl flex items-center justify-between shadow-sm print:hidden">
         <div className="space-y-1">
@@ -68,15 +102,15 @@ export default async function JoiningLetterPage() {
         </div>
       </div>
 
-      {/* Official Letter Template */}
-      <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-lg p-10 print:border-none print:shadow-none print:p-0 text-gray-900 text-sm font-serif leading-relaxed">
+      {/* Official Letter Template (Annotated with print-letter-container) */}
+      <div className="print-letter-container max-w-4xl mx-auto bg-white border border-gray-200 shadow-lg p-10 print:border-none print:shadow-none print:p-0 text-gray-900 text-sm font-serif leading-relaxed">
         
         {/* Letterhead Header */}
         <div className="flex items-center justify-between border-b-2 border-emerald-800 pb-6 mb-6">
           <div className="flex items-center gap-4">
-            {/* Official Transparent MCL Logo */}
+            {/* Official Transparent MCL Logo from local public directory */}
             <img 
-              src="https://medamneluagjkxfcrtit.supabase.co/storage/v1/object/public/certificates/mcl-logo-transparent.png" 
+              src="/mcl-logo-transparent.png" 
               alt="MCL Logo" 
               className="w-16 h-16 object-contain flex-shrink-0"
             />
@@ -163,7 +197,7 @@ export default async function JoiningLetterPage() {
             </ol>
           </div>
 
-          {/* Reporting advice message (Green background removed, styled with top/bottom border) */}
+          {/* Reporting advisory (no background color, styled elegantly with clean horizontal borders) */}
           <div className="border-t border-b border-gray-200 py-4 my-6 text-xs font-sans text-gray-900 space-y-1.5 print:border-gray-300">
             <p className="font-bold text-[11px] uppercase tracking-wider text-emerald-900">🚨 Reporting Advisory / रिपोर्टिंग निर्देश:</p>
             <p className="font-bold text-gray-900"> आपसे अनुरोध है कि उपरोक्त छात्रा को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ General Manager, {areaName} Area, MCL को उपरोक्त तिथि के अनुसार रिपोर्ट करने की सलाह दें। </p>
@@ -171,16 +205,17 @@ export default async function JoiningLetterPage() {
           </div>
         </div>
 
-        {/* Signatures Section */}
+        {/* Dynamic Signatures Section */}
         <div className="flex justify-between items-end pt-12 mt-12 border-t border-gray-200 font-sans text-xs">
-          {/* General Manager (HRD) Signature */}
+          
+          {/* Left: General Manager (HRD) Signature from DB */}
           <div className="text-left space-y-1.5 w-1/2">
             <div className="h-16 flex items-end">
               {hqAdmin?.signature_data ? (
                 <img 
                   src={hqAdmin.signature_data} 
                   alt="General Manager (HRD) Signature" 
-                  className="h-14 object-contain"
+                  className="h-14 object-contain inline-block"
                 />
               ) : (
                 <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px]">
@@ -189,17 +224,17 @@ export default async function JoiningLetterPage() {
               )}
             </div>
             <p className="font-bold text-emerald-950">General Manager (HRD)</p>
-            <p className="text-gray-500">Mahanadi Coalfields Limited</p>
+            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited</p>
           </div>
 
-          {/* Area Training Officer Signature */}
+          {/* Right: Area Training Officer Signature from DB */}
           <div className="text-right space-y-1.5 w-1/2">
             <div className="h-16 flex items-end justify-end">
               {areaAdmin?.signature_data ? (
                 <img 
                   src={areaAdmin.signature_data} 
                   alt="Area Training Officer Signature" 
-                  className="h-14 object-contain"
+                  className="h-14 object-contain inline-block ml-auto"
                 />
               ) : (
                 <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px] ml-auto">
@@ -208,7 +243,7 @@ export default async function JoiningLetterPage() {
               )}
             </div>
             <p className="font-bold text-emerald-950">Area Training Officer</p>
-            <p className="text-gray-500">Mahanadi Coalfields Limited, {areaName} Area</p>
+            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited, {areaName} Area</p>
           </div>
         </div>
 
