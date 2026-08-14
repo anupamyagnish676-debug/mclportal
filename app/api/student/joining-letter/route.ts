@@ -316,8 +316,17 @@ export async function GET(req: NextRequest) {
     // Left Column: Area Training Officer
     if (areaAdmin?.signature_data) {
       try {
-        const transparentSigBuffer = await makeTransparent(areaAdmin.signature_data)
-        const sigImage = await pdfDoc.embedPng(transparentSigBuffer)
+        let sigImage;
+        try {
+          const transparentSigBuffer = await makeTransparent(areaAdmin.signature_data)
+          sigImage = await pdfDoc.embedPng(transparentSigBuffer)
+        } catch (jimpErr) {
+          console.warn('Jimp transparency processing failed for Area Admin, embedding signature directly:', jimpErr)
+          const base64Data = areaAdmin.signature_data.includes(',') ? areaAdmin.signature_data.split(',')[1] : areaAdmin.signature_data
+          const imageBytes = Buffer.from(base64Data, 'base64')
+          sigImage = await pdfDoc.embedPng(imageBytes)
+        }
+        
         const sigDims = sigImage.scale(0.35)
         page.drawImage(sigImage, {
           x: 45,
@@ -337,8 +346,17 @@ export async function GET(req: NextRequest) {
     // Right Column: General Manager (HRD)
     if (hqAdmin?.signature_data) {
       try {
-        const transparentSigBuffer = await makeTransparent(hqAdmin.signature_data)
-        const sigImage = await pdfDoc.embedPng(transparentSigBuffer)
+        let sigImage;
+        try {
+          const transparentSigBuffer = await makeTransparent(hqAdmin.signature_data)
+          sigImage = await pdfDoc.embedPng(transparentSigBuffer)
+        } catch (jimpErr) {
+          console.warn('Jimp transparency processing failed for GM HRD, embedding signature directly:', jimpErr)
+          const base64Data = hqAdmin.signature_data.includes(',') ? hqAdmin.signature_data.split(',')[1] : hqAdmin.signature_data
+          const imageBytes = Buffer.from(base64Data, 'base64')
+          sigImage = await pdfDoc.embedPng(imageBytes)
+        }
+        
         const sigDims = sigImage.scale(0.35)
         page.drawImage(sigImage, {
           x: width - 185,
