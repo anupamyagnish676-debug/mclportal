@@ -106,14 +106,27 @@ export default function ApplicationActions({
           const active = Object.entries(data.deptAvailabilityMap as Record<string, string[]>)
             .filter(([, areas]) => areas.includes(area!))
             .map(([name]) => name)
-          setAreaDepts(active.length ? active : (data.departments || []).map((d: any) => d.name))
+          let finalDepts = active.length ? active : (data.departments || []).map((d: any) => d.name)
+          
+          // Guarantee the HQ assigned department is one of the selectable options
+          if (hqDepartment && !finalDepts.includes(hqDepartment)) {
+            finalDepts = [hqDepartment, ...finalDepts]
+          }
+          setAreaDepts(finalDepts)
         }
       } catch (err) {
         console.error('Area depts load error:', err)
       }
     }
     load()
-  }, [showRegisterForm, area])
+  }, [showRegisterForm, area, hqDepartment])
+
+  // Sync wing state when the registration modal opens
+  useEffect(() => {
+    if (showRegisterForm) {
+      setWing(hqDepartment || '')
+    }
+  }, [showRegisterForm, hqDepartment])
 
   // Areas where the selected dept is active
   const activeAreasForDept = selectedDept ? (deptAvailabilityMap[selectedDept] || []) : []
