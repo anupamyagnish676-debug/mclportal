@@ -1,21 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import ApplicationActions from './ApplicationActions'
 import { redirect } from 'next/navigation'
 
 export const revalidate = 0
 
 export default async function ApplicationsPage() {
+  // Use user session only for auth check
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('role, area').eq('id', user.id).maybeSingle()
+  const { data: profile } = await supabase
+    .from('profiles').select('role, area').eq('id', user.id).maybeSingle()
+
+  if (profile?.role !== 'admin') redirect('/')
+
   const isAdminGlobal = profile?.area === 'Headquarters'
 
-  const { data: applications, error } = await supabase
+  // Use admin client (service role) to bypass RLS — our own filter below enforces access control
+  const adminDb = createAdminClient()
+  const { data: applications, error } = await adminDb
     .from('applications')
     .select(`
       id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university, target_area,
