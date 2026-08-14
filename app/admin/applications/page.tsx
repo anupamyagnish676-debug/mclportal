@@ -18,7 +18,7 @@ export default async function ApplicationsPage() {
   const { data: applications, error } = await supabase
     .from('applications')
     .select(`
-      id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university,
+      id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university, target_area,
       student:profiles!applications_student_id_fkey(full_name, email, area, wing),
       referrer:profiles!applications_referred_by_fkey(full_name, area)
     `)
@@ -27,21 +27,34 @@ export default async function ApplicationsPage() {
   // Filter based on admin scope
   const filteredApps = (applications || []).filter((app: any) => {
     if (isAdminGlobal) {
-      // Global Admins see pending HQ applications
+      // HQ Admins see pending HQ applications
       return app.status === 'pending_hq' || app.status === 'pending'
     } else {
-      // Area Admins see pending area applications OR approved applications with no student account linked yet
-      const studentArea = app.student?.area ? app.student.area.trim().toLowerCase() : ''
-      const referrerArea = (app.referrer?.area && app.referrer.area !== 'Headquarters') ? app.referrer.area.trim().toLowerCase() : ''
       const adminArea = (profile?.area || '').trim().toLowerCase()
 
-      const matchesArea = studentArea 
-        ? (studentArea === adminArea)
-        : (referrerArea ? referrerArea === adminArea : true)
+      // Priority 1: use target_area set by HQ Admin when forwarding
+      if (app.target_area) {
+        const matchesTarget = app.target_area.trim().toLowerCase() === adminArea
+        const isPendingArea = app.status === 'pending_area'
+        const isApprovedNoAccount = app.status === 'approved' && !app.student_id
+        return matchesTarget && (isPendingArea || isApprovedNoAccount)
+      }
 
+      // Priority 2: fall back to student profile area
+      const studentArea = app.student?.area ? app.student.area.trim().toLowerCase() : ''
+      if (studentArea) {
+        const isPendingArea = app.status === 'pending_area'
+        const isApprovedNoAccount = app.status === 'approved' && !app.student_id
+        return studentArea === adminArea && (isPendingArea || isApprovedNoAccount)
+      }
+
+      // Priority 3: fall back to referrer area (original employee's area)
+      const referrerArea = (app.referrer?.area && app.referrer.area !== 'Headquarters')
+        ? app.referrer.area.trim().toLowerCase() : ''
+      const matchesReferrer = referrerArea ? referrerArea === adminArea : false
       const isPendingArea = app.status === 'pending_area'
-      const isApprovedButNotRegistered = app.status === 'approved' && !app.student_id
-      return matchesArea && (isPendingArea || isApprovedButNotRegistered)
+      const isApprovedNoAccount = app.status === 'approved' && !app.student_id
+      return matchesReferrer && (isPendingArea || isApprovedNoAccount)
     }
   })
 
@@ -129,7 +142,7 @@ export default async function ApplicationsPage() {
                         isAdminGlobal={isAdminGlobal}
                         rollNo={app.roll_no}
                         university={app.university}
-                        area={app.referrer?.area}
+                        area={app.target_area || app.student?.area || app.referrer?.area}
                       />
                     </td>
                   </tr>

@@ -133,15 +133,15 @@ export default function ApplicationActions({
     setForwardLoading(true)
     setForwardError('')
     try {
-      // Update application status to pending_area only (wing col does not exist on applications)
+      // Update application: status + target_area so Area Admin filter can route correctly
       const { error: appErr } = await supabase
         .from('applications')
-        .update({ status: 'pending_area' })
+        .update({ status: 'pending_area', target_area: selectedTargetArea })
         .eq('id', applicationId)
 
       if (appErr) throw appErr
 
-      // If student profile exists, update area and wing there
+      // If student profile exists, update area and wing there too
       if (studentId) {
         const profileUpdate: any = { area: selectedTargetArea }
         if (selectedDept) profileUpdate.wing = selectedDept
