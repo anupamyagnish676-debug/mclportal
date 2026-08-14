@@ -27,8 +27,10 @@ export default async function ApplicationsPage() {
   // Filter based on admin scope
   const filteredApps = (applications || []).filter((app: any) => {
     if (isAdminGlobal) {
-      // HQ Admins see pending HQ applications
-      return app.status === 'pending_hq' || app.status === 'pending'
+      // HQ Admins see: (a) pending HQ screening, (b) pending_area with NO target_area set (needs re-forwarding)
+      if (app.status === 'pending_hq' || app.status === 'pending') return true
+      if (app.status === 'pending_area' && !app.target_area) return true
+      return false
     } else {
       const adminArea = (profile?.area || '').trim().toLowerCase()
 
@@ -48,7 +50,7 @@ export default async function ApplicationsPage() {
         return studentArea === adminArea && (isPendingArea || isApprovedNoAccount)
       }
 
-      // Priority 3: fall back to referrer area (original employee's area)
+      // Priority 3: fall back to referrer area (original employee's area, skip HQ)
       const referrerArea = (app.referrer?.area && app.referrer.area !== 'Headquarters')
         ? app.referrer.area.trim().toLowerCase() : ''
       const matchesReferrer = referrerArea ? referrerArea === adminArea : false
