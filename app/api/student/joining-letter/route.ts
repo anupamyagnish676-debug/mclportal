@@ -246,7 +246,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Terms and conditions header
-    let termsY = tableTop - 140
+    let termsY = tableTop - 135
     page.drawText('TRAINING TERMS & CONDITIONS', {
       x: 45,
       y: termsY,
@@ -255,14 +255,22 @@ export async function GET(req: NextRequest) {
       color: darkGreen,
     })
 
+    termsY -= 15
+    page.drawText('Training is being given to the student on the basis of the following terms and conditions:-', {
+      x: 45,
+      y: termsY,
+      size: 8.5,
+      font: fontBold,
+      color: charcoal,
+    })
+
     const terms = [
       '1. The information collected by the student will be used only for educational purpose.',
       '2. The Company will not be responsible for any injury/accident caused to the student during the training period.',
       '3. No accommodation and transportation will be provided to the student by the company.',
-      '4. The training will be at their own risk. If anything happens during their training period, the company will not be responsible. The student must submit an undertaking to this effect.',
-      '5. No financial burden will be borne by MCL (except stipulated stipend amounts for approved paid category).',
-      '6. Any other conditions imposed by the concerned sector/project/department.',
-      '7. The Student is advised to take a printout of this letter and report.'
+      '4. The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.',
+      '5. No financial burden will be borne by MCL.',
+      '6. Any other conditions imposed by the concerned sector/project/department.'
     ]
 
     termsY -= 15
@@ -270,13 +278,13 @@ export async function GET(req: NextRequest) {
       page.drawText(term, {
         x: 45,
         y: termsY,
-        size: 8.5,
+        size: 8,
         font: fontRegular,
         color: charcoal,
         maxWidth: width - 90,
-        lineHeight: 12,
+        lineHeight: 11,
       })
-      termsY -= 24
+      termsY -= 25
     })
 
     // Reporting Advisory Box
@@ -299,7 +307,7 @@ export async function GET(req: NextRequest) {
       color: rgb(0.6, 0.1, 0.1),
     })
 
-    const advisoryText = `You are requested to advise the student to report to the General Manager, ${areaName} Area, MCL as per the allocated date along with their identity card for further necessary action.`
+    const advisoryText = `You are requested to advise the above students to report to the General Manager, ${areaName} Area, MCL HQ as per the above date along with his identity card for further necessary action.`
     page.drawText(sanitizeText(advisoryText), {
       x: 55,
       y: advisoryY - 27,

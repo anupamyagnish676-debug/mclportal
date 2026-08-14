@@ -190,9 +190,10 @@ export default async function JoiningLetterPage() {
           </div>
 
           <div className="border-t border-b border-gray-200 py-6 my-6 font-sans">
-            <h3 className="text-xs font-extrabold text-emerald-950 uppercase tracking-widest mb-4 text-center">
-              प्रशिक्षण नियम एवं शर्तें / Training Terms &amp; Conditions
-            </h3>
+            <div className="text-xs font-bold text-emerald-950 mb-4 text-center space-y-1">
+              <p>निम्नलिखित नियम एवं शर्तों के आधार पर छात्र को निःशुल्क प्रशिक्षण दिया जा रहा है:-</p>
+              <p className="text-gray-500 font-semibold">Training is being given to the student on the basis of the following terms and conditions:-</p>
+            </div>
             
             <ol className="list-decimal pl-6 space-y-4 text-xs text-justify text-gray-800">
               <li>
@@ -208,8 +209,8 @@ export default async function JoiningLetterPage() {
                 <p className="text-gray-500 mt-0.5">No accommodation and transportation will be provided to the student by the company.</p>
               </li>
               <li>
-                <p className="font-bold text-gray-900">प्रशिक्षण उनके अपने जोखिम पर होगा, यदि उनकी प्रशिक्षण अवधि के दौरान कुछ होता है, तो कंपनी जिम्मेदार नहीं होगी। छात्रा को इस आशय का एक वचन पत्र प्रस्तुत करना होगा।</p>
-                <p className="text-gray-500 mt-0.5">The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student must submit an undertaking to this effect.</p>
+                <p className="font-bold text-gray-900">प्रशिक्षण उनके अपने जोखिम पर होगा। यदि प्रशिक्षण के दौरान कुछ होता है, तो कंपनी जिम्मेदार नहीं होगी। छात्र को इस आशय का एक वचन पत्र प्रस्तुत करना होगा।</p>
+                <p className="text-gray-500 mt-0.5">The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.</p>
               </li>
               <li>
                 <p className="font-bold text-gray-900">एमसीएल द्वारा कोई वित्तीय भार वहन नहीं किया जाएगा।</p>
@@ -219,18 +220,14 @@ export default async function JoiningLetterPage() {
                 <p className="font-bold text-gray-900">संबंधित क्षेत्र/परियोजना/विभाग द्वारा लगाई गई कोई अन्य शर्तें।</p>
                 <p className="text-gray-500 mt-0.5">Any other conditions imposed by the concerned sector/project/department.</p>
               </li>
-              <li>
-                <p className="font-bold text-gray-900">छात्र को सलाह दी जाती है कि वह इस ईमेल का प्रिंटआउट लें और रिपोर्ट करें।</p>
-                <p className="text-gray-500 mt-0.5">The Student is advised to take a printout of this mail and report.</p>
-              </li>
             </ol>
           </div>
 
           {/* Reporting advisory (no background color, styled elegantly with clean horizontal borders) */}
           <div className="border-t border-b border-gray-200 py-4 my-6 text-xs font-sans text-gray-900 space-y-1.5 print:border-gray-300">
             <p className="font-bold text-[11px] uppercase tracking-wider text-emerald-900">🚨 Reporting Advisory / रिपोर्टिंग निर्देश:</p>
-            <p className="font-bold text-gray-900"> आपसे अनुरोध है कि उपरोक्त छात्रा को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ General Manager, {areaName} Area, MCL को उपरोक्त तिथि के अनुसार रिपोर्ट करने की सलाह दें। </p>
-            <p className="text-gray-700 mt-1"> You are requested to advise the above students to report to the General Manager, {areaName} Area, MCL as per the above date along with his identity card for further necessary action. </p>
+            <p className="font-bold text-gray-900"> आपसे अनुरोध है कि उपरोक्त छात्र को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ उपरोक्त तिथि के अनुसार General Manager, {areaName} Area, MCL को रिपोर्ट करने की सलाह दें। </p>
+            <p className="text-gray-700 mt-1"> You are requested to advise the above students to report to the General Manager, {areaName} Area, MCL HQ as per the above date along with his identity card for further necessary action. </p>
           </div>
         </div>
 
