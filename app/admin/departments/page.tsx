@@ -139,7 +139,7 @@ export default function AdminDepartmentsPage() {
   return (
     <div className="max-w-6xl space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-850 via-emerald-800 to-teal-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-md">
             🏛️ Department &amp; Wing Configuration
