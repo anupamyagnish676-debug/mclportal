@@ -204,38 +204,7 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
           </div>
         </div>
 
-        {/* Smart Department Availability Detection Banner */}
-        {!loading && (
-          <div className={`p-4 rounded-xl border text-xs space-y-1 leading-relaxed ${
-            isDeptActiveInCurrentArea
-              ? 'bg-blue-50/70 border-blue-200 text-blue-900'
-              : 'bg-amber-50 border-amber-200 text-amber-900'
-          }`}>
-            {!isDeptActiveInCurrentArea ? (
-              <>
-                <p className="font-bold flex items-center gap-1.5 text-amber-900">
-                  <span>⚠️</span> Department Not Active in {studentArea} Area
-                </p>
-                <p className="text-amber-800">
-                  The wing <strong>&quot;{studentWing}&quot;</strong> is currently not configured as active in {studentArea} Area.
-                </p>
-                {availableAreasForDept.length > 0 ? (
-                  <p className="font-semibold text-emerald-800 pt-1">
-                    ✅ Active in: <span className="underline font-bold">{availableAreasForDept.join(', ')}</span>
-                  </p>
-                ) : (
-                  <p className="text-gray-500 italic pt-1">
-                    (No area has explicitly enabled this wing yet — you can transfer to any area below).
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="font-semibold text-blue-800 flex items-center gap-1.5">
-                <span>ℹ️</span> Department <strong>&quot;{studentWing}&quot;</strong> is active in {studentArea} Area.
-              </p>
-            )}
-          </div>
-        )}
+
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold">
@@ -260,15 +229,12 @@ export default function ShiftAreaModal({ isOpen, onClose, student, onSuccess }: 
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               required
             >
-              <option value="">-- Select Active Target Area --</option>
-              {areasList.filter(a => a !== studentArea).map(areaName => {
-                const isSupported = availableAreasForDept.length === 0 || availableAreasForDept.includes(areaName)
-                return (
-                  <option key={areaName} value={areaName} disabled={!isSupported}>
-                    {areaName} Area {isSupported ? '✅ (Department Active)' : '🔒 (Department Inactive in Area)'}
-                  </option>
-                )
-              })}
+              <option value="">-- Select Target Area --</option>
+              {areasList.filter(a => a !== studentArea).map(areaName => (
+                <option key={areaName} value={areaName}>
+                  {areaName} Area
+                </option>
+              ))}
             </select>
           </div>
 

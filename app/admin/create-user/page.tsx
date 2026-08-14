@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ShiftAreaModal from '@/components/ShiftAreaModal'
 
 export default function CreateUserPage() {
   const supabase = createClient()
@@ -23,14 +22,8 @@ export default function CreateUserPage() {
   const [adminProfile, setAdminProfile] = useState<{ role: string; area: string | null } | null>(null)
   const [areas, setAreas] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
-  const [deptAvailabilityMap, setDeptAvailabilityMap] = useState<Record<string, string[]>>({})
-  const [areaStatusMap, setAreaStatusMap] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  // Shift Area Modal state for forwarding candidate with LoR
-  const [shiftModalOpen, setShiftModalOpen] = useState(false)
-  const [shiftCandidate, setShiftCandidate] = useState<any>(null)
 
   useEffect(() => {
     async function loadAreas() {
@@ -73,8 +66,6 @@ export default function CreateUserPage() {
       const data = await res.json()
       if (res.ok) {
         setDepartments(data.departments || [])
-        setDeptAvailabilityMap(data.deptAvailabilityMap || {})
-        setAreaStatusMap(data.areaStatusMap || {})
       }
     } catch (err) {
       console.error('Failed to load area departments:', err)
@@ -84,30 +75,6 @@ export default function CreateUserPage() {
   function handleAreaChange(newArea: string) {
     setForm(prev => ({ ...prev, area: newArea }))
     fetchDepartments(newArea)
-  }
-
-  const selectedAreaName = form.area || adminProfile?.area || 'Headquarters'
-  const activeAreasForWing = form.wing ? (deptAvailabilityMap[form.wing] || []) : []
-  const statusInArea = form.wing ? areaStatusMap[form.wing] : undefined
-  const isWingActiveInCurrentArea = form.wing 
-    ? (statusInArea !== undefined ? statusInArea : (activeAreasForWing.length === 0 || activeAreasForWing.includes(selectedAreaName)))
-    : true
-
-  function openForwardLoRModal() {
-    if (!form.full_name || !form.email) {
-      setMessage({ type: 'error', text: 'Please fill candidate Full Name and Email address first before forwarding LoR.' })
-      return
-    }
-    setShiftCandidate({
-      id: '',
-      full_name: form.full_name,
-      email: form.email,
-      wing: form.wing,
-      area: selectedAreaName,
-      roll_no: form.roll_no,
-      university: form.university
-    })
-    setShiftModalOpen(true)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -157,8 +124,8 @@ export default function CreateUserPage() {
 
   return (
     <div className="max-w-xl pb-12">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Create User &amp; Forward Referral</h1>
-      <p className="text-gray-500 text-sm mb-6">Add a new student, mentor, employee, or forward an LoR referral to an active Area</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Create User</h1>
+      <p className="text-gray-500 text-sm mb-6">Add a new student, mentor, employee, or admin user</p>
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-xs">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -218,68 +185,22 @@ export default function CreateUserPage() {
             </div>
           )}
 
-          {/* Wing / Department Dropdown with Smart Area Detection */}
+          {/* Wing / Department Dropdown */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Wing / Department</label>
-              <span className="text-[11px] text-gray-400">Available in {selectedAreaName} Area</span>
-            </div>
-
+            <label className="block text-sm font-medium text-gray-700 mb-1">Wing / Department</label>
             <select
               value={form.wing}
               onChange={e => setForm({ ...form, wing: e.target.value })}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
             >
               <option value="">-- Select Wing / Department --</option>
-              {departments.map(dept => {
-                const activeAreas = deptAvailabilityMap[dept.name] || []
-                const statusInArea = areaStatusMap[dept.name]
-                const isActiveInCurrentArea = statusInArea !== undefined ? statusInArea : (activeAreas.length === 0 || activeAreas.includes(selectedAreaName))
-
-                return (
-                  <option key={dept.id || dept.name} value={dept.name}>
-                    {dept.name} {isActiveInCurrentArea 
-                      ? `⭐ (Active in ${selectedAreaName})` 
-                      : `🔒 (Not Active in ${selectedAreaName}${activeAreas.length > 0 ? ` — Active in: ${activeAreas.join(', ')}` : ''})`
-                    }
-                  </option>
-                )
-              })}
+              {departments.map(dept => (
+                <option key={dept.id || dept.name} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
           </div>
-
-          {/* Smart Department Warning & Forward LoR Page Modal Option */}
-          {form.wing && !isWingActiveInCurrentArea && (
-            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 space-y-2.5 animate-in fade-in duration-200">
-              <div>
-                <p className="font-bold flex items-center gap-1.5 text-amber-950 text-xs">
-                  <span>⚠️</span> Department &quot;{form.wing}&quot; is NOT active in {selectedAreaName} Area.
-                </p>
-                {activeAreasForWing.length > 0 ? (
-                  <p className="text-[11px] text-emerald-800 font-medium mt-1">
-                    ✅ Active &amp; Operational in: <span className="underline font-bold">{activeAreasForWing.join(', ')}</span>
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-gray-500 italic mt-1">
-                    No Area has enabled this department yet.
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-1 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-[11px] text-amber-800">
-                  Forward candidate &amp; attach LoR to target area admin inbox:
-                </span>
-                <button
-                  type="button"
-                  onClick={openForwardLoRModal}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 flex-shrink-0"
-                >
-                  <span>📄</span> Attach LoR &amp; Send to Active Area Modal ↗
-                </button>
-              </div>
-            </div>
-          )}
 
           {form.role === 'student' && (
             <>
@@ -334,34 +255,6 @@ export default function CreateUserPage() {
           </button>
         </form>
       </div>
-
-      {/* Shift Area Modal with LoR Upload for Forwarding Candidate */}
-      <ShiftAreaModal
-        isOpen={shiftModalOpen}
-        onClose={() => setShiftModalOpen(false)}
-        student={shiftCandidate}
-        onSuccess={() => {
-          setMessage({
-            type: 'success',
-            text: `Candidate ${shiftCandidate?.full_name} & LoR PDF successfully forwarded to Target Area Admin Inbox!`
-          })
-          setForm({ 
-            full_name: '', 
-            email: '', 
-            password: '', 
-            role: 'student', 
-            wing: '', 
-            start_date: '', 
-            end_date: '', 
-            roll_no: '', 
-            university: '', 
-            serial_no: '',
-            employee_code: '',
-            area: adminProfile?.area !== 'Headquarters' ? (adminProfile?.area || '') : '',
-            internship_type: 'unpaid'
-          })
-        }}
-      />
     </div>
   )
 }
