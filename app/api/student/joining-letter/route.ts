@@ -29,6 +29,18 @@ async function makeTransparent(base64Str: string): Promise<Buffer> {
   return await image.getBuffer('image/png')
 }
 
+// Helper to calculate proportional dimensions for signature images
+function getScaledDimensions(imgWidth: number, imgHeight: number, targetWidth = 130, targetHeight = 45) {
+  const aspect = imgWidth / imgHeight
+  let w = targetWidth
+  let h = w / aspect
+  if (h > targetHeight) {
+    h = targetHeight
+    w = h * aspect
+  }
+  return { width: w, height: h }
+}
+
 // Helper to sanitize text for standard PDF fonts (WinAnsi encoding)
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return ''
@@ -335,12 +347,12 @@ export async function GET(req: NextRequest) {
           sigImage = await pdfDoc.embedPng(imageBytes)
         }
         
-        const sigDims = sigImage.scale(0.35)
+        const { width: sigW, height: sigH } = getScaledDimensions(sigImage.width, sigImage.height, 130, 45)
         page.drawImage(sigImage, {
           x: 45,
-          y: footerY,
-          width: Math.min(sigDims.width, 140),
-          height: Math.min(sigDims.height, 45),
+          y: footerY + 2,
+          width: sigW,
+          height: sigH,
         })
       } catch (e) {
         console.warn('Could not embed Area Training Officer signature in PDF:', e)
@@ -365,12 +377,12 @@ export async function GET(req: NextRequest) {
           sigImage = await pdfDoc.embedPng(imageBytes)
         }
         
-        const sigDims = sigImage.scale(0.35)
+        const { width: sigW, height: sigH } = getScaledDimensions(sigImage.width, sigImage.height, 130, 45)
         page.drawImage(sigImage, {
           x: width - 185,
-          y: footerY,
-          width: Math.min(sigDims.width, 140),
-          height: Math.min(sigDims.height, 45),
+          y: footerY + 2,
+          width: sigW,
+          height: sigH,
         })
       } catch (e) {
         console.warn('Could not embed GM HRD signature in PDF:', e)
