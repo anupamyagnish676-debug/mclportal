@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import AdminDashboardClient from './AdminDashboardClient'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -59,48 +60,52 @@ export default async function AdminDashboard({
   let pendingApps = 0
   let activeInterns = 0
 
+  // Use admin client to bypass RLS for counts
+  const adminDb = createAdminClient()
+
   // 1. Fetch scoped counts
   if (isAdminGlobal) {
-    const studentQuery = supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student')
-    const internQuery = supabase.from('internships').select('*', { count: 'exact', head: true }).eq('is_active', true)
+    const studentQuery = adminDb.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student')
+    const internQuery = adminDb.from('internships').select('*', { count: 'exact', head: true }).eq('is_active', true)
 
     if (selectedArea) {
       studentQuery.eq('area', selectedArea)
       internQuery.eq('area', selectedArea)
     }
 
-    const [ts, pa, ai] = await Promise.all([
-      studentQuery,
-      supabase.from('applications').select('*', { count: 'exact', head: true }).in('status', ['pending_hq', 'pending']),
-      internQuery
-    ])
-
+    const [ts, ai] = await Promise.all([studentQuery, internQuery])
     totalStudents = ts.count ?? 0
     activeInterns = ai.count ?? 0
 
-    if (selectedArea) {
-      const { data: hqApps } = await supabase
-        .from('applications')
-        .select('id, referrer:profiles!applications_referred_by_fkey(area)')
-        .in('status', ['pending_hq', 'pending'])
-      pendingApps = (hqApps || []).filter((app: any) => app.referrer?.area === selectedArea).length
-    } else {
-      pendingApps = pa.count ?? 0
-    }
+    // Count pending HQ apps (status = pending or pending_hq)
+    const { count: paCount } = await adminDb
+      .from('applications')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pending_hq', 'pending'])
+    pendingApps = paCount ?? 0
+
   } else {
     // Area Admin scope
     const [ts, ai] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('area', adminArea),
-      supabase.from('internships').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('area', adminArea),
+      adminDb.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('area', adminArea),
+      adminDb.from('internships').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('area', adminArea),
     ])
     totalStudents = ts.count ?? 0
     activeInterns = ai.count ?? 0
 
-    const { data: areaApps } = await supabase
+    // Count pending_area apps targeted at this area via target_area column
+    const { data: areaApps } = await adminDb
       .from('applications')
-      .select('id, referrer:profiles!applications_referred_by_fkey(area)')
+      .select('id, target_area, student:profiles!applications_student_id_fkey(area)')
       .eq('status', 'pending_area')
-    pendingApps = (areaApps || []).filter((app: any) => app.referrer?.area === adminArea).length
+
+    pendingApps = (areaApps || []).filter((app: any) => {
+      // Priority 1: target_area set by HQ Admin
+      if (app.target_area) return app.target_area.trim().toLowerCase() === adminArea.trim().toLowerCase()
+      // Priority 2: student profile area
+      if (app.student?.area) return app.student.area.trim().toLowerCase() === adminArea.trim().toLowerCase()
+      return false
+    }).length
   }
 
   const stats = [
