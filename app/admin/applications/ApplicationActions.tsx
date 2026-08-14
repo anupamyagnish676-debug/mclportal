@@ -15,6 +15,7 @@ export default function ApplicationActions({
   rollNo,
   university,
   area,
+  hqDepartment,
 }: {
   applicationId: string
   studentId: string | null
@@ -26,6 +27,7 @@ export default function ApplicationActions({
   rollNo?: string | null
   university?: string | null
   area?: string | null
+  hqDepartment?: string | null
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -56,7 +58,7 @@ export default function ApplicationActions({
   const [password, setPassword] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [wing, setWing] = useState('')
+  const [wing, setWing] = useState(hqDepartment || '')
   const [areaDepts, setAreaDepts] = useState<string[]>([])
   const [accountLoading, setAccountLoading] = useState(false)
   const [accountError, setAccountError] = useState('')
@@ -152,12 +154,13 @@ export default function ApplicationActions({
     setForwardLoading(true)
     setForwardError('')
     try {
-      // 1. Update application: status = pending_area + target_area (critical for area admin routing)
+      // 1. Update application: status = pending_area + target_area + hq_department
       const { error: appErr } = await supabase
         .from('applications')
         .update({
           status: 'pending_area',
           target_area: selectedTargetArea,
+          hq_department: selectedDept,
         })
         .eq('id', applicationId)
 

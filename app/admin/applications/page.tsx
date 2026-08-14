@@ -23,7 +23,7 @@ export default async function ApplicationsPage() {
   const { data: applications, error } = await adminDb
     .from('applications')
     .select(`
-      id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university, target_area,
+      id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university, target_area, hq_department,
       student:profiles!applications_student_id_fkey(full_name, email, area, wing),
       referrer:profiles!applications_referred_by_fkey(full_name, area)
     `)
@@ -150,6 +150,7 @@ export default async function ApplicationsPage() {
                         rollNo={app.roll_no}
                         university={app.university}
                         area={app.target_area || app.student?.area || app.referrer?.area}
+                        hqDepartment={app.hq_department || app.student?.wing || null}
                       />
                     </td>
                   </tr>
