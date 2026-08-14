@@ -103,61 +103,7 @@ export async function POST(request: NextRequest) {
     ip,
   })
 
-  // ── Feature 3: Login email notification (admin + finance only) ───────────
-  if ((role === 'admin' || role === 'finance') && process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-    try {
-      const nodemailer = await import('nodemailer')
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
-      })
-      const now = new Date().toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true,
-      })
-      const areaLabel = profile.area ? ` (${profile.area})` : ''
-      await transporter.sendMail({
-        from: `"MCL Security" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: `🔐 New sign-in to your MCL account`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-            <div style="background:#166534;padding:24px 32px;color:#fff;">
-              <h1 style="margin:0;font-size:18px;font-weight:bold;">New Sign-In Detected</h1>
-              <p style="margin:6px 0 0;font-size:12px;opacity:0.8;">MCL Internship Portal Security Alert</p>
-            </div>
-            <div style="padding:32px;color:#374151;background:#fff;">
-              <p style="margin-top:0;font-size:15px;">Dear <strong>${profile.full_name || email}</strong>,</p>
-              <p style="font-size:14px;color:#374151;">A new sign-in was detected for your MCL Portal account.</p>
-              <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
-                <tr style="border-bottom:1px solid #f3f4f6;">
-                  <td style="padding:10px 0;color:#6b7280;font-weight:bold;width:100px;">Time</td>
-                  <td style="padding:10px 0;color:#111827;">${now} IST</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f3f4f6;">
-                  <td style="padding:10px 0;color:#6b7280;font-weight:bold;">Role</td>
-                  <td style="padding:10px 0;color:#111827;">${role.charAt(0).toUpperCase() + role.slice(1)}${areaLabel}</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 0;color:#6b7280;font-weight:bold;">IP Address</td>
-                  <td style="padding:10px 0;color:#111827;">${ip}</td>
-                </tr>
-              </table>
-              <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;">
-                <strong>⚠️ If this wasn't you</strong>, contact your system administrator immediately and change your password.
-              </div>
-            </div>
-            <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#6b7280;">
-              This is an automated security notification from MCL Internship Portal. Do not reply.
-            </div>
-          </div>
-        `,
-      })
-    } catch (err: any) {
-      console.error('[LOGIN] Failed to send security email:', err.message)
-    }
-  }
+
 
   const ENABLE_2FA = process.env.ENABLE_2FA === 'true'
 

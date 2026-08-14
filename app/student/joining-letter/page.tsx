@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PrintButton from './PrintButton'
@@ -33,28 +34,48 @@ export default async function JoiningLetterPage() {
   const endDate = internship?.end_date ? new Date(internship.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'
   const areaName = student.area || 'Concerned'
 
+  // Fetch signatures using createAdminClient to bypass RLS restrictions for student view
+  const adminClient = createAdminClient()
+
   // Fetch HQ Admin (GM HRD) signature
-  const { data: hqAdmin } = await supabase
+  const { data: hqAdmin } = await adminClient
     .from('profiles')
     .select('full_name, signature_data')
     .eq('email', 'anupamyagnish87@gmail.com')
     .maybeSingle()
 
   // Fetch Area Admin (Area Training Officer) signature
-  const { data: areaAdmin } = await supabase
+  const { data: areaAdmins } = await adminClient
     .from('profiles')
     .select('full_name, signature_data')
     .eq('role', 'admin')
     .eq('area', areaName)
     .not('signature_data', 'is', null)
-    .maybeSingle()
+    .limit(1)
+
+  const areaAdmin = areaAdmins?.[0] || null
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 print:bg-white print:py-0 print:px-0">
       
       {/* Global CSS Overrides for Perfect Print Layout */}
       <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: A4;
+          margin: 0 !important;
+        }
         @media print {
+          /* Reset parent layout and main content container spacing/offsets */
+          html, body, main, .flex {
+            margin: 0 !important;
+            padding: 0 !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: auto !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
           /* Hide all outer components, sidebars, headers, and dashboard wrapping UI */
           body * {
             visibility: hidden !important;
@@ -71,10 +92,12 @@ export default async function JoiningLetterPage() {
             top: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            padding: 0 !important;
+            padding: 20mm 20mm 20mm 20mm !important; /* Elegant 20mm margins for official printout */
             margin: 0 !important;
             border: none !important;
             box-shadow: none !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
           }
           /* Enforce printing of images and graphic backgrounds */
           img {
@@ -99,6 +122,12 @@ export default async function JoiningLetterPage() {
             ← Dashboard
           </Link>
           <PrintButton />
+          <a
+            href="/api/student/joining-letter"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5"
+          >
+            📥 Download PDF
+          </a>
         </div>
       </div>
 
@@ -205,16 +234,16 @@ export default async function JoiningLetterPage() {
           </div>
         </div>
 
-        {/* Dynamic Signatures Section */}
+        {/* Dynamic Signatures Section with Swapped Positions */}
         <div className="flex justify-between items-end pt-12 mt-12 border-t border-gray-200 font-sans text-xs">
           
-          {/* Left: General Manager (HRD) Signature from DB */}
+          {/* Left: Area Training Officer Signature from DB */}
           <div className="text-left space-y-1.5 w-1/2">
             <div className="h-16 flex items-end">
-              {hqAdmin?.signature_data ? (
+              {areaAdmin?.signature_data ? (
                 <img 
-                  src={hqAdmin.signature_data} 
-                  alt="General Manager (HRD) Signature" 
+                  src={areaAdmin.signature_data} 
+                  alt="Area Training Officer Signature" 
                   className="h-14 object-contain inline-block"
                 />
               ) : (
@@ -223,17 +252,17 @@ export default async function JoiningLetterPage() {
                 </div>
               )}
             </div>
-            <p className="font-bold text-emerald-950">General Manager (HRD)</p>
-            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited</p>
+            <p className="font-bold text-emerald-950">Area Training Officer</p>
+            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited, {areaName} Area</p>
           </div>
 
-          {/* Right: Area Training Officer Signature from DB */}
+          {/* Right: General Manager (HRD) Signature from DB */}
           <div className="text-right space-y-1.5 w-1/2">
             <div className="h-16 flex items-end justify-end">
-              {areaAdmin?.signature_data ? (
+              {hqAdmin?.signature_data ? (
                 <img 
-                  src={areaAdmin.signature_data} 
-                  alt="Area Training Officer Signature" 
+                  src={hqAdmin.signature_data} 
+                  alt="General Manager (HRD) Signature" 
                   className="h-14 object-contain inline-block ml-auto"
                 />
               ) : (
@@ -242,8 +271,8 @@ export default async function JoiningLetterPage() {
                 </div>
               )}
             </div>
-            <p className="font-bold text-emerald-950">Area Training Officer</p>
-            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited, {areaName} Area</p>
+            <p className="font-bold text-emerald-950">General Manager (HRD)</p>
+            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited</p>
           </div>
         </div>
 

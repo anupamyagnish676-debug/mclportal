@@ -4,9 +4,9 @@ export default function PrintButton() {
   return (
     <button
       onClick={() => window.print()}
-      className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors print:hidden"
+      className="border border-emerald-200 hover:bg-emerald-50 text-emerald-700 px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors print:hidden"
     >
-      🖨️ Print / Save PDF
+      🖨️ Print Layout
     </button>
   )
 }
