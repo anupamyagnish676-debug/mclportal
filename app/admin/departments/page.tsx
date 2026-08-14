@@ -161,14 +161,16 @@ export default function AdminDepartmentsPage() {
             >
               🏢 Area View
             </button>
-            <button
-              onClick={() => setViewMode('matrix')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'matrix' ? 'bg-white text-emerald-950 shadow-sm' : 'text-emerald-100 hover:bg-white/10'
-              }`}
-            >
-              🌐 Company Matrix Grid
-            </button>
+            {isHqAdmin && (
+              <button
+                onClick={() => setViewMode('matrix')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'matrix' ? 'bg-white text-emerald-950 shadow-sm' : 'text-emerald-100 hover:bg-white/10'
+                }`}
+              >
+                🌐 Company Matrix Grid
+              </button>
+            )}
           </div>
 
           {isHqAdmin && viewMode === 'area' && areasList.length > 0 && (
