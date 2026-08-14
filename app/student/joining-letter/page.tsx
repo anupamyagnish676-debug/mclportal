@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import PrintButton from './PrintButton'
 
 export const revalidate = 0
 
@@ -47,12 +48,7 @@ export default async function JoiningLetterPage() {
           >
             ← Dashboard
           </Link>
-          <button
-            onClick={() => window.print()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors"
-          >
-            🖨️ Print / Save PDF
-          </button>
+          <PrintButton />
         </div>
       </div>
 
