@@ -164,6 +164,29 @@ export default async function StudentDashboard() {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error.message}</div>
       )}
 
+      {internship && (
+        <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-700/50">
+          <div className="space-y-1">
+            <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              ✉️ Official Training Allocation Letter
+            </span>
+            <p className="text-sm font-extrabold tracking-tight mt-1">
+              Your Joining &amp; Reporting Instructions are Available
+            </p>
+            <p className="text-xs text-emerald-100/80">
+              Print this official letter to report at the designated training office.
+            </p>
+          </div>
+          <Link
+            href="/student/joining-letter"
+            target="_blank"
+            className="bg-white hover:bg-emerald-50 text-emerald-950 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm flex-shrink-0"
+          >
+            <span>📄</span> View &amp; Print Joining Letter
+          </Link>
+        </div>
+      )}
+
 
 
       {internship ? (
