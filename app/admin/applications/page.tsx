@@ -19,7 +19,7 @@ export default async function ApplicationsPage() {
     .from('applications')
     .select(`
       id, status, applied_at, lor_url, student_id, student_name, student_email, employee_code, roll_no, university,
-      student:profiles!applications_student_id_fkey(full_name, email, area),
+      student:profiles!applications_student_id_fkey(full_name, email, area, wing),
       referrer:profiles!applications_referred_by_fkey(full_name, area)
     `)
     .order('applied_at', { ascending: false })
@@ -90,6 +90,11 @@ export default async function ApplicationsPage() {
                         <p className="text-gray-400 text-[10px] mt-0.5">
                           {app.roll_no ? `${app.roll_no} • ` : ''}{app.university}
                         </p>
+                      )}
+                      {app.student?.wing && (
+                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
+                          🏷️ {app.student.wing}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{app.referrer?.full_name || '—'}</td>
