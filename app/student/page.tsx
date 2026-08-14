@@ -171,7 +171,7 @@ export default async function StudentDashboard() {
       )}
 
       {transferRecord && (
-        <div className="bg-gradient-to-r from-emerald-850 via-emerald-800 to-teal-900 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-700/50">
+        <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-700/50">
           <div className="space-y-1">
             <span className="bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
               🔄 Official Inter-Area Transfer Order
