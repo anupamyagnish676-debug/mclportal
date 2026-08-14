@@ -111,9 +111,9 @@ export default async function ApplicationsPage() {
                           {app.roll_no ? `${app.roll_no} • ` : ''}{app.university}
                         </p>
                       )}
-                      {app.student?.wing && (
+                      {(app.hq_department || app.student?.wing) && (
                         <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
-                          🏷️ {app.student.wing}
+                          🏷️ HQ Assigned: {app.hq_department || app.student?.wing}
                         </span>
                       )}
                     </td>
