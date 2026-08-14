@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import path from 'path'
+import { isGDriveConfigured, uploadFileToGDrive, getAreaDriveFolderId } from '@/lib/gdrive'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,12 +16,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden — Employee or Admin only' }, { status: 403 })
     }
 
-    const { studentEmail, studentName, lorUrl, employeeCode, rollNo, university } = await req.json()
-    if (!studentEmail || !studentName || !lorUrl || !employeeCode || !rollNo || !university) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    const formData = await req.formData()
+    const studentEmail = formData.get('studentEmail') as string | null
+    const studentName = formData.get('studentName') as string | null
+    const employeeCode = formData.get('employeeCode') as string | null
+    const rollNo = formData.get('rollNo') as string | null
+    const university = formData.get('university') as string | null
+    const file = formData.get('file') as File | null
+
+    if (!studentEmail || !studentName || !employeeCode || !rollNo || !university || !file) {
+      return NextResponse.json({ error: 'Missing required fields or file' }, { status: 400 })
     }
 
     const adminClient = createAdminClient()
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const ext = path.extname(file.name) || '.pdf'
+    const timestamp = Date.now()
+
+    let lorUrl = ''
+
+    if (isGDriveConfigured()) {
+      // Find the Google Drive folder for the employee's area
+      const employeeArea = profile?.area || 'Headquarters'
+      const areaFolderId = await getAreaDriveFolderId(employeeArea)
+
+      // Upload file directly to HQ / Area Admin's Google Drive folder
+      const sanitizedName = studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
+      const gdriveRes = await uploadFileToGDrive({
+        buffer,
+        fileName: `LOR_${sanitizedName}_${timestamp}${ext}`,
+        mimeType: file.type || 'application/pdf',
+        folderId: areaFolderId,
+      })
+      lorUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+    } else {
+      // Fallback to Supabase Storage
+      const sanitizedEmail = studentEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')
+      const storagePath = `lors/${sanitizedEmail}/${timestamp}_lor.pdf`
+
+      const { error: uploadError } = await adminClient.storage
+        .from('lor-documents')
+        .upload(storagePath, buffer, {
+          contentType: file.type || 'application/pdf',
+          upsert: true,
+        })
+
+      if (uploadError) {
+        return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
+      }
+
+      // Generate a 1-year signed URL
+      const { data: signedUrlData, error: signedUrlError } = await adminClient.storage
+        .from('lor-documents')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 365)
+
+      if (signedUrlError) {
+        return NextResponse.json({ error: `Signed URL generation failed: ${signedUrlError.message}` }, { status: 500 })
+      }
+
+      lorUrl = signedUrlData.signedUrl
+    }
 
     // 1. Resolve student ID if a profile already exists for this email
     let { data: student } = await adminClient

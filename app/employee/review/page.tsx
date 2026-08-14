@@ -55,40 +55,18 @@ export default function EmployeeReviewPage() {
         return 
       }
 
-      // 1. Upload file using a sanitized email folder path in storage
-      const sanitizedEmail = studentEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')
-      const filePath = `lors/${sanitizedEmail}/${Date.now()}_lor.pdf`
+      // Construct FormData to upload files and metadata directly to backend
+      const formData = new FormData()
+      formData.append('studentEmail', studentEmail.trim())
+      formData.append('studentName', studentName.trim())
+      formData.append('employeeCode', employeeCode.trim())
+      formData.append('rollNo', rollNo.trim())
+      formData.append('university', university.trim())
+      formData.append('file', file)
 
-      const { error: uploadError } = await supabase.storage.from('lor-documents').upload(filePath, file)
-      if (uploadError) { 
-        setError(`Storage Upload Error: ${uploadError.message}`)
-        setUploading(false)
-        return 
-      }
-
-      // 2. Create signed URL valid for 1 year
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from('lor-documents')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 365)
-
-      if (signedUrlError) { 
-        setError(`Signed URL Generation Error: ${signedUrlError.message}`)
-        setUploading(false)
-        return 
-      }
-
-      // 3. Post to the secure backend API endpoint
       const res = await fetch('/api/employee/submit-lor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentEmail: studentEmail.trim(),
-          studentName: studentName.trim(),
-          lorUrl: signedUrlData.signedUrl,
-          employeeCode: employeeCode.trim(),
-          rollNo: rollNo.trim(),
-          university: university.trim()
-        })
+        body: formData
       })
 
       const data = await res.json()
