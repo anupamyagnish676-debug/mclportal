@@ -33,6 +33,22 @@ export default async function JoiningLetterPage() {
   const endDate = internship?.end_date ? new Date(internship.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'
   const areaName = student.area || 'Concerned'
 
+  // Fetch HQ Admin (GM HRD) signature
+  const { data: hqAdmin } = await supabase
+    .from('profiles')
+    .select('full_name, signature_data')
+    .eq('email', 'anupamyagnish87@gmail.com')
+    .maybeSingle()
+
+  // Fetch Area Admin (Area Training Officer) signature
+  const { data: areaAdmin } = await supabase
+    .from('profiles')
+    .select('full_name, signature_data')
+    .eq('role', 'admin')
+    .eq('area', areaName)
+    .not('signature_data', 'is', null)
+    .maybeSingle()
+
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 print:bg-white print:py-0 print:px-0">
       {/* Action Header Banner (Hidden during Print) */}
@@ -58,10 +74,12 @@ export default async function JoiningLetterPage() {
         {/* Letterhead Header */}
         <div className="flex items-center justify-between border-b-2 border-emerald-800 pb-6 mb-6">
           <div className="flex items-center gap-4">
-            {/* Styled Emblem */}
-            <div className="w-16 h-16 bg-emerald-800 rounded-full flex items-center justify-center text-white font-extrabold text-lg flex-shrink-0">
-              MCL
-            </div>
+            {/* Official Transparent MCL Logo */}
+            <img 
+              src="https://medamneluagjkxfcrtit.supabase.co/storage/v1/object/public/certificates/mcl-logo-transparent.png" 
+              alt="MCL Logo" 
+              className="w-16 h-16 object-contain flex-shrink-0"
+            />
             <div>
               <h1 className="text-xl font-black text-emerald-900 uppercase tracking-wide leading-none">Mahanadi Coalfields Limited</h1>
               <p className="text-xs font-sans text-gray-600 mt-1.5 font-bold uppercase tracking-wider">(A Subsidiary of Coal India Limited)</p>
@@ -145,25 +163,51 @@ export default async function JoiningLetterPage() {
             </ol>
           </div>
 
-          {/* Reporting advice message */}
-          <div className="bg-emerald-50 border border-emerald-200/50 rounded-xl p-4 my-6 text-xs font-sans text-emerald-950 space-y-1.5 print:bg-white print:border-gray-300">
+          {/* Reporting advice message (Green background removed, styled with top/bottom border) */}
+          <div className="border-t border-b border-gray-200 py-4 my-6 text-xs font-sans text-gray-900 space-y-1.5 print:border-gray-300">
             <p className="font-bold text-[11px] uppercase tracking-wider text-emerald-900">🚨 Reporting Advisory / रिपोर्टिंग निर्देश:</p>
             <p className="font-bold text-gray-900"> आपसे अनुरोध है कि उपरोक्त छात्रा को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ General Manager, {areaName} Area, MCL को उपरोक्त तिथि के अनुसार रिपोर्ट करने की सलाह दें। </p>
-            <p className="text-emerald-800 mt-1"> You are requested to advise the above students to report to the General Manager, {areaName} Area, MCL as per the above date along with his identity card for further necessary action. </p>
+            <p className="text-gray-700 mt-1"> You are requested to advise the above students to report to the General Manager, {areaName} Area, MCL as per the above date along with his identity card for further necessary action. </p>
           </div>
         </div>
 
-        {/* Signatures */}
-        <div className="flex justify-between items-end pt-12 mt-12 border-t border-gray-100 font-sans text-xs">
-          <div>
-            <p className="font-bold text-gray-400 uppercase tracking-widest">Office Seal</p>
-            <div className="w-24 h-24 border border-dashed border-gray-300 rounded-lg mt-2 flex items-center justify-center text-gray-300 text-[10px]">
-              MCL Area Stamp
+        {/* Signatures Section */}
+        <div className="flex justify-between items-end pt-12 mt-12 border-t border-gray-200 font-sans text-xs">
+          {/* General Manager (HRD) Signature */}
+          <div className="text-left space-y-1.5 w-1/2">
+            <div className="h-16 flex items-end">
+              {hqAdmin?.signature_data ? (
+                <img 
+                  src={hqAdmin.signature_data} 
+                  alt="General Manager (HRD) Signature" 
+                  className="h-14 object-contain"
+                />
+              ) : (
+                <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px]">
+                  Pending Signature
+                </div>
+              )}
             </div>
+            <p className="font-bold text-emerald-950">General Manager (HRD)</p>
+            <p className="text-gray-500">Mahanadi Coalfields Limited</p>
           </div>
-          <div className="text-right space-y-1">
-            <div className="h-10"></div> {/* Space for signature */}
-            <p className="font-bold text-emerald-950">Area Training Officer / General Manager (HRD)</p>
+
+          {/* Area Training Officer Signature */}
+          <div className="text-right space-y-1.5 w-1/2">
+            <div className="h-16 flex items-end justify-end">
+              {areaAdmin?.signature_data ? (
+                <img 
+                  src={areaAdmin.signature_data} 
+                  alt="Area Training Officer Signature" 
+                  className="h-14 object-contain"
+                />
+              ) : (
+                <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px] ml-auto">
+                  Pending Signature
+                </div>
+              )}
+            </div>
+            <p className="font-bold text-emerald-950">Area Training Officer</p>
             <p className="text-gray-500">Mahanadi Coalfields Limited, {areaName} Area</p>
           </div>
         </div>
