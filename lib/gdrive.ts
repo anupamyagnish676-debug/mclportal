@@ -157,6 +157,78 @@ export async function getOrCreateStudentFolder(params: {
 }
 
 /**
+ * Find or create a dedicated LOR folder hierarchy in Google Drive.
+ * Structure: Root -> LOR -> AreaName (e.g., LOR / Lingaraj)
+ */
+export async function getOrCreateLorAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const parentFolder = process.env.GDRIVE_FOLDER_ID
+
+  const rawArea = areaName && areaName.trim() ? areaName.trim() : 'Headquarters'
+  const cleanArea = rawArea.replace(/[^a-zA-Z0-9\s]/g, '').trim()
+
+  try {
+    // Step 1: Find or Create Master "LOR" Folder inside parentFolder
+    let lorMasterFolderId = parentFolder
+    if (parentFolder) {
+      const masterQuery = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'LOR' and trashed = false`
+      const masterSearchRes = await drive.files.list({
+        q: masterQuery,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
+
+      if (masterSearchRes.data.files && masterSearchRes.data.files.length > 0) {
+        lorMasterFolderId = masterSearchRes.data.files[0].id!
+      } else {
+        const masterCreateRes = await drive.files.create({
+          requestBody: {
+            name: 'LOR',
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [parentFolder],
+          },
+          supportsAllDrives: true,
+          fields: 'id',
+        })
+        lorMasterFolderId = masterCreateRes.data.id!
+      }
+    }
+
+    // Step 2: Find or Create Area Subfolder inside LOR Master Folder
+    if (lorMasterFolderId) {
+      const areaQuery = `'${lorMasterFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = '${cleanArea}' and trashed = false`
+      const areaSearchRes = await drive.files.list({
+        q: areaQuery,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
+
+      if (areaSearchRes.data.files && areaSearchRes.data.files.length > 0) {
+        return areaSearchRes.data.files[0].id!
+      } else {
+        const areaCreateRes = await drive.files.create({
+          requestBody: {
+            name: cleanArea,
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [lorMasterFolderId],
+          },
+          supportsAllDrives: true,
+          fields: 'id',
+        })
+        return areaCreateRes.data.id!
+      }
+    }
+
+    return parentFolder || ''
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateLorAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
  * Delete a student's subfolder from Google Drive when an admin deletes the student.
  */
 export async function deleteStudentFolderGDrive(params: {

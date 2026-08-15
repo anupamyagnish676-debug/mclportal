@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import path from 'path'
-import { isGDriveConfigured, uploadFileToGDrive, getAreaDriveFolderId } from '@/lib/gdrive'
+import { isGDriveConfigured, uploadFileToGDrive, getOrCreateLorAreaFolder } from '@/lib/gdrive'
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,17 +38,17 @@ export async function POST(req: NextRequest) {
 
     if (isGDriveConfigured()) {
       try {
-        // Find the Google Drive folder for the employee's area
+        // Find or Create "LOR / {AreaName}" Subfolder in Google Drive
         const employeeArea = profile?.area || 'Headquarters'
-        const areaFolderId = await getAreaDriveFolderId(employeeArea)
+        const lorAreaFolderId = await getOrCreateLorAreaFolder(employeeArea)
 
-        // Upload file directly to HQ / Area Admin's Google Drive folder
+        // Upload file directly into LOR -> Area subfolder
         const sanitizedName = studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
         const gdriveRes = await uploadFileToGDrive({
           buffer,
           fileName: `LOR_${sanitizedName}_${timestamp}${ext}`,
           mimeType: file.type || 'application/pdf',
-          folderId: areaFolderId,
+          folderId: lorAreaFolderId,
         })
         lorUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
       } catch (gdriveErr: any) {
