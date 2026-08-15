@@ -190,9 +190,9 @@ export default async function StudentIdCardPage() {
 
               <div>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Allocated Area</p>
-                <span className="inline-block bg-emerald-100 text-emerald-900 font-bold text-[10px] px-2 py-0.5 rounded-md border border-emerald-200">
+                <p className="font-bold text-emerald-900 text-[10px]">
                   {areaName} Area Office
-                </span>
+                </p>
               </div>
             </div>
 
