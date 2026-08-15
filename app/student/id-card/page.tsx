@@ -33,8 +33,9 @@ export default async function StudentIdCardPage() {
   const areaName = student.area || 'Concerned'
   const serialNo = internship?.serial_no || 'N/A'
 
-  // Fetch student's passport photo from student_documents table
   const adminClient = createAdminClient()
+
+  // Fetch student's passport photo
   const { data: photoDoc } = await adminClient
     .from('student_documents')
     .select('file_url, file_path, status')
@@ -43,28 +44,39 @@ export default async function StudentIdCardPage() {
     .maybeSingle()
 
   // Always use the server-side photo proxy so Google Drive images load correctly
-  // (Direct Drive URLs require auth / cause CORS issues when used in <img> tags)
   const passportPhotoUrl = photoDoc ? `/api/student/photo-proxy?studentId=${user.id}&t=${Date.now()}` : null
 
-  const startDate = internship?.start_date 
-    ? new Date(internship.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
+  // Fetch Area Admin's signature_data
+  const { data: areaAdmin } = await adminClient
+    .from('profiles')
+    .select('full_name, signature_data')
+    .eq('role', 'admin')
+    .eq('area', areaName)
+    .maybeSingle()
+
+  const areaAdminName = areaAdmin?.full_name || 'Area Training Officer'
+  const areaAdminSignature = areaAdmin?.signature_data || null
+
+  const startDate = internship?.start_date
+    ? new Date(internship.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : 'N/A'
-  const endDate = internship?.end_date 
-    ? new Date(internship.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
+  const endDate = internship?.end_date
+    ? new Date(internship.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : 'N/A'
 
-  // Generate Verification QR Code
-  const qrDataText = `MCL INTERN ID\nName: ${student.full_name}\nSerial: MCL/HRD/${areaName.toUpperCase()}/${serialNo}\nArea: ${areaName}\nValid: ${startDate} - ${endDate}`
+  // Generate Verification QR Code pointing to a live verification page
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mclportal.vercel.app'
+  const verifyUrl = `${baseUrl}/verify/id/${user.id}`
   let qrCodeDataUrl = ''
   try {
-    qrCodeDataUrl = await QRCode.toDataURL(qrDataText, { margin: 1, width: 90 })
+    qrCodeDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 100, errorCorrectionLevel: 'M' })
   } catch (err) {
     console.error('QR Code generation failed:', err)
   }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4 print:bg-white print:py-0 print:px-0">
-      
+
       {/* Print Stylesheet for ID Card */}
       <style dangerouslySetInnerHTML={{ __html: `
         @page {
@@ -116,39 +128,41 @@ export default async function StudentIdCardPage() {
 
       {/* Printable ID Card Container */}
       <div className="print-id-card-wrapper max-w-sm mx-auto bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden font-sans">
-        
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-5 text-center relative border-b-4 border-amber-400">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <img 
-              src="/mcl-logo-transparent.png" 
-              alt="MCL Logo" 
-              className="w-10 h-10 object-contain"
-            />
-            <div className="text-left">
-              <h2 className="text-xs font-black uppercase tracking-wider text-emerald-100 leading-tight">Mahanadi Coalfields Limited</h2>
-              <p className="text-[9px] text-emerald-300 font-semibold uppercase tracking-wider">(A Subsidiary of Coal India Limited)</p>
-            </div>
+
+        {/* ── Compact Header Strip (no dark green band) ── */}
+        <div className="bg-white border-b-2 border-amber-400 px-5 py-3 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/mcl-logo-transparent.png"
+            alt="MCL Logo"
+            className="w-9 h-9 object-contain flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-950 leading-tight">
+              Mahanadi Coalfields Limited
+            </p>
+            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider leading-tight">
+              A Subsidiary of Coal India Limited
+            </p>
           </div>
-          
-          <div className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] font-extrabold uppercase tracking-widest py-0.5 px-3 rounded-full inline-block mt-1">
-            Official Intern Trainee ID Card
+          <div className="flex-shrink-0 bg-amber-400 text-[7px] font-extrabold uppercase tracking-widest py-0.5 px-2 rounded-full text-amber-950">
+            INTERN ID
           </div>
         </div>
 
         {/* Card Body */}
-        <div className="p-6 bg-slate-50/50 space-y-4">
-          
+        <div className="p-5 bg-slate-50/40 space-y-4">
+
           {/* Photo & Basic Details Row */}
           <div className="flex gap-4 items-center">
-            
+
             {/* Passport Photo Box */}
             <div className="w-28 h-36 flex-shrink-0 bg-white border-2 border-emerald-800 rounded-xl overflow-hidden shadow-md relative flex items-center justify-center p-0.5">
               {passportPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img 
+                <img
                   src={passportPhotoUrl}
-                  alt="Student Passport Photo" 
+                  alt="Student Passport Photo"
                   className="w-full h-full object-cover rounded-lg"
                 />
               ) : (
@@ -213,33 +227,46 @@ export default async function StudentIdCardPage() {
           </div>
 
           {/* Verification QR & Signature Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-dashed border-slate-300">
-            
-            {/* QR Code */}
+          <div className="flex items-end justify-between pt-2 border-t border-dashed border-slate-300">
+
+            {/* QR Code — links to live verification page */}
             <div className="flex items-center gap-2">
               {qrCodeDataUrl && (
-                <img 
-                  src={qrCodeDataUrl} 
-                  alt="Verification QR Code" 
-                  className="w-14 h-14 object-contain border border-slate-200 rounded-lg p-0.5 bg-white shadow-xs"
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrCodeDataUrl}
+                  alt="Verification QR Code"
+                  className="w-16 h-16 object-contain border border-slate-200 rounded-lg p-0.5 bg-white shadow-xs"
                 />
               )}
               <div className="text-[8px] text-slate-500 leading-tight">
                 <p className="font-bold text-slate-700">Digital Gate Pass</p>
-                <p>Scan to verify authenticity</p>
+                <p>Scan to verify</p>
+                <p className="text-emerald-600 font-semibold">authenticity</p>
               </div>
             </div>
 
-            {/* Authorized Signature */}
+            {/* Area Admin Signature */}
             <div className="text-right space-y-0.5">
-              <img 
-                src="/gm-signature.png" 
-                alt="GM HRD Signature" 
-                className="h-8 object-contain ml-auto mix-blend-multiply"
-              />
+              {areaAdminSignature ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={areaAdminSignature}
+                  alt="Area Admin Signature"
+                  className="h-8 object-contain ml-auto mix-blend-multiply"
+                />
+              ) : (
+                // Fallback: GM HRD signature image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/gm-signature.png"
+                  alt="Authorised Signature"
+                  className="h-8 object-contain ml-auto mix-blend-multiply"
+                />
+              )}
               <div className="w-24 border-b border-slate-400 ml-auto"></div>
-              <p className="text-[8px] font-bold text-emerald-950">General Manager (HRD)</p>
-              <p className="text-[7px] text-slate-400">Issuing Authority</p>
+              <p className="text-[8px] font-bold text-emerald-950">{areaAdminName}</p>
+              <p className="text-[7px] text-slate-400">Area Training Officer, MCL</p>
             </div>
 
           </div>
