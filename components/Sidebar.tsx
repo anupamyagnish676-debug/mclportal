@@ -27,7 +27,8 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Shield
+  Shield,
+  CreditCard
 } from 'lucide-react'
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
@@ -65,6 +66,7 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   student: [
     { label: 'Dashboard',      href: '/student',                icon: Home },
+    { label: 'My ID Card',     href: '/student/id-card',        icon: CreditCard },
     { label: 'Attendance',     href: '/student/attendance',     icon: Calendar },
     { label: 'Daily Logbook',  href: '/student/logbook',        icon: BookOpen },
     { label: 'Leave Apply',    href: '/student/leaves',         icon: Mail },
