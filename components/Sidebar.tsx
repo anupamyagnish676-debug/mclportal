@@ -65,7 +65,6 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   student: [
     { label: 'Dashboard',      href: '/student',                icon: Home },
-    { label: 'Joining Letter', href: '/student/joining-letter', icon: FileText },
     { label: 'Attendance',     href: '/student/attendance',     icon: Calendar },
     { label: 'Daily Logbook',  href: '/student/logbook',        icon: BookOpen },
     { label: 'Leave Apply',    href: '/student/leaves',         icon: Mail },
