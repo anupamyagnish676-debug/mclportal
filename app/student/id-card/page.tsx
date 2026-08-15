@@ -262,22 +262,23 @@ export default async function StudentIdCardPage() {
 
             {/* Area Admin Signature */}
             <div className="text-right space-y-0.5">
-              {areaAdminSignature ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={areaAdminSignature}
-                  alt="Area Admin Signature"
-                  className="h-8 object-contain ml-auto mix-blend-multiply"
-                />
-              ) : (
-                // Fallback: GM HRD signature image
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src="/gm-signature.png"
-                  alt="Authorised Signature"
-                  className="h-8 object-contain ml-auto mix-blend-multiply"
-                />
-              )}
+              <div className="h-12 flex items-end justify-end mb-0.5 bg-slate-50 rounded border border-slate-100 px-1">
+                {areaAdminSignature ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={areaAdminSignature}
+                    alt="Area Admin Signature"
+                    className="max-h-12 max-w-[120px] object-contain"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src="/gm-signature.png"
+                    alt="Authorised Signature"
+                    className="max-h-12 max-w-[120px] object-contain"
+                  />
+                )}
+              </div>
               <div className="w-24 border-b border-slate-400 ml-auto"></div>
               <p className="text-[8px] font-bold text-emerald-950">{areaAdminName}</p>
               <p className="text-[7px] text-slate-400">Area Training Officer, MCL</p>
