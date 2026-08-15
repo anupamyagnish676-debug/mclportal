@@ -1,5 +1,7 @@
+import 'regenerator-runtime/runtime'
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import fs from 'fs'
@@ -110,6 +112,19 @@ export async function GET(req: NextRequest) {
 
     // Generate PDF Document using pdf-lib
     const pdfDoc = await PDFDocument.create()
+    pdfDoc.registerFontkit(fontkit)
+
+    let fontDevanagari: any = null
+    try {
+      const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Hind-Regular.ttf')
+      if (fs.existsSync(fontPath)) {
+        const fontBytes = fs.readFileSync(fontPath)
+        fontDevanagari = await pdfDoc.embedFont(fontBytes)
+      }
+    } catch (fontErr) {
+      console.warn('Could not load Devanagari font:', fontErr)
+    }
+
     const page = pdfDoc.addPage([595.28, 841.89]) // A4 Page Size
     const { width, height } = page.getSize()
 
@@ -171,11 +186,10 @@ export async function GET(req: NextRequest) {
     })
 
     // Ref & Date
-    const refNo = `Ref: MCL/${areaName.toUpperCase()}/INT/${new Date().getFullYear()}/{serialNo}`
-    const refText = refNo.replace('{serialNo}', serialNo)
+    const refNo = `Ref: MCL/${areaName.toUpperCase()}/INT/${new Date().getFullYear()}/${serialNo}`
     const todayStr = `Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}`
     
-    page.drawText(refText, { x: width - 210, y: height - 62, size: 8, font: fontRegular, color: charcoal })
+    page.drawText(refNo, { x: width - 210, y: height - 62, size: 8, font: fontRegular, color: charcoal })
     page.drawText(todayStr, { x: width - 210, y: height - 76, size: 8, font: fontRegular, color: charcoal })
 
     // Divider Line
@@ -196,38 +210,38 @@ export async function GET(req: NextRequest) {
     })
 
     // To section
-    page.drawText('To,', { x: 45, y: height - 165, size: 10, font: fontRegular, color: charcoal })
+    page.drawText('To,', { x: 45, y: height - 160, size: 10, font: fontRegular, color: charcoal })
     
-    let currentY = height - 180
+    let currentY = height - 173
     const toDetails = [
       student.full_name,
       `University: ${student.university || 'N/A'}`,
       `Roll / Reg No: ${student.roll_no || 'N/A'}`
     ]
     toDetails.forEach(line => {
-      page.drawText(sanitizeText(line), { x: 55, y: currentY, size: 10, font: fontBold, color: charcoal })
-      currentY -= 14
+      page.drawText(sanitizeText(line), { x: 55, y: currentY, size: 9.5, font: fontBold, color: charcoal })
+      currentY -= 13
     })
 
     // Body Text
     const bodyText = `With reference to the Letter of Recommendation submitted on your behalf, we are pleased to confirm that you have been approved and allocated to undergo internship training at Mahanadi Coalfields Limited (MCL). Your training profile details are outlined below:`
     page.drawText(bodyText, {
       x: 45,
-      y: currentY - 10,
-      size: 9.5,
+      y: currentY - 8,
+      size: 9,
       font: fontRegular,
       color: charcoal,
       maxWidth: width - 90,
-      lineHeight: 14,
+      lineHeight: 13,
     })
 
     // Table Box
-    const tableTop = currentY - 50
+    const tableTop = currentY - 45
     page.drawRectangle({
       x: 45,
-      y: tableTop - 110,
+      y: tableTop - 95,
       width: width - 90,
-      height: 110,
+      height: 95,
       borderColor: borderGray,
       borderWidth: 1,
       color: rgb(0.98, 0.99, 0.98),
@@ -241,66 +255,106 @@ export async function GET(req: NextRequest) {
       ['Stipend Designation', internship?.internship_type === 'paid' ? 'Paid Internship' : 'Unpaid Training'],
     ]
 
-    let rowY = tableTop - 20
+    let rowY = tableTop - 18
     rows.forEach(([label, val]) => {
-      page.drawText(label, { x: 60, y: rowY, size: 9, font: fontBold, color: darkGreen })
-      page.drawText(sanitizeText(val), { x: 230, y: rowY, size: 9, font: fontRegular, color: charcoal })
-      // Divider
-      if (rowY > tableTop - 100) {
+      page.drawText(label, { x: 55, y: rowY, size: 8.5, font: fontBold, color: darkGreen })
+      page.drawText(sanitizeText(val), { x: 220, y: rowY, size: 8.5, font: fontRegular, color: charcoal })
+      if (rowY > tableTop - 85) {
         page.drawLine({
-          start: { x: 45, y: rowY - 6 },
-          end: { x: width - 45, y: rowY - 6 },
+          start: { x: 45, y: rowY - 5 },
+          end: { x: width - 45, y: rowY - 5 },
           thickness: 0.5,
           color: borderGray,
         })
       }
-      rowY -= 20
+      rowY -= 18
     })
 
     // Terms and conditions header
-    let termsY = tableTop - 135
+    let termsY = tableTop - 118
     page.drawText('TRAINING TERMS & CONDITIONS', {
       x: 45,
       y: termsY,
-      size: 10,
+      size: 9.5,
       font: fontBold,
       color: darkGreen,
     })
 
-    termsY -= 15
+    if (fontDevanagari) {
+      termsY -= 13
+      page.drawText('निम्नलिखित नियम एवं शर्तों के आधार पर छात्र को निःशुल्क प्रशिक्षण दिया जा रहा है:-', {
+        x: 45,
+        y: termsY,
+        size: 7.5,
+        font: fontDevanagari,
+        color: charcoal,
+      })
+    }
+
+    termsY -= 11
     page.drawText('Training is being given to the student on the basis of the following terms and conditions:-', {
       x: 45,
       y: termsY,
-      size: 8.5,
+      size: 7.5,
       font: fontBold,
       color: charcoal,
     })
 
     const terms = [
-      '1. The information collected by the student will be used only for educational purpose.',
-      '2. The Company will not be responsible for any injury/accident caused to the student during the training period.',
-      '3. No accommodation and transportation will be provided to the student by the company.',
-      '4. The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.',
-      '5. No financial burden will be borne by MCL.',
-      '6. Any other conditions imposed by the concerned sector/project/department.'
+      {
+        hi: '1. छात्र द्वारा एकत्रित की गई जानकारी का उपयोग केवल शैक्षणिक उद्देश्य के लिए किया जाएगा।',
+        en: '   The information collected by the student will be used only for educational purpose.'
+      },
+      {
+        hi: '2. प्रशिक्षण अवधि के दौरान छात्र को हुई किसी भी चोट/दुर्घटना के लिए कंपनी जिम्मेदार नहीं होगी।',
+        en: '   The Company will not be responsible for any injury/accident caused to the student during the training period.'
+      },
+      {
+        hi: '3. कंपनी द्वारा छात्र को कोई आवास और परिवहन प्रदान नहीं किया जाएगा।',
+        en: '   No accommodation and transportation will be provided to the student by the company.'
+      },
+      {
+        hi: '4. प्रशिक्षण उनके अपने जोखिम पर होगा। यदि प्रशिक्षण के दौरान कुछ होता है, तो कंपनी जिम्मेदार नहीं होगी। छात्र को इस आशय का एक वचन पत्र प्रस्तुत करना होगा।',
+        en: '   The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.'
+      },
+      {
+        hi: '5. एमसीएल द्वारा कोई वित्तीय भार वहन नहीं किया जाएगा।',
+        en: '   No financial burden will be borne by MCL.'
+      },
+      {
+        hi: '6. संबंधित क्षेत्र/परियोजना/विभाग द्वारा लगाई गई कोई अन्य शर्तें।',
+        en: '   Any other conditions imposed by the concerned sector/project/department.'
+      }
     ]
 
-    termsY -= 15
+    termsY -= 13
     terms.forEach(term => {
-      page.drawText(term, {
+      if (fontDevanagari && term.hi) {
+        page.drawText(term.hi, {
+          x: 45,
+          y: termsY,
+          size: 7,
+          font: fontDevanagari,
+          color: charcoal,
+          maxWidth: width - 90,
+          lineHeight: 9,
+        })
+        termsY -= 10
+      }
+      page.drawText(term.en, {
         x: 45,
         y: termsY,
-        size: 8,
+        size: 7,
         font: fontRegular,
         color: charcoal,
         maxWidth: width - 90,
-        lineHeight: 11,
+        lineHeight: 9,
       })
-      termsY -= 25
+      termsY -= 13
     })
 
     // Reporting Advisory Box
-    const advisoryY = termsY - 10
+    const advisoryY = termsY - 8
     page.drawRectangle({
       x: 45,
       y: advisoryY - 45,
@@ -311,27 +365,40 @@ export async function GET(req: NextRequest) {
       color: rgb(0.99, 0.97, 0.97),
     })
 
-    page.drawText('REPORTING ADVISORY:', {
+    page.drawText('REPORTING ADVISORY / रिपोर्टिंग निर्देश:', {
       x: 55,
-      y: advisoryY - 15,
-      size: 8.5,
-      font: fontBold,
+      y: advisoryY - 13,
+      size: 7.5,
+      font: fontDevanagari || fontBold,
       color: rgb(0.6, 0.1, 0.1),
     })
+
+    if (fontDevanagari) {
+      const hindiAdv = `आपसे अनुरोध है कि उपरोक्त छात्र को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ उपरोक्त तिथि के अनुसार General Manager, ${areaName} Area, MCL को रिपोर्ट करने की सलाह दें।`
+      page.drawText(hindiAdv, {
+        x: 55,
+        y: advisoryY - 24,
+        size: 7,
+        font: fontDevanagari,
+        color: charcoal,
+        maxWidth: width - 110,
+        lineHeight: 9,
+      })
+    }
 
     const advisoryText = `You are requested to advise the above students to report to the General Manager, ${areaName} Area, MCL HQ as per the above date along with his identity card for further necessary action.`
     page.drawText(sanitizeText(advisoryText), {
       x: 55,
-      y: advisoryY - 27,
-      size: 8,
+      y: fontDevanagari ? advisoryY - 35 : advisoryY - 25,
+      size: 7,
       font: fontRegular,
       color: charcoal,
       maxWidth: width - 110,
-      lineHeight: 11,
+      lineHeight: 9,
     })
 
     // Swapped Signature Section
-    const footerY = 120
+    const footerY = 115
 
     // Left Column: Area Training Officer
     if (areaAdmin?.signature_data) {
