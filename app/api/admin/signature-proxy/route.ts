@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import fs from 'fs'
 import path from 'path'
 
+export const revalidate = 0
+
 /**
  * GET /api/admin/signature-proxy?area=Lingaraj
  * 
@@ -12,18 +14,21 @@ import path from 'path'
  */
 export async function GET(req: NextRequest) {
   try {
-    const areaName = req.nextUrl.searchParams.get('area') || 'Headquarters'
+    const rawArea = req.nextUrl.searchParams.get('area') || 'Headquarters'
+    // Clean area name in case it contains "Area Office" or whitespace
+    const areaName = rawArea.replace(/Area Office/gi, '').trim()
+
     const adminClient = createAdminClient()
 
     let signatureData: string | null = null
 
-    // 1. Try to fetch area admin signature from DB
+    // 1. Try to fetch area admin signature from DB for specified area
     if (areaName && areaName !== 'Concerned') {
       const { data: withSigRows } = await adminClient
         .from('profiles')
         .select('signature_data')
         .eq('role', 'admin')
-        .ilike('area', areaName.trim())
+        .ilike('area', `%${areaName}%`)
         .not('signature_data', 'is', null)
         .limit(1)
 
@@ -32,41 +37,51 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // If no specific area admin signature, try Headquarters admin signature
+    // 2. If no area match, fallback to ANY admin who has a signature saved
     if (!signatureData) {
-      const { data: hqRows } = await adminClient
+      const { data: anyAdminRows } = await adminClient
         .from('profiles')
         .select('signature_data')
         .eq('role', 'admin')
-        .ilike('area', 'Headquarters')
         .not('signature_data', 'is', null)
         .limit(1)
 
-      if (hqRows && hqRows.length > 0 && hqRows[0].signature_data) {
-        signatureData = hqRows[0].signature_data
+      if (anyAdminRows && anyAdminRows.length > 0 && anyAdminRows[0].signature_data) {
+        signatureData = anyAdminRows[0].signature_data
       }
     }
 
-    // 2. If valid base64 signature found, parse and return PNG buffer
-    if (signatureData && signatureData.startsWith('data:image/')) {
-      const base64Data = signatureData.replace(/^data:image\/\w+;base64,/, '').trim().replace(/\s+/g, '')
-      const buffer = Buffer.from(base64Data, 'base64')
+    // 3. If valid base64 signature found, convert to Uint8Array and return PNG
+    if (signatureData) {
+      let base64Data = signatureData
+      if (base64Data.includes(',')) {
+        base64Data = base64Data.split(',')[1]
+      }
+      base64Data = base64Data.trim().replace(/\s+/g, '')
 
-      return new NextResponse(buffer, {
+      const buffer = Buffer.from(base64Data, 'base64')
+      const uint8 = new Uint8Array(buffer)
+
+      return new NextResponse(uint8, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
+          'Content-Length': String(uint8.byteLength),
           'Cache-Control': 'no-store, max-age=0',
         },
       })
     }
 
-    // 3. Fallback: serve local gm-signature.png file
+    // 4. Ultimate Fallback: serve local public/gm-signature.png file
     const fallbackPath = path.join(process.cwd(), 'public', 'gm-signature.png')
     if (fs.existsSync(fallbackPath)) {
       const fallbackBuffer = fs.readFileSync(fallbackPath)
-      return new NextResponse(fallbackBuffer, {
+      const uint8 = new Uint8Array(fallbackBuffer)
+      return new NextResponse(uint8, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
+          'Content-Length': String(uint8.byteLength),
           'Cache-Control': 'public, max-age=86400',
         },
       })
