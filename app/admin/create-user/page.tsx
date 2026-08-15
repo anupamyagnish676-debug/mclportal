@@ -161,15 +161,15 @@ export default function CreateUserPage() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required />
           </div>
 
-          {adminProfile?.area === 'Headquarters' && (
+          {(!adminProfile?.area || adminProfile?.area?.toLowerCase() === 'headquarters') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Office / Area Location <span className="text-red-500">*</span></label>
               <select value={form.area} onChange={e => handleAreaChange(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
-                <option value="">-- Select Area --</option>
-                {areas.map(a => (
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-medium" required>
+                <option value="Headquarters">Headquarters (Central)</option>
+                {areas.filter(a => a.name !== 'Headquarters').map(a => (
                   <option key={a.name} value={a.name}>
-                    {a.name === 'Headquarters' ? 'Headquarters (Central)' : `${a.name} Area`}
+                    {a.name} Area
                   </option>
                 ))}
               </select>
