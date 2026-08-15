@@ -75,7 +75,7 @@ export default async function StudentIdCardPage() {
   }
 
   const areaAdminName = areaAdmin?.full_name || 'Area Training Officer'
-  const areaAdminSignature = areaAdmin?.signature_data || null
+  const signatureProxyUrl = `/api/admin/signature-proxy?area=${encodeURIComponent(areaName)}&t=${Date.now()}`
 
   const startDate = internship?.start_date
     ? new Date(internship.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -263,21 +263,12 @@ export default async function StudentIdCardPage() {
             {/* Area Admin Signature */}
             <div className="text-right space-y-0.5">
               <div className="h-12 flex items-end justify-end mb-0.5 bg-slate-50 rounded border border-slate-100 px-1">
-                {areaAdminSignature ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={areaAdminSignature}
-                    alt="Area Admin Signature"
-                    className="max-h-12 max-w-[120px] object-contain"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src="/gm-signature.png"
-                    alt="Authorised Signature"
-                    className="max-h-12 max-w-[120px] object-contain"
-                  />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={signatureProxyUrl}
+                  alt="Area Admin Signature"
+                  className="max-h-12 max-w-[120px] object-contain"
+                />
               </div>
               <div className="w-24 border-b border-slate-400 ml-auto"></div>
               <p className="text-[8px] font-bold text-emerald-950">{areaAdminName}</p>
