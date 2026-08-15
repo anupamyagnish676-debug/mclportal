@@ -173,11 +173,7 @@ export default async function StudentIdCardPage() {
                 </div>
               )}
 
-              {photoDoc && (
-                <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[7px] font-bold px-1 rounded uppercase">
-                  VERIFIED
-                </div>
-              )}
+
             </div>
 
             {/* Main Info */}
