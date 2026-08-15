@@ -124,9 +124,9 @@ export default async function JoiningLetterPage() {
           <PrintButton />
           <a
             href="/api/student/joining-letter"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5"
+            className="border border-emerald-300 hover:bg-emerald-50 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5"
           >
-            📥 Download PDF
+            📥 Download Direct PDF
           </a>
         </div>
       </div>

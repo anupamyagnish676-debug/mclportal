@@ -271,90 +271,49 @@ export async function GET(req: NextRequest) {
     })
 
     // Terms and conditions header
-    let termsY = tableTop - 118
+    let termsY = tableTop - 120
     page.drawText('TRAINING TERMS & CONDITIONS', {
       x: 45,
       y: termsY,
-      size: 9.5,
+      size: 10,
       font: fontBold,
       color: darkGreen,
     })
 
-    if (fontDevanagari) {
-      termsY -= 13
-      page.drawText('निम्नलिखित नियम एवं शर्तों के आधार पर छात्र को निःशुल्क प्रशिक्षण दिया जा रहा है:-', {
-        x: 45,
-        y: termsY,
-        size: 7.5,
-        font: fontDevanagari,
-        color: charcoal,
-      })
-    }
-
-    termsY -= 11
+    termsY -= 15
     page.drawText('Training is being given to the student on the basis of the following terms and conditions:-', {
       x: 45,
       y: termsY,
-      size: 7.5,
+      size: 8.5,
       font: fontBold,
       color: charcoal,
     })
 
     const terms = [
-      {
-        hi: '1. छात्र द्वारा एकत्रित की गई जानकारी का उपयोग केवल शैक्षणिक उद्देश्य के लिए किया जाएगा।',
-        en: '   The information collected by the student will be used only for educational purpose.'
-      },
-      {
-        hi: '2. प्रशिक्षण अवधि के दौरान छात्र को हुई किसी भी चोट/दुर्घटना के लिए कंपनी जिम्मेदार नहीं होगी।',
-        en: '   The Company will not be responsible for any injury/accident caused to the student during the training period.'
-      },
-      {
-        hi: '3. कंपनी द्वारा छात्र को कोई आवास और परिवहन प्रदान नहीं किया जाएगा।',
-        en: '   No accommodation and transportation will be provided to the student by the company.'
-      },
-      {
-        hi: '4. प्रशिक्षण उनके अपने जोखिम पर होगा। यदि प्रशिक्षण के दौरान कुछ होता है, तो कंपनी जिम्मेदार नहीं होगी। छात्र को इस आशय का एक वचन पत्र प्रस्तुत करना होगा।',
-        en: '   The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.'
-      },
-      {
-        hi: '5. एमसीएल द्वारा कोई वित्तीय भार वहन नहीं किया जाएगा।',
-        en: '   No financial burden will be borne by MCL.'
-      },
-      {
-        hi: '6. संबंधित क्षेत्र/परियोजना/विभाग द्वारा लगाई गई कोई अन्य शर्तें।',
-        en: '   Any other conditions imposed by the concerned sector/project/department.'
-      }
+      '1. The information collected by the student will be used only for educational purpose.',
+      '2. The Company will not be responsible for any injury/accident caused to the student during the training period.',
+      '3. No accommodation and transportation will be provided to the student by the company.',
+      '4. The training will be at their own risk, if anything happens during their training period, the company will not be responsible. The student will have to submit an undertaking to this effect.',
+      '5. No financial burden will be borne by MCL.',
+      '6. Any other conditions imposed by the concerned sector/project/department.'
     ]
 
-    termsY -= 13
+    termsY -= 15
     terms.forEach(term => {
-      if (fontDevanagari && term.hi) {
-        page.drawText(term.hi, {
-          x: 45,
-          y: termsY,
-          size: 7,
-          font: fontDevanagari,
-          color: charcoal,
-          maxWidth: width - 90,
-          lineHeight: 9,
-        })
-        termsY -= 10
-      }
-      page.drawText(term.en, {
+      page.drawText(term, {
         x: 45,
         y: termsY,
-        size: 7,
+        size: 8.5,
         font: fontRegular,
         color: charcoal,
         maxWidth: width - 90,
-        lineHeight: 9,
+        lineHeight: 12,
       })
-      termsY -= 13
+      termsY -= 22
     })
 
     // Reporting Advisory Box
-    const advisoryY = termsY - 8
+    const advisoryY = termsY - 10
     page.drawRectangle({
       x: 45,
       y: advisoryY - 45,
@@ -365,36 +324,23 @@ export async function GET(req: NextRequest) {
       color: rgb(0.99, 0.97, 0.97),
     })
 
-    page.drawText('REPORTING ADVISORY / रिपोर्टिंग निर्देश:', {
+    page.drawText('REPORTING ADVISORY:', {
       x: 55,
-      y: advisoryY - 13,
-      size: 7.5,
-      font: fontDevanagari || fontBold,
+      y: advisoryY - 15,
+      size: 8.5,
+      font: fontBold,
       color: rgb(0.6, 0.1, 0.1),
     })
-
-    if (fontDevanagari) {
-      const hindiAdv = `आपसे अनुरोध है कि उपरोक्त छात्र को आगे की आवश्यक कार्रवाई के लिए अपने पहचान पत्र के साथ उपरोक्त तिथि के अनुसार General Manager, ${areaName} Area, MCL को रिपोर्ट करने की सलाह दें।`
-      page.drawText(hindiAdv, {
-        x: 55,
-        y: advisoryY - 24,
-        size: 7,
-        font: fontDevanagari,
-        color: charcoal,
-        maxWidth: width - 110,
-        lineHeight: 9,
-      })
-    }
 
     const advisoryText = `You are requested to advise the above students to report to the General Manager, ${areaName} Area, MCL HQ as per the above date along with his identity card for further necessary action.`
     page.drawText(sanitizeText(advisoryText), {
       x: 55,
-      y: fontDevanagari ? advisoryY - 35 : advisoryY - 25,
-      size: 7,
+      y: advisoryY - 28,
+      size: 8,
       font: fontRegular,
       color: charcoal,
       maxWidth: width - 110,
-      lineHeight: 9,
+      lineHeight: 11,
     })
 
     // Swapped Signature Section
