@@ -37,20 +37,27 @@ export async function POST(req: NextRequest) {
     let lorUrl = ''
 
     if (isGDriveConfigured()) {
-      // Find the Google Drive folder for the employee's area
-      const employeeArea = profile?.area || 'Headquarters'
-      const areaFolderId = await getAreaDriveFolderId(employeeArea)
+      try {
+        // Find the Google Drive folder for the employee's area
+        const employeeArea = profile?.area || 'Headquarters'
+        const areaFolderId = await getAreaDriveFolderId(employeeArea)
 
-      // Upload file directly to HQ / Area Admin's Google Drive folder
-      const sanitizedName = studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
-      const gdriveRes = await uploadFileToGDrive({
-        buffer,
-        fileName: `LOR_${sanitizedName}_${timestamp}${ext}`,
-        mimeType: file.type || 'application/pdf',
-        folderId: areaFolderId,
-      })
-      lorUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
-    } else {
+        // Upload file directly to HQ / Area Admin's Google Drive folder
+        const sanitizedName = studentName.trim().replace(/[^a-zA-Z0-9]/g, '_')
+        const gdriveRes = await uploadFileToGDrive({
+          buffer,
+          fileName: `LOR_${sanitizedName}_${timestamp}${ext}`,
+          mimeType: file.type || 'application/pdf',
+          folderId: areaFolderId,
+        })
+        lorUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+      } catch (gdriveErr: any) {
+        console.warn('[GDRIVE] LOR upload failed (invalid_grant or token expired), falling back to Supabase Storage:', gdriveErr.message || gdriveErr)
+        lorUrl = ''
+      }
+    }
+
+    if (!lorUrl) {
       // Fallback to Supabase Storage
       const sanitizedEmail = studentEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')
       const storagePath = `lors/${sanitizedEmail}/${timestamp}_lor.pdf`

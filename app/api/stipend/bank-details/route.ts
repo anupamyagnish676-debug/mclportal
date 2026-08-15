@@ -56,41 +56,48 @@ export async function POST(req: NextRequest) {
     let storagePath = ''
 
     if (isGDriveConfigured()) {
-      const { data: stuProfile } = await adminClient
-        .from('profiles')
-        .select('full_name, area')
-        .eq('id', user.id)
-        .maybeSingle()
+      try {
+        const { data: stuProfile } = await adminClient
+          .from('profiles')
+          .select('full_name, area')
+          .eq('id', user.id)
+          .maybeSingle()
 
-      const { data: stuInternship } = await adminClient
-        .from('internships')
-        .select('serial_no, area')
-        .eq('student_id', user.id)
-        .limit(1)
-        .maybeSingle()
+        const { data: stuInternship } = await adminClient
+          .from('internships')
+          .select('serial_no, area')
+          .eq('student_id', user.id)
+          .limit(1)
+          .maybeSingle()
 
-      const studentFolderId = await getOrCreateStudentFolder({
-        studentName: stuProfile?.full_name || 'Student',
-        studentId: user.id,
-        serialNo: stuInternship?.serial_no,
-        area: stuProfile?.area || stuInternship?.area || 'Headquarters',
-      })
+        const studentFolderId = await getOrCreateStudentFolder({
+          studentName: stuProfile?.full_name || 'Student',
+          studentId: user.id,
+          serialNo: stuInternship?.serial_no,
+          area: stuProfile?.area || stuInternship?.area || 'Headquarters',
+        })
 
-      const gdriveRes = await uploadFileToGDrive({
-        buffer,
-        fileName: `bank_cheque_${timestamp}${ext}`,
-        mimeType: file.type || 'application/octet-stream',
-        folderId: studentFolderId,
-      })
-      fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
-      storagePath = `gdrive:${gdriveRes.fileId}`
-    } else {
+        const gdriveRes = await uploadFileToGDrive({
+          buffer,
+          fileName: `bank_cheque_${timestamp}${ext}`,
+          mimeType: file.type || 'application/octet-stream',
+          folderId: studentFolderId,
+        })
+        fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+        storagePath = `gdrive:${gdriveRes.fileId}`
+      } catch (gdriveErr: any) {
+        console.warn('[GDRIVE] Bank cheque upload failed (invalid_grant or token expired), falling back to Supabase Storage:', gdriveErr.message || gdriveErr)
+        fileUrl = ''
+      }
+    }
+
+    if (!fileUrl) {
       storagePath = `${user.id}/bank_cheque_${timestamp}${ext}`
       const { error: uploadError } = await adminClient.storage
         .from('documents')
         .upload(storagePath, buffer, {
           contentType: file.type || 'application/octet-stream',
-          upsert: false,
+          upsert: true,
         })
 
       if (uploadError) {

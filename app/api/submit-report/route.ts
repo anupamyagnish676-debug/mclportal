@@ -50,24 +50,31 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(arrayBuffer)
 
       if (isGDriveConfigured()) {
-        const studentFolderId = await getOrCreateStudentFolder({
-          studentName: internship.student?.full_name || 'Student',
-          studentId: user.id,
-          serialNo: internship.serial_no,
-          area: internship.area || internship.student?.area || 'Headquarters',
-        })
-        const gdriveRes = await uploadFileToGDrive({
-          buffer,
-          fileName: `Project_Report_${timestamp}${ext}`,
-          mimeType: file.type || 'application/pdf',
-          folderId: studentFolderId,
-        })
-        fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
-      } else {
+        try {
+          const studentFolderId = await getOrCreateStudentFolder({
+            studentName: internship.student?.full_name || 'Student',
+            studentId: user.id,
+            serialNo: internship.serial_no,
+            area: internship.area || internship.student?.area || 'Headquarters',
+          })
+          const gdriveRes = await uploadFileToGDrive({
+            buffer,
+            fileName: `Project_Report_${timestamp}${ext}`,
+            mimeType: file.type || 'application/pdf',
+            folderId: studentFolderId,
+          })
+          fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+        } catch (gdriveErr: any) {
+          console.warn('[GDRIVE] Project report upload failed (invalid_grant or token expired), falling back to Supabase Storage:', gdriveErr.message || gdriveErr)
+          fileUrl = ''
+        }
+      }
+
+      if (!fileUrl) {
         const filePath = `project-reports/${internshipId}/${timestamp}_${file.name}`
         const { error: uploadErr } = await adminClient.storage
           .from('assignments')
-          .upload(filePath, buffer, { contentType: file.type || 'application/pdf' })
+          .upload(filePath, buffer, { contentType: file.type || 'application/pdf', upsert: true })
 
         if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
 

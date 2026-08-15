@@ -41,24 +41,31 @@ export async function POST(req: NextRequest) {
     let fileUrl = ''
 
     if (isGDriveConfigured()) {
-      const studentFolderId = await getOrCreateStudentFolder({
-        studentName: stuProfile?.full_name || 'Student',
-        studentId: user.id,
-        serialNo: stuInternship?.serial_no,
-        area: stuProfile?.area || stuInternship?.area || 'Headquarters',
-      })
-      const gdriveRes = await uploadFileToGDrive({
-        buffer,
-        fileName: `Assignment_${timestamp}${ext}`,
-        mimeType: file.type || 'application/octet-stream',
-        folderId: studentFolderId,
-      })
-      fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
-    } else {
+      try {
+        const studentFolderId = await getOrCreateStudentFolder({
+          studentName: stuProfile?.full_name || 'Student',
+          studentId: user.id,
+          serialNo: stuInternship?.serial_no,
+          area: stuProfile?.area || stuInternship?.area || 'Headquarters',
+        })
+        const gdriveRes = await uploadFileToGDrive({
+          buffer,
+          fileName: `Assignment_${timestamp}${ext}`,
+          mimeType: file.type || 'application/octet-stream',
+          folderId: studentFolderId,
+        })
+        fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+      } catch (gdriveErr: any) {
+        console.warn('[GDRIVE] Assignment submission upload failed (invalid_grant or token expired), falling back to Supabase Storage:', gdriveErr.message || gdriveErr)
+        fileUrl = ''
+      }
+    }
+
+    if (!fileUrl) {
       const filePath = `${user.id}/${assignmentId}/${timestamp}_${file.name}`
       const { error: uploadError } = await adminClient.storage
         .from('assignments')
-        .upload(filePath, buffer, { contentType: file.type || 'application/octet-stream' })
+        .upload(filePath, buffer, { contentType: file.type || 'application/octet-stream', upsert: true })
 
       if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 

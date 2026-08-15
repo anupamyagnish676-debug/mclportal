@@ -483,21 +483,28 @@ export async function POST(req: NextRequest) {
     let certUrl = ''
 
     if (isGDriveConfigured()) {
-      const internCleanName = (studentName || internship.student?.full_name || 'Intern').replace(/\s+/g, '_')
-      const studentFolderId = await getOrCreateStudentFolder({
-        studentName: studentName || internship.student?.full_name || 'Intern',
-        studentId: internship.student_id,
-        serialNo: internship.serial_no,
-        area: internship.area || internship.student?.area || 'Headquarters',
-      })
-      const gdriveRes = await uploadFileToGDrive({
-        buffer: pdfBuffer,
-        fileName: `Certificate_${internCleanName}_${internship.serial_no || internshipId}.pdf`,
-        mimeType: 'application/pdf',
-        folderId: studentFolderId,
-      })
-      certUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
-    } else {
+      try {
+        const internCleanName = (studentName || internship.student?.full_name || 'Intern').replace(/\s+/g, '_')
+        const studentFolderId = await getOrCreateStudentFolder({
+          studentName: studentName || internship.student?.full_name || 'Intern',
+          studentId: internship.student_id,
+          serialNo: internship.serial_no,
+          area: internship.area || internship.student?.area || 'Headquarters',
+        })
+        const gdriveRes = await uploadFileToGDrive({
+          buffer: pdfBuffer,
+          fileName: `Certificate_${internCleanName}_${internship.serial_no || internshipId}.pdf`,
+          mimeType: 'application/pdf',
+          folderId: studentFolderId,
+        })
+        certUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
+      } catch (gdriveErr: any) {
+        console.warn('[GDRIVE] Certificate upload failed (invalid_grant or token expired), falling back to Supabase Storage:', gdriveErr.message || gdriveErr)
+        certUrl = ''
+      }
+    }
+
+    if (!certUrl) {
       const filePath = `${internshipId}/certificate.pdf`
       const { error: uploadError } = await adminClient.storage
         .from('certificates')
