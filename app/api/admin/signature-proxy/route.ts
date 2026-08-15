@@ -2,27 +2,46 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import fs from 'fs'
 import path from 'path'
+import { Jimp } from 'jimp'
 
 export const revalidate = 0
+
+// Helper matching certificate signature transparency processing
+async function makeTransparent(base64Str: string): Promise<Buffer> {
+  const base64Data = base64Str.includes(',') ? base64Str.split(',')[1] : base64Str
+  const imageBuffer = Buffer.from(base64Data, 'base64')
+  
+  const image = await Jimp.read(imageBuffer)
+  
+  // Replace white/near-white pixels with transparent ones
+  image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
+    const r = image.bitmap.data[idx + 0]
+    const g = image.bitmap.data[idx + 1]
+    const b = image.bitmap.data[idx + 2]
+    
+    if (r > 240 && g > 240 && b > 240) {
+      image.bitmap.data[idx + 3] = 0 // Alpha = 0
+    }
+  })
+  
+  return await image.getBuffer('image/png')
+}
 
 /**
  * GET /api/admin/signature-proxy?area=Lingaraj
  * 
- * Serves the Area Admin's digital signature as a standard PNG image stream.
- * If the area admin has saved a signature in DB, returns that PNG.
- * Otherwise, falls back to serving the default /gm-signature.png image.
+ * Serves the Area Admin's digital signature as a standard transparent PNG image stream.
+ * Uses exact Jimp transparent PNG processing matching the Certificate signature generator.
  */
 export async function GET(req: NextRequest) {
   try {
     const rawArea = req.nextUrl.searchParams.get('area') || 'Headquarters'
-    // Clean area name in case it contains "Area Office" or whitespace
     const areaName = rawArea.replace(/Area Office/gi, '').trim()
 
     const adminClient = createAdminClient()
-
     let signatureData: string | null = null
 
-    // 1. Try to fetch area admin signature from DB for specified area
+    // 1. Fetch Area Admin signature for the student's area
     if (areaName && areaName !== 'Concerned') {
       const { data: withSigRows } = await adminClient
         .from('profiles')
@@ -37,42 +56,67 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. If no area match, fallback to ANY admin who has a signature saved
+    // 2. Fallback: Headquarters Admin signature
     if (!signatureData) {
-      const { data: anyAdminRows } = await adminClient
+      const { data: hqRows } = await adminClient
+        .from('profiles')
+        .select('signature_data')
+        .eq('role', 'admin')
+        .ilike('area', 'Headquarters')
+        .not('signature_data', 'is', null)
+        .limit(1)
+
+      if (hqRows && hqRows.length > 0 && hqRows[0].signature_data) {
+        signatureData = hqRows[0].signature_data
+      }
+    }
+
+    // 3. Fallback: ANY admin signature
+    if (!signatureData) {
+      const { data: anyRows } = await adminClient
         .from('profiles')
         .select('signature_data')
         .eq('role', 'admin')
         .not('signature_data', 'is', null)
         .limit(1)
 
-      if (anyAdminRows && anyAdminRows.length > 0 && anyAdminRows[0].signature_data) {
-        signatureData = anyAdminRows[0].signature_data
+      if (anyRows && anyRows.length > 0 && anyRows[0].signature_data) {
+        signatureData = anyRows[0].signature_data
       }
     }
 
-    // 3. If valid base64 signature found, convert to Uint8Array and return PNG
+    // 4. Process signature with Jimp transparency (same as certificate logic)
     if (signatureData) {
-      let base64Data = signatureData
-      if (base64Data.includes(',')) {
-        base64Data = base64Data.split(',')[1]
+      try {
+        const transparentPngBuffer = await makeTransparent(signatureData)
+        const uint8 = new Uint8Array(transparentPngBuffer)
+
+        return new NextResponse(uint8, {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Content-Length': String(uint8.byteLength),
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        })
+      } catch (jimpErr: any) {
+        console.warn('[signature-proxy] Jimp transparency warning, falling back to raw buffer:', jimpErr.message)
+        const rawBase64 = signatureData.includes(',') ? signatureData.split(',')[1] : signatureData
+        const rawBuffer = Buffer.from(rawBase64.trim(), 'base64')
+        const uint8 = new Uint8Array(rawBuffer)
+
+        return new NextResponse(uint8, {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Content-Length': String(uint8.byteLength),
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        })
       }
-      base64Data = base64Data.trim().replace(/\s+/g, '')
-
-      const buffer = Buffer.from(base64Data, 'base64')
-      const uint8 = new Uint8Array(buffer)
-
-      return new NextResponse(uint8, {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Content-Length': String(uint8.byteLength),
-          'Cache-Control': 'no-store, max-age=0',
-        },
-      })
     }
 
-    // 4. Ultimate Fallback: serve local public/gm-signature.png file
+    // 5. Ultimate Fallback: serve local public/gm-signature.png file
     const fallbackPath = path.join(process.cwd(), 'public', 'gm-signature.png')
     if (fs.existsSync(fallbackPath)) {
       const fallbackBuffer = fs.readFileSync(fallbackPath)
