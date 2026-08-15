@@ -125,23 +125,18 @@ export default function MentorSettingsPage() {
     const signatureData = canvas.toDataURL('image/png')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setErr('Not logged in')
-        setLoading(false)
-        return
-      }
+      const res = await fetch('/api/user/save-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureData }),
+      })
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ signature_data: signatureData })
-        .eq('id', user.id)
-
-      if (error) {
-        setErr(error.message)
+      const resData = await res.json()
+      if (!res.ok) {
+        setErr(resData.error || 'Failed to save signature')
       } else {
         setSavedSignature(signatureData)
-        setMsg('Digital signature saved successfully!')
+        setMsg('Digital signature saved to Area Google Drive!')
         clearCanvas()
       }
     } catch (e: any) {

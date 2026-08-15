@@ -58,6 +58,37 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
+    // Save copy of Notice to Area Google Drive -> Notices folder
+    try {
+      const { isGDriveConfigured, uploadFileToGDrive, getOrCreateNoticesAreaFolder } = await import('@/lib/gdrive')
+      if (isGDriveConfigured()) {
+        const noticesFolderId = await getOrCreateNoticesAreaFolder(profile.area || 'Headquarters')
+        const noticeObj = {
+          title,
+          content,
+          posted_by: profile.full_name || 'Admin',
+          source_area: profile.area || 'Headquarters',
+          priority: priority || 'normal',
+          target_roles: finalRoles,
+          target_areas: finalAreas,
+          created_at: new Date().toISOString(),
+        }
+        const noticeBuffer = Buffer.from(JSON.stringify(noticeObj, null, 2), 'utf-8')
+        const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)
+        const fileName = `${Date.now()}_Notice_${cleanTitle}.json`
+
+        await uploadFileToGDrive({
+          buffer: noticeBuffer,
+          fileName,
+          mimeType: 'application/json',
+          folderId: noticesFolderId,
+        })
+        console.log(`[NOTICES-GDRIVE] Saved notice archive to Area Drive: ${fileName}`)
+      }
+    } catch (gdriveNoticeErr: any) {
+      console.warn('[NOTICES-GDRIVE] GDrive save notice:', gdriveNoticeErr.message)
+    }
+
     // Send email notification to targeted recipients
     if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
       try {
