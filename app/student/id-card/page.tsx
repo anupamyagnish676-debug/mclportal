@@ -51,25 +51,26 @@ export default async function StudentIdCardPage() {
   let areaAdmin: { full_name: string; signature_data: string | null } | null = null
 
   if (areaName && areaName !== 'Concerned') {
-    const { data: withSig } = await adminClient
+    // Use .limit(1) NOT .maybeSingle() — multiple admins per area exist and maybeSingle() returns null on >1 rows
+    const { data: withSigRows } = await adminClient
       .from('profiles')
       .select('full_name, signature_data')
       .eq('role', 'admin')
       .ilike('area', areaName.trim())
       .not('signature_data', 'is', null)
-      .maybeSingle()
+      .limit(1)
 
-    if (withSig) {
-      areaAdmin = withSig
+    if (withSigRows && withSigRows.length > 0) {
+      areaAdmin = withSigRows[0]
     } else {
       // Step 2: any admin in this area even without signature
-      const { data: anySig } = await adminClient
+      const { data: anyRows } = await adminClient
         .from('profiles')
         .select('full_name, signature_data')
         .eq('role', 'admin')
         .ilike('area', areaName.trim())
-        .maybeSingle()
-      areaAdmin = anySig
+        .limit(1)
+      areaAdmin = anyRows && anyRows.length > 0 ? anyRows[0] : null
     }
   }
 
