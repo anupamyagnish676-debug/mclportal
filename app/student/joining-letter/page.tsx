@@ -232,38 +232,40 @@ export default async function JoiningLetterPage() {
         </div>
 
         {/* Dynamic Signatures Section with Swapped Positions */}
-        <div className="flex justify-between items-end pt-12 mt-12 border-t border-gray-200 font-sans text-xs">
+        <div className="flex justify-between items-end pt-10 mt-10 font-sans text-xs">
           
-          {/* Left: Area Training Officer Signature from DB */}
-          <div className="text-left space-y-1.5 w-1/2">
+          {/* Left: Area Training Officer Signature */}
+          <div className="text-left space-y-1 w-1/2">
             <div className="h-16 flex items-end">
               {areaAdmin?.signature_data ? (
                 <img 
                   src={areaAdmin.signature_data} 
                   alt="Area Training Officer Signature" 
-                  className="h-14 object-contain inline-block"
+                  className="h-14 max-w-[160px] object-contain mix-blend-multiply inline-block"
                 />
               ) : (
-                <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px]">
+                <div className="h-12 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-400 w-36 text-[10px]">
                   Pending Signature
                 </div>
               )}
             </div>
-            <p className="font-bold text-emerald-950">Area Training Officer</p>
-            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited, {areaName} Area</p>
+            <div className="w-48 border-b-2 border-emerald-900 pt-1 pb-1"></div>
+            <p className="font-bold text-emerald-950 text-xs">Area Training Officer</p>
+            <p className="text-gray-600 font-semibold text-[11px]">Mahanadi Coalfields Limited, {areaName} Area</p>
           </div>
 
           {/* Right: General Manager (HRD) Signature (loaded from official gm-signature.png) */}
-          <div className="text-right space-y-1.5 w-1/2">
+          <div className="text-right space-y-1 w-1/2">
             <div className="h-16 flex items-end justify-end">
               <img 
                 src="/gm-signature.png" 
                 alt="General Manager (HRD) Signature" 
-                className="h-14 object-contain inline-block ml-auto"
+                className="h-14 max-w-[160px] object-contain mix-blend-multiply inline-block ml-auto"
               />
             </div>
-            <p className="font-bold text-emerald-950">General Manager (HRD)</p>
-            <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited</p>
+            <div className="w-48 border-b-2 border-emerald-900 pt-1 pb-1 ml-auto"></div>
+            <p className="font-bold text-emerald-950 text-xs">General Manager (HRD)</p>
+            <p className="text-gray-600 font-semibold text-[11px]">Mahanadi Coalfields Limited</p>
           </div>
         </div>
 

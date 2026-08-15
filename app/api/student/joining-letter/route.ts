@@ -414,10 +414,10 @@ export async function GET(req: NextRequest) {
           sigImage = await pdfDoc.embedPng(imageBytes)
         }
         
-        const { width: sigW, height: sigH } = getScaledDimensions(sigImage.width, sigImage.height, 130, 45)
+        const { width: sigW, height: sigH } = getScaledDimensions(sigImage.width, sigImage.height, 140, 45)
         page.drawImage(sigImage, {
           x: 45,
-          y: footerY + 2,
+          y: footerY - 2,
           width: sigW,
           height: sigH,
         })
@@ -426,7 +426,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    page.drawLine({ start: { x: 45, y: footerY - 5 }, end: { x: 200, y: footerY - 5 }, thickness: 1, color: darkGreen })
+    page.drawLine({ start: { x: 45, y: footerY - 5 }, end: { x: 205, y: footerY - 5 }, thickness: 1.5, color: darkGreen })
     page.drawText('Area Training Officer', { x: 45, y: footerY - 18, size: 9, font: fontBold, color: darkGreen })
     page.drawText(`Mahanadi Coalfields Limited, ${sanitizeText(areaName)} Area`, { x: 45, y: footerY - 30, size: 8, font: fontRegular, color: charcoal })
 
