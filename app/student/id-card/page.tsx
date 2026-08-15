@@ -12,14 +12,18 @@ export default async function StudentIdCardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Fetch student profile
   const { data: student } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!student || student.role !== 'student') redirect('/login')
+  if (!student || student.role !== 'student') {
+    redirect('/login')
+  }
 
+  // Fetch active internship
   const { data: internship } = await supabase
     .from('internships')
     .select('*')
@@ -31,7 +35,7 @@ export default async function StudentIdCardPage() {
 
   const adminClient = createAdminClient()
 
-  // Fetch student passport photo
+  // Fetch student's passport photo from student_documents table
   const { data: photoDoc } = await adminClient
     .from('student_documents')
     .select('file_url, file_path, status')
@@ -39,16 +43,15 @@ export default async function StudentIdCardPage() {
     .eq('doc_type', 'photo')
     .maybeSingle()
 
-  const passportPhotoUrl = photoDoc
-    ? `/api/student/photo-proxy?studentId=${user.id}&t=${Date.now()}`
-    : null
+  // Always use the server-side photo proxy so Google Drive images load correctly
+  const passportPhotoUrl = photoDoc ? `/api/student/photo-proxy?studentId=${user.id}&t=${Date.now()}` : null
 
-  // Fetch area admin signature — try by area match, fallback to any area admin
+  // Fetch Area Admin's signature_data
+  // Step 1: find admin in this area who has a signature saved
   let areaAdmin: { full_name: string; signature_data: string | null } | null = null
 
   if (areaName && areaName !== 'Concerned') {
-    // Primary: find admin whose area exactly matches
-    const { data: exactMatch } = await adminClient
+    const { data: withSig } = await adminClient
       .from('profiles')
       .select('full_name, signature_data')
       .eq('role', 'admin')
@@ -56,235 +59,239 @@ export default async function StudentIdCardPage() {
       .not('signature_data', 'is', null)
       .maybeSingle()
 
-    if (exactMatch) {
-      areaAdmin = exactMatch
+    if (withSig) {
+      areaAdmin = withSig
     } else {
-      // Secondary: find any admin in this area (even without signature)
-      const { data: anyAdmin } = await adminClient
+      // Step 2: any admin in this area even without signature
+      const { data: anySig } = await adminClient
         .from('profiles')
         .select('full_name, signature_data')
         .eq('role', 'admin')
         .ilike('area', areaName.trim())
         .maybeSingle()
-      areaAdmin = anyAdmin
+      areaAdmin = anySig
     }
   }
 
   const areaAdminName = areaAdmin?.full_name || 'Area Training Officer'
   const areaAdminSignature = areaAdmin?.signature_data || null
 
-  const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'
+  const startDate = internship?.start_date
+    ? new Date(internship.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'N/A'
+  const endDate = internship?.end_date
+    ? new Date(internship.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'N/A'
 
-  const startDate = fmtDate(internship?.start_date ?? null)
-  const endDate = fmtDate(internship?.end_date ?? null)
-
-  // QR points to live verification page
+  // Generate Verification QR Code pointing to a live verification page
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mclportal.vercel.app'
   const verifyUrl = `${baseUrl}/verify/id/${user.id}`
   let qrCodeDataUrl = ''
   try {
-    qrCodeDataUrl = await QRCode.toDataURL(verifyUrl, {
-      margin: 1,
-      width: 110,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#134e2a', light: '#ffffff' },
-    })
+    qrCodeDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 100, errorCorrectionLevel: 'M' })
   } catch (err) {
     console.error('QR Code generation failed:', err)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 py-10 px-4 print:bg-white print:py-0 print:px-0">
+    <div className="min-h-screen bg-slate-100 py-10 px-4 print:bg-white print:py-0 print:px-0">
 
+      {/* Print Stylesheet for ID Card */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Roboto+Mono:wght@600&display=swap');
-        @page { size: A4 portrait; margin: 0 !important; }
+        @page {
+          size: A4 portrait;
+          margin: 0 !important;
+        }
         @media print {
-          html, body, main, .flex { margin: 0 !important; padding: 0 !important; background: white !important; }
-          body * { visibility: hidden !important; }
-          .print-id-card-wrapper, .print-id-card-wrapper * { visibility: visible !important; }
+          html, body, main, .flex {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            box-shadow: none !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-id-card-wrapper,
+          .print-id-card-wrapper * {
+            visibility: visible !important;
+          }
           .print-id-card-wrapper {
-            position: absolute !important; left: 50% !important; top: 40px !important;
-            transform: translateX(-50%) !important; margin: 0 !important;
-            box-shadow: none !important; border: 1px solid #cbd5e1 !important;
+            position: absolute !important;
+            left: 50% !important;
+            top: 40px !important;
+            transform: translateX(-50%) !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: 1px solid #cbd5e1 !important;
           }
         }
       `}} />
 
-      {/* Top nav (hidden on print) */}
-      <div className="max-w-sm mx-auto mb-5 flex items-center justify-between print:hidden">
-        <Link href="/student" className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1">
-          ← Back to Dashboard
-        </Link>
-        <PrintIdCardButton />
+      {/* Top Banner (Hidden in Print) */}
+      <div className="max-w-xl mx-auto mb-6 bg-white border border-gray-200 p-4 rounded-2xl flex items-center justify-between shadow-sm print:hidden">
+        <div>
+          <h1 className="text-base font-bold text-gray-900">Official Student ID Card</h1>
+          <p className="text-xs text-gray-500">Digital verification badge &amp; Gate Entry Pass</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/student"
+            className="border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+          >
+            ← Dashboard
+          </Link>
+          <PrintIdCardButton />
+        </div>
       </div>
 
-      {/* ── ID CARD ── */}
-      <div className="print-id-card-wrapper max-w-sm mx-auto rounded-2xl overflow-hidden shadow-2xl border border-slate-300"
-           style={{ fontFamily: "'Inter', sans-serif", background: '#fff' }}>
+      {/* Printable ID Card Container */}
+      <div className="print-id-card-wrapper max-w-sm mx-auto bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden font-sans">
 
-        {/* ── TOP HEADER ── */}
-        <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', borderBottom: '3px solid #f59e0b' }}>
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 opacity-[0.04]"
-            style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%)', backgroundSize: '10px 10px' }} />
-
-          <div className="relative flex items-center gap-3 px-5 py-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mcl-logo-transparent.png" alt="MCL" className="w-10 h-10 object-contain flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-800 leading-tight">
-                Mahanadi Coalfields Limited
-              </p>
-              <p className="text-[8px] font-semibold uppercase tracking-widest text-slate-400 leading-tight mt-0.5">
-                A Subsidiary of Coal India Limited
-              </p>
-            </div>
-            <div className="flex-shrink-0 text-[7.5px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-2 py-0.5 rounded">
-              INTERN ID
-            </div>
+        {/* ── Compact Header Strip ── */}
+        <div className="bg-white border-b-2 border-amber-400 px-5 py-3 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/mcl-logo-transparent.png"
+            alt="MCL Logo"
+            className="w-9 h-9 object-contain flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-950 leading-tight">
+              Mahanadi Coalfields Limited
+            </p>
+            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider leading-tight">
+              A Subsidiary of Coal India Limited
+            </p>
+          </div>
+          <div className="flex-shrink-0 bg-amber-400 text-[7px] font-extrabold uppercase tracking-widest py-0.5 px-2 rounded-full text-amber-950">
+            INTERN ID
           </div>
         </div>
 
-        {/* ── BODY ── */}
-        <div className="px-5 py-4 space-y-4">
+        {/* Card Body */}
+        <div className="p-5 bg-slate-50/40 space-y-4">
 
-          {/* Photo + Name row */}
-          <div className="flex gap-4 items-start">
+          {/* Photo & Basic Details Row */}
+          <div className="flex gap-4 items-center">
 
-            {/* Photo */}
-            <div className="flex-shrink-0 w-[90px] h-[110px] rounded-lg overflow-hidden border-2 border-slate-300 shadow-md bg-slate-100 relative">
+            {/* Passport Photo Box */}
+            <div className="w-28 h-36 flex-shrink-0 bg-white border-2 border-emerald-800 rounded-xl overflow-hidden shadow-md relative flex items-center justify-center p-0.5">
               {passportPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={passportPhotoUrl} alt="Passport Photo" className="w-full h-full object-cover" />
+                <img
+                  src={passportPhotoUrl}
+                  alt="Student Passport Photo"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-center p-2">
+                <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-center p-2">
                   <span className="text-2xl mb-1">📷</span>
-                  <span className="text-[8px] font-bold text-slate-400 leading-tight">No Photo</span>
+                  <span className="text-[9px] font-bold text-slate-500 leading-tight">No Photo Uploaded</span>
+                  <span className="text-[8px] text-emerald-700 font-semibold mt-1">Upload in Docs</span>
                 </div>
               )}
-              {/* Decorative corner badge */}
-              <div className="absolute top-1 left-1 w-2.5 h-2.5 rounded-sm bg-amber-400 opacity-90" />
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 space-y-2.5 pt-0.5">
-              {/* Name */}
+            {/* Main Info */}
+            <div className="flex-1 space-y-1.5 text-xs">
               <div>
-                <p className="text-[7.5px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-0.5">Trainee Name</p>
-                <p className="text-sm font-black text-slate-900 uppercase leading-tight tracking-wide">
-                  {student.full_name}
-                </p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Trainee Name</p>
+                <p className="font-extrabold text-emerald-950 text-sm leading-tight uppercase">{student.full_name}</p>
               </div>
 
-              {/* Serial */}
               <div>
-                <p className="text-[7.5px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-0.5">Serial No.</p>
-                <p className="text-[10px] font-bold text-slate-700 leading-tight" style={{ fontFamily: "'Roboto Mono', monospace" }}>
-                  MCL/HRD/{areaName.toUpperCase()}/{serialNo}
-                </p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Serial Number</p>
+                <p className="font-mono font-bold text-xs text-slate-800">MCL/HRD/{areaName.toUpperCase()}/{serialNo}</p>
               </div>
 
-              {/* Area */}
               <div>
-                <p className="text-[7.5px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-0.5">Area</p>
-                <p className="text-[10px] font-bold text-emerald-800 leading-tight">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Allocated Area</p>
+                <p className="font-bold text-emerald-900 text-[10px]">
                   {areaName} Area Office
                 </p>
               </div>
             </div>
+
           </div>
 
-          {/* ── Divider ── */}
-          <div className="border-t border-dashed border-slate-200" />
-
-          {/* Details grid */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-            {[
-              { label: 'Institution', value: student.university || 'N/A' },
-              { label: 'Roll / Reg No', value: student.roll_no || 'N/A' },
-              { label: 'Department Wing', value: student.wing || 'Technical Wing' },
-              { label: 'Stipend', value: internship?.internship_type === 'paid' ? 'Paid Category' : 'Unpaid Category' },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-[7.5px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-0.5">{label}</p>
-                <p className="text-[10px] font-semibold text-slate-800 leading-tight truncate">{value}</p>
-              </div>
-            ))}
+          {/* Secondary Details Grid */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-3 text-[11px] grid grid-cols-2 gap-2 shadow-sm">
+            <div>
+              <p className="text-[9px] text-slate-400 font-bold uppercase">Institution</p>
+              <p className="font-bold text-slate-800 truncate">{student.university || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-slate-400 font-bold uppercase">Roll / Reg No</p>
+              <p className="font-bold text-slate-800">{student.roll_no || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-slate-400 font-bold uppercase">Department Wing</p>
+              <p className="font-semibold text-slate-700">{student.wing || 'Technical Wing'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-slate-400 font-bold uppercase">Stipend Status</p>
+              <p className="font-semibold text-slate-700 capitalize">{internship?.internship_type === 'paid' ? 'Paid Category' : 'Unpaid Category'}</p>
+            </div>
+            <div className="col-span-2 border-t border-slate-100 pt-1.5 flex justify-between items-center text-[10px]">
+              <span className="text-slate-400 font-bold uppercase">Training Period:</span>
+              <span className="font-bold text-emerald-900">{startDate} — {endDate}</span>
+            </div>
           </div>
 
-          {/* Training period — full row */}
-          <div className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 flex items-center justify-between">
-            <p className="text-[7.5px] font-bold uppercase tracking-widest text-slate-400">Training Period</p>
-            <p className="text-[10px] font-bold text-emerald-900">{startDate} — {endDate}</p>
-          </div>
+          {/* Verification QR & Signature Footer */}
+          <div className="flex items-end justify-between pt-2 border-t border-dashed border-slate-300">
 
-          {/* ── Divider ── */}
-          <div className="border-t border-dashed border-slate-200" />
-
-          {/* QR + Signature row */}
-          <div className="flex items-end justify-between gap-2">
-
-            {/* QR Code */}
+            {/* QR Code — links to live verification page */}
             <div className="flex items-center gap-2">
               {qrCodeDataUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={qrCodeDataUrl}
-                  alt="Scan to verify"
-                  className="w-[60px] h-[60px] object-contain rounded border border-slate-200 bg-white"
+                  alt="Verification QR Code"
+                  className="w-16 h-16 object-contain border border-slate-200 rounded-lg p-0.5 bg-white shadow-xs"
                 />
               )}
-              <div>
-                <p className="text-[8px] font-black text-slate-700 leading-tight">Digital Gate Pass</p>
-                <p className="text-[7px] text-slate-400 leading-tight">Scan to verify</p>
+              <div className="text-[8px] text-slate-500 leading-tight">
+                <p className="font-bold text-slate-700">Digital Gate Pass</p>
+                <p>Scan to verify</p>
+                <p className="text-emerald-600 font-semibold">authenticity</p>
               </div>
             </div>
 
-            {/* Signature block */}
-            <div className="text-right flex-shrink-0 max-w-[130px]">
-              <div className="h-10 flex items-end justify-end mb-0.5">
-                {areaAdminSignature ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={areaAdminSignature}
-                    alt="Area Admin Signature"
-                    className="max-h-10 max-w-[120px] object-contain mix-blend-multiply"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src="/gm-signature.png"
-                    alt="Authorised Signature"
-                    className="max-h-10 max-w-[120px] object-contain mix-blend-multiply"
-                  />
-                )}
-              </div>
-              <div className="w-full border-b border-slate-400 mb-0.5" />
-              <p className="text-[7.5px] font-black text-slate-800 leading-tight truncate">{areaAdminName}</p>
-              <p className="text-[6.5px] text-slate-400 leading-tight">Area Training Officer, MCL</p>
+            {/* Area Admin Signature */}
+            <div className="text-right space-y-0.5">
+              {areaAdminSignature ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={areaAdminSignature}
+                  alt="Area Admin Signature"
+                  className="h-8 object-contain ml-auto mix-blend-multiply"
+                />
+              ) : (
+                // Fallback: GM HRD signature image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/gm-signature.png"
+                  alt="Authorised Signature"
+                  className="h-8 object-contain ml-auto mix-blend-multiply"
+                />
+              )}
+              <div className="w-24 border-b border-slate-400 ml-auto"></div>
+              <p className="text-[8px] font-bold text-emerald-950">{areaAdminName}</p>
+              <p className="text-[7px] text-slate-400">Area Training Officer, MCL</p>
             </div>
 
           </div>
+
         </div>
 
-        {/* ── Footer strip ── */}
-        <div className="flex items-center justify-between px-5 py-1.5 bg-slate-900">
-          <p className="text-[7px] font-mono text-slate-500 uppercase tracking-widest">
-            MCL · Official Trainee ID
-          </p>
-          <div className="flex gap-1">
-            <div className="w-2 h-2 rounded-full bg-amber-400 opacity-80" />
-            <div className="w-2 h-2 rounded-full bg-emerald-500 opacity-80" />
-          </div>
+        {/* Security Disclaimer Strip */}
+        <div className="bg-slate-900 text-slate-400 text-[8px] py-1.5 px-4 text-center font-mono">
+          System Generated Official Trainee ID • Property of MCL HRD
         </div>
+
       </div>
-
-      {/* Helper note (hidden on print) */}
-      <p className="text-center text-xs text-slate-400 mt-4 print:hidden">
-        Area admin must save their digital signature in <strong>Admin → Settings</strong> for it to appear here.
-      </p>
     </div>
   )
 }
