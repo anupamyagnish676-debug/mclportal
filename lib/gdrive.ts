@@ -338,6 +338,45 @@ export async function deleteFileFromGDrive(fileId: string): Promise<void> {
 }
 
 /**
+ * Stream a file from Google Drive using the Drive API (server-side).
+ * Returns a ReadableStream and the file's MIME type.
+ * Used by the photo-proxy API to serve student photos without CORS/auth issues.
+ */
+export async function getGDriveFileStream(fileId: string): Promise<{ stream: ReadableStream; mimeType: string }> {
+  const drive = getGDriveClient()
+
+  // Get file metadata first (for mimeType)
+  const metaRes = await drive.files.get({
+    fileId,
+    fields: 'mimeType',
+    supportsAllDrives: true,
+  })
+  const mimeType = metaRes.data.mimeType || 'image/jpeg'
+
+  // Get file content as a stream
+  const mediaRes = await drive.files.get(
+    {
+      fileId,
+      alt: 'media',
+      supportsAllDrives: true,
+    },
+    { responseType: 'stream' }
+  )
+
+  // Convert Node.js Readable to Web ReadableStream
+  const nodeStream = mediaRes.data as any
+  const webStream = new ReadableStream({
+    start(controller) {
+      nodeStream.on('data', (chunk: Buffer) => controller.enqueue(chunk))
+      nodeStream.on('end', () => controller.close())
+      nodeStream.on('error', (err: Error) => controller.error(err))
+    },
+  })
+
+  return { stream: webStream, mimeType }
+}
+
+/**
  * Save or Update a student's daily log entry directly inside their Google Drive folder (Daily_Logbook.json).
  */
 export async function saveStudentLogbookToGDrive(params: {

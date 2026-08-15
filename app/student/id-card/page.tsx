@@ -37,12 +37,14 @@ export default async function StudentIdCardPage() {
   const adminClient = createAdminClient()
   const { data: photoDoc } = await adminClient
     .from('student_documents')
-    .select('file_url, status')
+    .select('file_url, file_path, status')
     .eq('student_id', user.id)
     .eq('doc_type', 'photo')
     .maybeSingle()
 
-  const passportPhotoUrl = photoDoc?.file_url || null
+  // Always use the server-side photo proxy so Google Drive images load correctly
+  // (Direct Drive URLs require auth / cause CORS issues when used in <img> tags)
+  const passportPhotoUrl = photoDoc ? `/api/student/photo-proxy?studentId=${user.id}&t=${Date.now()}` : null
 
   const startDate = internship?.start_date 
     ? new Date(internship.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
@@ -143,8 +145,9 @@ export default async function StudentIdCardPage() {
             {/* Passport Photo Box */}
             <div className="w-28 h-36 flex-shrink-0 bg-white border-2 border-emerald-800 rounded-xl overflow-hidden shadow-md relative flex items-center justify-center p-0.5">
               {passportPhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img 
-                  src={passportPhotoUrl} 
+                  src={passportPhotoUrl}
                   alt="Student Passport Photo" 
                   className="w-full h-full object-cover rounded-lg"
                 />
@@ -156,9 +159,11 @@ export default async function StudentIdCardPage() {
                 </div>
               )}
 
-              <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[7px] font-bold px-1 rounded uppercase">
-                VERIFIED
-              </div>
+              {photoDoc && (
+                <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[7px] font-bold px-1 rounded uppercase">
+                  VERIFIED
+                </div>
+              )}
             </div>
 
             {/* Main Info */}
