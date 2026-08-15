@@ -272,7 +272,9 @@ export default function AdminAreasPage() {
                     <div key={area.id} className="p-4 rounded-xl border border-gray-150 bg-gray-50/40 space-y-3 hover:border-green-200 transition-colors">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-bold text-gray-900">{area.name} Area</p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {area.name === 'Headquarters' ? 'Headquarters (Central)' : `${area.name} Area`}
+                          </p>
                           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-0.5 border ${
                             hasCustomDrive 
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -285,7 +287,7 @@ export default function AdminAreasPage() {
 
                       <div className="space-y-1.5 pt-1">
                         <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                          Google Drive Folder ID ({area.name} Area)
+                          Google Drive Folder ID ({area.name === 'Headquarters' ? 'Headquarters (Central)' : `${area.name} Area`})
                         </label>
                         <div className="flex items-center gap-2">
                           <input
