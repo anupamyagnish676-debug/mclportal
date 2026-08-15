@@ -39,42 +39,37 @@ export default function MentorMaterialsPage() {
   }, [selectedInternship])
 
   async function uploadMaterial() {
-    if (!file || !title) return
+    if (!file || !title || !selectedInternship) return
     setUploading(true)
     setError('')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Not signed in'); setUploading(false); return }
+    try {
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('internshipId', selectedInternship)
+      formData.append('file', file)
 
-    const filePath = `${selectedInternship}/${Date.now()}_${file.name}`
-    const { error: uploadError } = await supabase.storage.from('study-materials').upload(filePath, file)
+      const res = await fetch('/api/mentor/materials', {
+        method: 'POST',
+        body: formData,
+      })
 
-    if (uploadError) { setError(uploadError.message); setUploading(false); return }
-
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('study-materials')
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365)
-
-    if (signedUrlError) { setError(signedUrlError.message); setUploading(false); return }
-
-    const { error: insertError } = await supabase.from('materials').insert({
-      internship_id: selectedInternship,
-      title,
-      file_url: signedUrlData.signedUrl,
-      uploaded_by: user.id,
-    })
-
-    if (insertError) {
-      setError(insertError.message)
-    } else {
-      const { data } = await supabase.from('materials').select('*').eq('internship_id', selectedInternship).order('created_at', { ascending: false })
-      setMaterials(data || [])
-      setTitle('')
-      setFile(null)
-      setMsg('Material uploaded!')
-      setTimeout(() => setMsg(''), 3000)
+      const resData = await res.json()
+      if (!res.ok) {
+        setError(resData.error || 'Upload failed')
+      } else {
+        const { data } = await supabase.from('materials').select('*').eq('internship_id', selectedInternship).order('created_at', { ascending: false })
+        setMaterials(data || [])
+        setTitle('')
+        setFile(null)
+        setMsg('Material uploaded to Area Google Drive!')
+        setTimeout(() => setMsg(''), 3000)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Upload failed')
+    } finally {
+      setUploading(false)
     }
-    setUploading(false)
   }
 
   return (

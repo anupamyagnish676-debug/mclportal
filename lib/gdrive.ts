@@ -229,6 +229,126 @@ export async function getOrCreateLorAreaFolder(areaName?: string | null): Promis
 }
 
 /**
+ * Find or create a dedicated Study_Materials folder inside an Area's Google Drive folder.
+ * Structure: Area Drive -> Study_Materials
+ */
+export async function getOrCreateStudyMaterialsAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const areaFolderId = await getAreaDriveFolderId(areaName)
+  const parentFolder = areaFolderId || process.env.GDRIVE_FOLDER_ID
+
+  try {
+    if (!parentFolder) return ''
+
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'Study_Materials' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'Study_Materials',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolder],
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateStudyMaterialsAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
+ * Find or create a dedicated Signatures folder inside an Area's Google Drive folder.
+ * Structure: Area Drive -> Signatures
+ */
+export async function getOrCreateSignaturesAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const areaFolderId = await getAreaDriveFolderId(areaName)
+  const parentFolder = areaFolderId || process.env.GDRIVE_FOLDER_ID
+
+  try {
+    if (!parentFolder) return ''
+
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'Signatures' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'Signatures',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolder],
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateSignaturesAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
+ * Find or create a dedicated Notices folder inside an Area's Google Drive folder.
+ * Structure: Area Drive -> Notices
+ */
+export async function getOrCreateNoticesAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const areaFolderId = await getAreaDriveFolderId(areaName)
+  const parentFolder = areaFolderId || process.env.GDRIVE_FOLDER_ID
+
+  try {
+    if (!parentFolder) return ''
+
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'Notices' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'Notices',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolder],
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateNoticesAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
  * Delete a student's subfolder from Google Drive when an admin deletes the student.
  */
 export async function deleteStudentFolderGDrive(params: {
@@ -374,6 +494,18 @@ export async function getGDriveFileStream(fileId: string): Promise<{ stream: Rea
   })
 
   return { stream: webStream, mimeType }
+}
+
+/**
+ * Fetch raw file Buffer directly from Google Drive.
+ */
+export async function getGDriveFileBuffer(fileId: string): Promise<Buffer> {
+  const drive = getGDriveClient()
+  const res = await drive.files.get(
+    { fileId, alt: 'media', supportsAllDrives: true },
+    { responseType: 'arraybuffer' }
+  )
+  return Buffer.from(res.data as ArrayBuffer)
 }
 
 /**
