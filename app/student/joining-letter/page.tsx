@@ -253,20 +253,14 @@ export default async function JoiningLetterPage() {
             <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited, {areaName} Area</p>
           </div>
 
-          {/* Right: General Manager (HRD) Signature from DB */}
+          {/* Right: General Manager (HRD) Signature (loaded from official gm-signature.png) */}
           <div className="text-right space-y-1.5 w-1/2">
             <div className="h-16 flex items-end justify-end">
-              {hqAdmin?.signature_data ? (
-                <img 
-                  src={hqAdmin.signature_data} 
-                  alt="General Manager (HRD) Signature" 
-                  className="h-14 object-contain inline-block ml-auto"
-                />
-              ) : (
-                <div className="h-14 border border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300 w-28 text-[9px] ml-auto">
-                  Pending Signature
-                </div>
-              )}
+              <img 
+                src="/gm-signature.png" 
+                alt="General Manager (HRD) Signature" 
+                className="h-14 object-contain inline-block ml-auto"
+              />
             </div>
             <p className="font-bold text-emerald-950">General Manager (HRD)</p>
             <p className="text-gray-500 font-bold">Mahanadi Coalfields Limited</p>

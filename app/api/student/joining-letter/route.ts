@@ -430,30 +430,30 @@ export async function GET(req: NextRequest) {
     page.drawText('Area Training Officer', { x: 45, y: footerY - 18, size: 9, font: fontBold, color: darkGreen })
     page.drawText(`Mahanadi Coalfields Limited, ${sanitizeText(areaName)} Area`, { x: 45, y: footerY - 30, size: 8, font: fontRegular, color: charcoal })
 
-    // Right Column: General Manager (HRD)
-    if (hqAdmin?.signature_data) {
-      try {
-        let sigImage;
-        try {
-          const transparentSigBuffer = await makeTransparent(hqAdmin.signature_data)
-          sigImage = await pdfDoc.embedPng(transparentSigBuffer)
-        } catch (jimpErr) {
-          console.warn('Jimp transparency processing failed for GM HRD, embedding signature directly:', jimpErr)
-          const base64Data = hqAdmin.signature_data.includes(',') ? hqAdmin.signature_data.split(',')[1] : hqAdmin.signature_data
-          const imageBytes = Buffer.from(base64Data, 'base64')
-          sigImage = await pdfDoc.embedPng(imageBytes)
-        }
-        
-        const { width: sigW, height: sigH } = getScaledDimensions(sigImage.width, sigImage.height, 130, 45)
-        page.drawImage(sigImage, {
+    // Right Column: General Manager (HRD) (Loaded from official gm-signature.png file)
+    try {
+      const gmSigPath = path.join(process.cwd(), 'public', 'gm-signature.png')
+      let gmSigImg;
+      if (fs.existsSync(gmSigPath)) {
+        const gmSigBytes = fs.readFileSync(gmSigPath)
+        gmSigImg = await pdfDoc.embedPng(gmSigBytes)
+      } else if (hqAdmin?.signature_data) {
+        const base64Data = hqAdmin.signature_data.includes(',') ? hqAdmin.signature_data.split(',')[1] : hqAdmin.signature_data
+        const imageBytes = Buffer.from(base64Data, 'base64')
+        gmSigImg = await pdfDoc.embedPng(imageBytes)
+      }
+
+      if (gmSigImg) {
+        const { width: sigW, height: sigH } = getScaledDimensions(gmSigImg.width, gmSigImg.height, 130, 45)
+        page.drawImage(gmSigImg, {
           x: width - 185,
           y: footerY + 2,
           width: sigW,
           height: sigH,
         })
-      } catch (e) {
-        console.warn('Could not embed GM HRD signature in PDF:', e)
       }
+    } catch (e) {
+      console.warn('Could not embed GM HRD signature in PDF:', e)
     }
 
     page.drawLine({ start: { x: width - 200, y: footerY - 5 }, end: { x: width - 45, y: footerY - 5 }, thickness: 1, color: darkGreen })
