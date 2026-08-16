@@ -217,6 +217,9 @@ export default function AdminSettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Google Authenticator Two-Factor Authentication (2FA) Section */}
+        <MFAManager />
       </div>
     </div>
   )
