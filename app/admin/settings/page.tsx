@@ -218,8 +218,6 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </div>
-
-      <HelpAndSupportSection role="admin" />
     </div>
   )
 }

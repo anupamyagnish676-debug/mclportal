@@ -212,8 +212,6 @@ export default function MentorSettingsPage() {
           )}
         </div>
       </div>
-
-      <HelpAndSupportSection role="mentor" />
     </div>
   )
 }

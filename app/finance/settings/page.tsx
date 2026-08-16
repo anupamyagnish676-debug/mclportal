@@ -144,8 +144,6 @@ export default function FinanceSettingsPage() {
           </button>
         </form>
       </div>
-
-      <HelpAndSupportSection role="finance" />
     </div>
   )
 }
