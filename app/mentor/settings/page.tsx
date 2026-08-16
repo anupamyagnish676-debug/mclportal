@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SettingsForm from '@/components/SettingsForm'
+import HelpAndSupportSection from '@/components/HelpAndSupportSection'
 
 export default function MentorSettingsPage() {
   const supabase = createClient()
@@ -211,6 +212,8 @@ export default function MentorSettingsPage() {
           )}
         </div>
       </div>
+
+      <HelpAndSupportSection role="mentor" />
     </div>
   )
 }

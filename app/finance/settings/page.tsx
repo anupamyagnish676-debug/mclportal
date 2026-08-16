@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import SignaturePad from '@/components/SignaturePad'
 import { Lock, PenTool } from 'lucide-react'
 import MFAManager from '@/components/MFAManager'
+import HelpAndSupportSection from '@/components/HelpAndSupportSection'
 
 export default function FinanceSettingsPage() {
   const supabase = createClient()
@@ -143,6 +144,8 @@ export default function FinanceSettingsPage() {
           </button>
         </form>
       </div>
+
+      <HelpAndSupportSection role="finance" />
     </div>
   )
 }

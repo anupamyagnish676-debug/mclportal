@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SettingsForm from '@/components/SettingsForm'
+import HelpAndSupportSection from '@/components/HelpAndSupportSection'
 import MFAManager from '@/components/MFAManager'
 
 export default function AdminSettingsPage() {
@@ -217,6 +218,8 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </div>
+
+      <HelpAndSupportSection role="admin" />
     </div>
   )
 }
