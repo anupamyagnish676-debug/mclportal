@@ -49,8 +49,16 @@ export default function SupportTicketsPanel({
     loadTickets(selectedArea)
   }, [selectedArea])
 
-  async function handleUpdateTicket(ticketId: string) {
-    setUpdatingId(ticketId)
+  const getCleanAreaLabel = (name: string) => {
+    if (!name) return ''
+    if (name === 'all' || name === 'All Areas') return '🌐 All Areas (Global)'
+    if (name === 'Headquarters') return 'Headquarters (Central)'
+    if (name.endsWith(' Area')) return name
+    return `${name} Area`
+  }
+
+  async function handleUpdateTicket(ticket: any) {
+    setUpdatingId(ticket.id)
     setErr('')
     setMsg('')
 
@@ -59,16 +67,17 @@ export default function SupportTicketsPanel({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ticketId,
+          ticketId: ticket.id,
           area: selectedArea,
-          status: statusSelect[ticketId],
-          resolutionNotes: resolutionText[ticketId] || '',
+          targetTicketArea: ticket.area,
+          status: statusSelect[ticket.id],
+          resolutionNotes: resolutionText[ticket.id] || '',
         })
       })
 
       const data = await res.json()
       if (res.ok) {
-        setMsg(`Ticket ${ticketId} updated successfully! Saved to Google Drive.`)
+        setMsg(`Ticket ${ticket.id} updated successfully! Saved to Google Drive.`)
         setTimeout(() => setMsg(''), 3000)
         loadTickets(selectedArea)
       } else {
@@ -100,9 +109,10 @@ export default function SupportTicketsPanel({
                 onChange={e => setSelectedArea(e.target.value)}
                 className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
+                <option value="all">🌐 All Areas (Global)</option>
                 {areas.map(a => (
                   <option key={a.name} value={a.name}>
-                    {a.name === 'Headquarters' ? 'Headquarters (Central)' : `${a.name} Area`}
+                    {getCleanAreaLabel(a.name)}
                   </option>
                 ))}
               </select>
@@ -208,7 +218,7 @@ export default function SupportTicketsPanel({
                   className="w-full text-xs border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <button
-                  onClick={() => handleUpdateTicket(t.id)}
+                  onClick={() => handleUpdateTicket(t)}
                   disabled={updatingId === t.id}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
                 >

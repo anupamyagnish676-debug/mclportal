@@ -33,6 +33,33 @@ export async function GET(req: NextRequest) {
 
     if (profile.role === 'admin') {
       const targetArea = req.nextUrl.searchParams.get('area') || userArea
+
+      if (targetArea === 'all' || targetArea === 'All Areas') {
+        // Fetch list of all registered areas from DB
+        const { data: areasData } = await adminClient
+          .from('areas')
+          .select('name')
+        
+        const areaNames = Array.from(new Set(['Headquarters', 'Talcher', 'Jagannath', 'Lingaraj', 'Subhadra', ...(areasData || []).map((a: any) => a.name)]))
+        
+        // Fetch tickets from all area Google Drive folders in parallel
+        const allTicketsNested = await Promise.all(
+          areaNames.map(areaName => getHelpdeskTicketsFromGDrive(areaName))
+        )
+        
+        const combined = allTicketsNested.flat()
+        // Deduplicate by ticket.id
+        const map = new Map<string, any>()
+        combined.forEach(t => {
+          if (t && t.id) map.set(t.id, t)
+        })
+
+        const tickets = Array.from(map.values()).sort(
+          (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        )
+        return NextResponse.json({ tickets })
+      }
+
       const tickets = await getHelpdeskTicketsFromGDrive(targetArea)
       return NextResponse.json({ tickets })
     }
@@ -133,19 +160,38 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
     }
 
-    const { ticketId, area, status, resolutionNotes } = await req.json()
-    if (!ticketId || !area) {
-      return NextResponse.json({ error: 'Missing ticketId or area' }, { status: 400 })
+    const { ticketId, area, targetTicketArea, status, resolutionNotes } = await req.json()
+    if (!ticketId) {
+      return NextResponse.json({ error: 'Missing ticketId' }, { status: 400 })
     }
 
-    const tickets = await getHelpdeskTicketsFromGDrive(area)
-    const ticket = tickets.find((t: any) => t.id === ticketId)
+    let ticketAreaToSearch = targetTicketArea || area || 'Headquarters'
+
+    // If searching across all areas, find which area ticket belongs to
+    let tickets = await getHelpdeskTicketsFromGDrive(ticketAreaToSearch)
+    let ticket = tickets.find((t: any) => t.id === ticketId)
+
+    if (!ticket && (area === 'all' || area === 'All Areas')) {
+      const { data: areasData } = await adminClient.from('areas').select('name')
+      const areaNames = Array.from(new Set(['Headquarters', 'Talcher', 'Jagannath', 'Lingaraj', 'Subhadra', ...(areasData || []).map((a: any) => a.name)]))
+      for (const aName of areaNames) {
+        const aTickets = await getHelpdeskTicketsFromGDrive(aName)
+        const match = aTickets.find((t: any) => t.id === ticketId)
+        if (match) {
+          ticket = match
+          ticketAreaToSearch = aName
+          break
+        }
+      }
+    }
+
     if (!ticket) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
     }
 
     const updatedTicket = {
       ...ticket,
+      area: ticket.area || ticketAreaToSearch,
       status: status || ticket.status,
       resolutionNotes: resolutionNotes !== undefined ? resolutionNotes : ticket.resolutionNotes,
       updatedAt: new Date().toISOString(),
