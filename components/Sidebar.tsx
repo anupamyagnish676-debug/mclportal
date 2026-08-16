@@ -28,7 +28,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  CreditCard
+  CreditCard,
+  LifeBuoy
 } from 'lucide-react'
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<any> }
@@ -50,6 +51,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Create User',       href: '/admin/create-user',      icon: UserPlus },
     { label: 'Broadcast Email',   href: '/admin/broadcast',        icon: Mail },
     { label: 'Audit Log',         href: '/admin/audit',            icon: Shield },
+    { label: 'Help & Support',    href: '/admin/support',          icon: LifeBuoy },
     { label: 'Settings',          href: '/admin/settings',         icon: Settings },
   ],
   mentor: [
@@ -63,13 +65,14 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Notice Board',   href: '/mentor/notices',            icon: Bell },
     { label: 'Intern Feedback',href: '/mentor/intern-feedback',    icon: MessageSquare },
     { label: 'Approve Cert',   href: '/mentor/approve-certificate', icon: GraduationCap },
+    { label: 'Help & Support',  href: '/mentor/support',            icon: LifeBuoy },
     { label: 'Settings',       href: '/mentor/settings',            icon: Settings },
   ],
   student: [
     { label: 'Dashboard',      href: '/student',                icon: Home },
     { label: 'My ID Card',     href: '/student/id-card',        icon: CreditCard },
     { label: 'Mentor Chat',    href: '/student/chat',           icon: MessageSquare },
-    { label: 'Helpdesk Support',href: '/student/support',       icon: Mail },
+    { label: 'Help & Support', href: '/student/support',        icon: LifeBuoy },
     { label: 'Attendance',     href: '/student/attendance',     icon: Calendar },
     { label: 'Daily Logbook',  href: '/student/logbook',        icon: BookOpen },
     { label: 'Leave Apply',    href: '/student/leaves',         icon: Mail },
@@ -77,21 +80,23 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Materials',      href: '/student/materials',      icon: FolderOpen },
     { label: 'Upload Docs',    href: '/student/documents',      icon: FileCheck },
     { label: 'Extension Apply',href: '/student/extension',      icon: Clock },
-    { label: 'Notice Board',   href: '/student/notices',     icon: Bell },
-    { label: 'My Stipend',    href: '/student/stipend',     icon: DollarSign },
-    { label: 'Feedback',      href: '/student/feedback',    icon: MessageSquare },
-    { label: 'Certificate',   href: '/student/certificate', icon: GraduationCap },
-    { label: 'Settings',      href: '/student/settings',    icon: Settings },
+    { label: 'Notice Board',   href: '/student/notices',        icon: Bell },
+    { label: 'My Stipend',     href: '/student/stipend',        icon: DollarSign },
+    { label: 'Feedback',       href: '/student/feedback',       icon: MessageSquare },
+    { label: 'Certificate',    href: '/student/certificate',    icon: GraduationCap },
+    { label: 'Settings',       href: '/student/settings',       icon: Settings },
   ],
   employee: [
-    { label: 'Dashboard',    href: '/employee',        icon: Home },
-    { label: 'Review LoR',   href: '/employee/review', icon: FileText },
-    { label: 'Notice Board', href: '/employee/notices',icon: Bell },
+    { label: 'Dashboard',    href: '/employee',         icon: Home },
+    { label: 'Review LoR',   href: '/employee/review',  icon: FileText },
+    { label: 'Notice Board', href: '/employee/notices', icon: Bell },
+    { label: 'Help & Support',href: '/employee/support',icon: LifeBuoy },
     { label: 'Settings',     href: '/employee/settings',icon: Settings },
   ],
   finance: [
     { label: 'Dashboard',    href: '/finance',          icon: Home },
     { label: 'Payments',     href: '/finance/payments', icon: DollarSign },
+    { label: 'Help & Support',href: '/finance/support', icon: LifeBuoy },
     { label: 'Settings',     href: '/finance/settings', icon: Settings },
   ]
 }

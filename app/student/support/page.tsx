@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import HelpAndSupportSection from '@/components/HelpAndSupportSection'
 
 export default function StudentSupportPage() {
   const [tickets, setTickets] = useState<any[]>([])
@@ -231,6 +232,8 @@ export default function StudentSupportPage() {
         </div>
 
       </div>
+
+      <HelpAndSupportSection role="student" />
     </div>
   )
 }
