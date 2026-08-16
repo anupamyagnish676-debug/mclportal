@@ -18,12 +18,7 @@ function MFAVerifyContent() {
 
   useEffect(() => {
     inputRef.current?.focus()
-    // Auto-redirect if authenticated session cookie exists
-    if (document.cookie.includes('mcl-session=')) {
-      document.cookie = `mcl-email-mfa-verified=true; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
-      window.location.href = next
-    }
-  }, [next])
+  }, [])
 
   // Resend cooldown timer countdown
   useEffect(() => {
