@@ -626,3 +626,289 @@ export async function getStudentLogbookFromGDrive(params: {
   return []
 }
 
+/**
+ * Find or create a dedicated Helpdesk_Tickets folder inside an Area's Google Drive folder.
+ */
+export async function getOrCreateHelpdeskAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const areaFolderId = await getAreaDriveFolderId(areaName)
+  const parentFolder = areaFolderId || process.env.GDRIVE_FOLDER_ID
+
+  try {
+    if (!parentFolder) return ''
+
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'Helpdesk_Tickets' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'Helpdesk_Tickets',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolder],
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateHelpdeskAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
+ * Save or update a Support Ticket directly inside Google Drive (Helpdesk_Tickets.json).
+ */
+export async function saveHelpdeskTicketToGDrive(ticket: {
+  id: string
+  studentId: string
+  studentName: string
+  area: string
+  category: string
+  subject: string
+  description: string
+  status: 'open' | 'in_progress' | 'resolved'
+  attachmentUrl?: string | null
+  resolutionNotes?: string | null
+  createdAt: string
+  updatedAt: string
+}): Promise<void> {
+  const drive = getGDriveClient()
+  const folderId = await getOrCreateHelpdeskAreaFolder(ticket.area)
+  if (!folderId) return
+
+  const fileName = 'Helpdesk_Tickets.json'
+  const q = `'${folderId}' in parents and name = '${fileName}' and trashed = false`
+
+  let fileId: string | null = null
+  let existingTickets: any[] = []
+
+  try {
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      if (typeof getRes.data === 'string') {
+        try { existingTickets = JSON.parse(getRes.data) } catch (e) { existingTickets = [] }
+      } else if (Array.isArray(getRes.data)) {
+        existingTickets = getRes.data
+      }
+    }
+  } catch (e) {
+    existingTickets = []
+  }
+
+  const existingIdx = existingTickets.findIndex((t: any) => t.id === ticket.id)
+  if (existingIdx >= 0) {
+    existingTickets[existingIdx] = { ...existingTickets[existingIdx], ...ticket }
+  } else {
+    existingTickets.unshift(ticket)
+  }
+
+  const jsonBuffer = Buffer.from(JSON.stringify(existingTickets, null, 2), 'utf-8')
+  const fileStream = new Readable()
+  fileStream.push(jsonBuffer)
+  fileStream.push(null)
+
+  if (fileId) {
+    await drive.files.update({
+      fileId,
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  } else {
+    await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [folderId],
+        mimeType: 'application/json'
+      },
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  }
+}
+
+/**
+ * Fetch Support Tickets from Google Drive (Helpdesk_Tickets.json).
+ */
+export async function getHelpdeskTicketsFromGDrive(areaName: string, studentId?: string): Promise<any[]> {
+  try {
+    const drive = getGDriveClient()
+    const folderId = await getOrCreateHelpdeskAreaFolder(areaName)
+    if (!folderId) return []
+
+    const fileName = 'Helpdesk_Tickets.json'
+    const q = `'${folderId}' in parents and name = '${fileName}' and trashed = false`
+
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      const fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      let tickets: any[] = []
+      if (typeof getRes.data === 'string') {
+        tickets = JSON.parse(getRes.data)
+      } else if (Array.isArray(getRes.data)) {
+        tickets = getRes.data
+      }
+      if (studentId) {
+        return tickets.filter((t: any) => t.studentId === studentId)
+      }
+      return tickets
+    }
+  } catch (err: any) {
+    console.error('[GDRIVE] Error loading support tickets from Drive:', err.message)
+  }
+  return []
+}
+
+/**
+ * Find or create a dedicated Messages folder inside an Area's Google Drive folder.
+ */
+export async function getOrCreateMessagesAreaFolder(areaName?: string | null): Promise<string> {
+  const drive = getGDriveClient()
+  const areaFolderId = await getAreaDriveFolderId(areaName)
+  const parentFolder = areaFolderId || process.env.GDRIVE_FOLDER_ID
+
+  try {
+    if (!parentFolder) return ''
+
+    const q = `'${parentFolder}' in parents and mimeType = 'application/vnd.google-apps.folder' and name = 'Messages' and trashed = false`
+    const searchRes = await drive.files.list({
+      q,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id!
+    }
+
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'Messages',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolder],
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    return createRes.data.id!
+  } catch (err: any) {
+    console.error('[GDRIVE] Error in getOrCreateMessagesAreaFolder:', err.message)
+    return parentFolder || ''
+  }
+}
+
+/**
+ * Save a chat message directly inside Google Drive ({StudentName}_Chat.json).
+ */
+export async function saveMentorMessageToGDrive(params: {
+  studentName: string
+  studentId: string
+  areaName: string
+  message: {
+    id: string
+    senderId: string
+    senderName: string
+    senderRole: string
+    content: string
+    createdAt: string
+  }
+}): Promise<void> {
+  const drive = getGDriveClient()
+  const folderId = await getOrCreateMessagesAreaFolder(params.areaName)
+  if (!folderId) return
+
+  const cleanName = params.studentName.replace(/[^a-zA-Z0-9]/g, '_')
+  const fileName = `${cleanName}_Chat.json`
+  const q = `'${folderId}' in parents and name = '${fileName}' and trashed = false`
+
+  let fileId: string | null = null
+  let chatHistory: any[] = []
+
+  try {
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      if (typeof getRes.data === 'string') {
+        try { chatHistory = JSON.parse(getRes.data) } catch (e) { chatHistory = [] }
+      } else if (Array.isArray(getRes.data)) {
+        chatHistory = getRes.data
+      }
+    }
+  } catch (e) {
+    chatHistory = []
+  }
+
+  chatHistory.push(params.message)
+
+  const jsonBuffer = Buffer.from(JSON.stringify(chatHistory, null, 2), 'utf-8')
+  const fileStream = new Readable()
+  fileStream.push(jsonBuffer)
+  fileStream.push(null)
+
+  if (fileId) {
+    await drive.files.update({
+      fileId,
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  } else {
+    await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [folderId],
+        mimeType: 'application/json'
+      },
+      media: { mimeType: 'application/json', body: fileStream },
+      supportsAllDrives: true
+    })
+  }
+}
+
+/**
+ * Fetch mentor-intern chat message history directly from Google Drive.
+ */
+export async function getMentorMessagesFromGDrive(params: {
+  studentName: string
+  areaName: string
+}): Promise<any[]> {
+  try {
+    const drive = getGDriveClient()
+    const folderId = await getOrCreateMessagesAreaFolder(params.areaName)
+    if (!folderId) return []
+
+    const cleanName = params.studentName.replace(/[^a-zA-Z0-9]/g, '_')
+    const fileName = `${cleanName}_Chat.json`
+    const q = `'${folderId}' in parents and name = '${fileName}' and trashed = false`
+
+    const listRes = await drive.files.list({ q, fields: 'files(id, name)', supportsAllDrives: true, includeItemsFromAllDrives: true })
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      const fileId = listRes.data.files[0].id!
+      const getRes = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true })
+      let messages: any[] = []
+      if (typeof getRes.data === 'string') {
+        messages = JSON.parse(getRes.data)
+      } else if (Array.isArray(getRes.data)) {
+        messages = getRes.data
+      }
+      return messages
+    }
+  } catch (err: any) {
+    console.error('[GDRIVE] Error loading chat history from Drive:', err.message)
+  }
+  return []
+}
+

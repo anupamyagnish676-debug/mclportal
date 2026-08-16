@@ -45,7 +45,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Verify Docs',       href: '/admin/documents',        icon: FileCheck },
     { label: 'Confirm Extensions',href: '/admin/extension-requests',icon: Clock },
     { label: 'Notice Board',      href: '/admin/notices',          icon: Bell },
-    { label: 'Grievances',        href: '/admin/grievances',       icon: Mail },
+    { label: 'Helpdesk Support',  href: '/admin/grievances',       icon: Mail },
     { label: 'Feedback Reports',  href: '/admin/feedback',         icon: MessageSquare },
     { label: 'Create User',       href: '/admin/create-user',      icon: UserPlus },
     { label: 'Broadcast Email',   href: '/admin/broadcast',        icon: Mail },
@@ -54,6 +54,7 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   mentor: [
     { label: 'Dashboard',      href: '/mentor',                    icon: Home },
+    { label: 'Direct Chat',    href: '/mentor/chat',               icon: MessageSquare },
     { label: 'Attendance',     href: '/mentor/attendance',         icon: Calendar },
     { label: 'Assignments',    href: '/mentor/assignments',        icon: ClipboardList },
     { label: 'Materials',      href: '/mentor/materials',           icon: FolderOpen },
@@ -67,6 +68,8 @@ const navByRole: Record<string, NavItem[]> = {
   student: [
     { label: 'Dashboard',      href: '/student',                icon: Home },
     { label: 'My ID Card',     href: '/student/id-card',        icon: CreditCard },
+    { label: 'Mentor Chat',    href: '/student/chat',           icon: MessageSquare },
+    { label: 'Helpdesk Support',href: '/student/support',       icon: Mail },
     { label: 'Attendance',     href: '/student/attendance',     icon: Calendar },
     { label: 'Daily Logbook',  href: '/student/logbook',        icon: BookOpen },
     { label: 'Leave Apply',    href: '/student/leaves',         icon: Mail },
@@ -77,7 +80,6 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Notice Board',   href: '/student/notices',     icon: Bell },
     { label: 'My Stipend',    href: '/student/stipend',     icon: DollarSign },
     { label: 'Feedback',      href: '/student/feedback',    icon: MessageSquare },
-    { label: 'Grievance',     href: '/student/grievance',   icon: Mail },
     { label: 'Certificate',   href: '/student/certificate', icon: GraduationCap },
     { label: 'Settings',      href: '/student/settings',    icon: Settings },
   ],
