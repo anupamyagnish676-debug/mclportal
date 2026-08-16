@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import QRCode from 'qrcode'
 import { Jimp } from 'jimp'
-import { getGDriveFileStream } from '@/lib/gdrive'
+import { getGDriveFileBuffer } from '@/lib/gdrive'
 
 export const revalidate = 0
 
@@ -31,7 +31,7 @@ async function makeTransparent(base64Str: string): Promise<Buffer> {
   return await image.getBuffer('image/png')
 }
 
-// Helper to fetch passport photo buffer from Drive/Supabase
+// Helper to fetch passport photo buffer directly
 async function getPhotoBuffer(adminClient: any, studentId: string): Promise<Buffer | null> {
   try {
     const { data: photoDoc } = await adminClient
@@ -46,17 +46,7 @@ async function getPhotoBuffer(adminClient: any, studentId: string): Promise<Buff
     // Case 1: GDrive
     if (photoDoc.file_path?.startsWith('gdrive:')) {
       const fileId = photoDoc.file_path.replace('gdrive:', '')
-      const { stream } = await getGDriveFileStream(fileId)
-      
-      // Convert web stream to buffer
-      const reader = (stream as any).getReader()
-      const chunks: Uint8Array[] = []
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        if (value) chunks.push(value)
-      }
-      return Buffer.concat(chunks)
+      return await getGDriveFileBuffer(fileId)
     }
 
     // Case 2: Supabase storage or HTTP URL
@@ -75,7 +65,7 @@ async function getPhotoBuffer(adminClient: any, studentId: string): Promise<Buff
       }
     }
   } catch (e) {
-    console.error('[ID-CARD-PDF] Failed to fetch photo buffer:', e)
+    console.error('[ID-CARD-PDF] Photo fetch error:', e)
   }
   return null
 }
@@ -96,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     const adminClient = createAdminClient()
 
-    // Get active internship
+    // Fetch active internship
     const { data: internship } = await adminClient
       .from('internships')
       .select('*')
@@ -136,10 +126,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Standard CR80 Portrait ID Card Dimensions in Points (72 dpi)
-    // 53.98 mm = 153.01 pt (Width), 85.60 mm = 242.65 pt (Height)
-    const cardWidth = 153.01
-    const cardHeight = 242.65
+    // Standard ISO CR80 Landscape Dimensions in Points (72 dpi)
+    // 85.60 mm = 242.65 pt (Width), 53.98 mm = 153.01 pt (Height)
+    const cardWidth = 242.65
+    const cardHeight = 153.01
 
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage([cardWidth, cardHeight])
@@ -148,7 +138,7 @@ export async function GET(req: NextRequest) {
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const monoFont = await pdfDoc.embedFont(StandardFonts.CourierBold)
 
-    // Colors
+    // Palette
     const darkBg = rgb(0.06, 0.09, 0.13)       // #0f172a
     const headerBg = rgb(0.97, 0.98, 0.99)     // #f8fafc
     const amberAccent = rgb(0.96, 0.62, 0.04)  // #f59e0b
@@ -165,8 +155,8 @@ export async function GET(req: NextRequest) {
       color: rgb(1, 1, 1),
     })
 
-    // 2. Header Box (Top 36 pt)
-    const headerHeight = 34
+    // 2. Header Box (Top 26 pt)
+    const headerHeight = 26
     const headerY = cardHeight - headerHeight
 
     page.drawRectangle({
@@ -177,12 +167,11 @@ export async function GET(req: NextRequest) {
       color: headerBg,
     })
 
-    // Header Amber Stripe
-    page.drawRectangle({
-      x: 0,
-      y: headerY,
-      width: cardWidth,
-      height: 2,
+    // Header Bottom Line
+    page.drawLine({
+      start: { x: 0, y: headerY },
+      end: { x: cardWidth, y: headerY },
+      thickness: 1.5,
       color: amberAccent,
     })
 
@@ -195,52 +184,49 @@ export async function GET(req: NextRequest) {
         page.drawImage(logoImg, {
           x: 6,
           y: headerY + 4,
-          width: 24,
-          height: 24,
+          width: 18,
+          height: 18,
         })
       } catch (e) {}
     }
 
     // Header Text
-    page.drawText('MAHANADI COALFIELDS LTD', {
-      x: 34,
-      y: headerY + 18,
-      size: 6.5,
+    page.drawText('MAHANADI COALFIELDS LIMITED', {
+      x: 28,
+      y: headerY + 14,
+      size: 7,
       font: boldFont,
       color: emeraldDark,
     })
-    page.drawText('A Subsidiary of Coal India Limited', {
-      x: 34,
-      y: headerY + 9,
-      size: 5,
+    page.drawText('(A Subsidiary of Coal India Limited)', {
+      x: 28,
+      y: headerY + 6,
+      size: 4.8,
       font: regularFont,
       color: slateGray,
     })
 
     // INTERN ID Badge
     page.drawRectangle({
-      x: cardWidth - 36,
-      y: headerY + 11,
-      width: 30,
-      height: 11,
+      x: cardWidth - 44,
+      y: headerY + 7,
+      width: 38,
+      height: 12,
       color: amberAccent,
     })
     page.drawText('INTERN ID', {
-      x: cardWidth - 33,
-      y: headerY + 14,
-      size: 4.5,
+      x: cardWidth - 40,
+      y: headerY + 10.5,
+      size: 5,
       font: boldFont,
       color: rgb(0.2, 0.1, 0),
     })
 
-    // 3. Photo & Details Layout
-    const bodyTopY = headerY - 6
-
-    // Passport Photo (Left)
-    const photoWidth = 46
-    const photoHeight = 58
+    // 3. Passport Photo (Left Column)
+    const photoWidth = 52
+    const photoHeight = 66
     const photoX = 8
-    const photoY = bodyTopY - photoHeight
+    const photoY = 44
 
     page.drawRectangle({
       x: photoX - 1,
@@ -249,7 +235,7 @@ export async function GET(req: NextRequest) {
       height: photoHeight + 2,
       color: rgb(1, 1, 1),
       borderColor: emeraldDark,
-      borderWidth: 1,
+      borderWidth: 1.5,
     })
 
     const photoBuffer = await getPhotoBuffer(adminClient, user.id)
@@ -268,127 +254,115 @@ export async function GET(req: NextRequest) {
           height: photoHeight,
         })
       } catch (e) {
-        // Fallback photo box
         page.drawRectangle({ x: photoX, y: photoY, width: photoWidth, height: photoHeight, color: rgb(0.95, 0.96, 0.98) })
       }
     } else {
       page.drawRectangle({ x: photoX, y: photoY, width: photoWidth, height: photoHeight, color: rgb(0.95, 0.96, 0.98) })
-      page.drawText('NO PHOTO', { x: photoX + 8, y: photoY + 26, size: 6, font: boldFont, color: slateGray })
+      page.drawText('NO PHOTO', { x: photoX + 10, y: photoY + 30, size: 6, font: boldFont, color: slateGray })
     }
 
-    // Student Info (Right of Photo)
-    const infoX = photoX + photoWidth + 7
+    // 4. Middle Column: Student Information (X = 68 to 175)
+    const midX = 68
 
     // Trainee Name
-    page.drawText('TRAINEE NAME', { x: infoX, y: bodyTopY - 7, size: 4.5, font: boldFont, color: slateGray })
-    const nameStr = (profile.full_name || 'STUDENT').toUpperCase()
-    page.drawText(nameStr.length > 15 ? `${nameStr.slice(0, 15)}...` : nameStr, {
-      x: infoX,
-      y: bodyTopY - 16,
-      size: 7.5,
+    page.drawText('TRAINEE NAME', { x: midX, y: 116, size: 4.5, font: boldFont, color: slateGray })
+    const studentNameStr = (profile.full_name || 'STUDENT').toUpperCase()
+    page.drawText(studentNameStr.length > 20 ? `${studentNameStr.slice(0, 20)}..` : studentNameStr, {
+      x: midX,
+      y: 106,
+      size: 8,
       font: boldFont,
       color: emeraldDark,
     })
 
-    // Serial No
-    page.drawText('SERIAL NO.', { x: infoX, y: bodyTopY - 26, size: 4.5, font: boldFont, color: slateGray })
+    // Serial Number
+    page.drawText('SERIAL NO.', { x: midX, y: 96, size: 4.5, font: boldFont, color: slateGray })
     const serialStr = `MCL/HRD/${(areaName || 'HQ').toUpperCase()}/${serialNo}`
     page.drawText(serialStr, {
-      x: infoX,
-      y: bodyTopY - 34,
-      size: 5.5,
+      x: midX,
+      y: 88,
+      size: 6,
       font: monoFont,
       color: textDark,
     })
 
-    // Area
-    page.drawText('ALLOCATED AREA', { x: infoX, y: bodyTopY - 44, size: 4.5, font: boldFont, color: slateGray })
-    page.drawText(`${areaName} Area`, {
-      x: infoX,
-      y: bodyTopY - 52,
-      size: 6,
+    // Allocated Area
+    page.drawText('ALLOCATED AREA', { x: midX, y: 78, size: 4.5, font: boldFont, color: slateGray })
+    page.drawText(`${areaName} Area Office`, {
+      x: midX,
+      y: 70,
+      size: 6.5,
       font: boldFont,
       color: emeraldDark,
     })
 
-    // 4. Secondary Details Grid
-    const gridY = photoY - 10
-
-    // Grid divider line
-    page.drawLine({
-      start: { x: 8, y: gridY + 4 },
-      end: { x: cardWidth - 8, y: gridY + 4 },
-      thickness: 0.5,
-      color: rgb(0.85, 0.88, 0.92),
-    })
-
-    // Col 1: Institution & Wing
-    page.drawText('INSTITUTION', { x: 8, y: gridY - 5, size: 4.5, font: boldFont, color: slateGray })
+    // Secondary Details Row: Inst & Roll
     const instStr = profile.university || 'N/A'
-    page.drawText(instStr.length > 14 ? `${instStr.slice(0, 14)}..` : instStr, { x: 8, y: gridY - 13, size: 5.5, font: boldFont, color: textDark })
+    const rollStr = profile.roll_no || 'N/A'
+    page.drawText(`INST: ${instStr.length > 13 ? instStr.slice(0, 13) + '.' : instStr}`, { x: midX, y: 58, size: 5.5, font: regularFont, color: textDark })
+    page.drawText(`ROLL: ${rollStr}`, { x: midX + 60, y: 58, size: 5.5, font: boldFont, color: textDark })
 
-    page.drawText('DEPARTMENT WING', { x: 8, y: gridY - 23, size: 4.5, font: boldFont, color: slateGray })
+    // Secondary Details Row: Wing & Stipend
     const wingStr = profile.wing || 'Technical'
-    page.drawText(wingStr.length > 14 ? `${wingStr.slice(0, 14)}..` : wingStr, { x: 8, y: gridY - 31, size: 5.5, font: regularFont, color: textDark })
+    const stipendStr = internship?.internship_type === 'paid' ? 'Paid' : 'Unpaid'
+    page.drawText(`WING: ${wingStr}`, { x: midX, y: 48, size: 5.5, font: regularFont, color: textDark })
+    page.drawText(`STIPEND: ${stipendStr}`, { x: midX + 60, y: 48, size: 5.5, font: regularFont, color: textDark })
 
-    // Col 2: Roll No & Stipend
-    page.drawText('ROLL / REG NO', { x: 82, y: gridY - 5, size: 4.5, font: boldFont, color: slateGray })
-    page.drawText(profile.roll_no || 'N/A', { x: 82, y: gridY - 13, size: 5.5, font: boldFont, color: textDark })
-
-    page.drawText('STIPEND STATUS', { x: 82, y: gridY - 23, size: 4.5, font: boldFont, color: slateGray })
-    page.drawText(internship?.internship_type === 'paid' ? 'Paid Category' : 'Unpaid Category', { x: 82, y: gridY - 31, size: 5.5, font: regularFont, color: textDark })
-
-    // Training Period Banner
-    const periodY = gridY - 44
+    // Training Period Highlight Strip
     page.drawRectangle({
-      x: 8,
-      y: periodY - 2,
-      width: cardWidth - 16,
+      x: midX,
+      y: 32,
+      width: 104,
       height: 11,
-      color: rgb(0.95, 0.97, 0.95),
-      borderColor: rgb(0.85, 0.92, 0.88),
+      color: rgb(0.94, 0.97, 0.94),
+      borderColor: rgb(0.82, 0.91, 0.84),
       borderWidth: 0.5,
     })
-
     const fmtD = (d: string | null) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'
     const periodStr = `${fmtD(internship?.start_date)} - ${fmtD(internship?.end_date)}`
-    page.drawText('TRAINING:', { x: 12, y: periodY + 1, size: 4.5, font: boldFont, color: slateGray })
-    page.drawText(periodStr, { x: 50, y: periodY + 1, size: 5.5, font: boldFont, color: emeraldDark })
+    page.drawText('TRAINING:', { x: midX + 3, y: 35, size: 4.5, font: boldFont, color: slateGray })
+    page.drawText(periodStr, { x: midX + 34, y: 35, size: 5.5, font: boldFont, color: emeraldDark })
 
-    // 5. Footer Row: QR Code (Left) & Area Admin Signature (Right)
-    const footerTopY = periodY - 10
 
-    // QR Code Generation
+    // 5. Right Column: QR Code & Signature (X = 180 to cardWidth - 8)
+    const rightX = 184
+
+    // QR Code
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mclportal.vercel.app'
     const verifyUrl = `${baseUrl}/verify/id/${user.id}`
     try {
-      const qrPngBuffer = await QRCode.toBuffer(verifyUrl, { margin: 1, width: 80, errorCorrectionLevel: 'M' })
+      const qrPngBuffer = await QRCode.toBuffer(verifyUrl, { margin: 1, width: 100, errorCorrectionLevel: 'M' })
       const qrImg = await pdfDoc.embedPng(qrPngBuffer)
       page.drawImage(qrImg, {
-        x: 8,
-        y: footerTopY - 32,
-        width: 32,
-        height: 32,
+        x: rightX,
+        y: 72,
+        width: 50,
+        height: 50,
       })
     } catch (e) {}
 
-    page.drawText('Gate Pass', { x: 42, y: footerTopY - 14, size: 4.5, font: boldFont, color: textDark })
-    page.drawText('Scan to verify', { x: 42, y: footerTopY - 20, size: 4, font: regularFont, color: slateGray })
+    page.drawText('Digital Gate Pass', { x: rightX + 2, y: 64, size: 4.5, font: boldFont, color: textDark })
+    page.drawText('Scan to verify', { x: rightX + 5, y: 58, size: 4, font: regularFont, color: slateGray })
 
-    // Area Admin Signature Embedding
-    const sigX = 92
-    const sigY = footerTopY - 24
+    // Area Admin Signature (Preserving Natural Aspect Ratio)
     let embeddedSig = false
+    const maxSigW = 52
+    const maxSigH = 22
+    const sigTargetY = 32
 
     if (signatureData) {
       try {
         const transparentPng = await makeTransparent(signatureData)
         const sigImg = await pdfDoc.embedPng(transparentPng)
+        const scale = Math.min(maxSigW / sigImg.width, maxSigH / sigImg.height)
+        const finalW = sigImg.width * scale
+        const finalH = sigImg.height * scale
+
         page.drawImage(sigImg, {
-          x: sigX,
-          y: sigY,
-          width: 52,
-          height: 18,
+          x: rightX + (maxSigW - finalW) / 2,
+          y: sigTargetY + (maxSigH - finalH) / 2,
+          width: finalW,
+          height: finalH,
         })
         embeddedSig = true
       } catch (e) {
@@ -396,42 +370,60 @@ export async function GET(req: NextRequest) {
           const rawBase64 = signatureData.includes(',') ? signatureData.split(',')[1] : signatureData
           const sigBuffer = Buffer.from(rawBase64.trim(), 'base64')
           const sigImg = await pdfDoc.embedPng(sigBuffer)
-          page.drawImage(sigImg, { x: sigX, y: sigY, width: 52, height: 18 })
+          const scale = Math.min(maxSigW / sigImg.width, maxSigH / sigImg.height)
+          const finalW = sigImg.width * scale
+          const finalH = sigImg.height * scale
+
+          page.drawImage(sigImg, {
+            x: rightX + (maxSigW - finalW) / 2,
+            y: sigTargetY + (maxSigH - finalH) / 2,
+            width: finalW,
+            height: finalH,
+          })
           embeddedSig = true
         } catch (_) {}
       }
     }
 
     // Fallback GM signature if no area admin signature embedded
-    if (!embeddedSig && fs.existsSync(logoPath)) {
+    if (!embeddedSig) {
       const gmPath = path.join(process.cwd(), 'public', 'gm-signature.png')
       if (fs.existsSync(gmPath)) {
         try {
           const gmBytes = fs.readFileSync(gmPath)
           const gmImg = await pdfDoc.embedPng(gmBytes)
-          page.drawImage(gmImg, { x: sigX, y: sigY, width: 52, height: 18 })
+          const scale = Math.min(maxSigW / gmImg.width, maxSigH / gmImg.height)
+          const finalW = gmImg.width * scale
+          const finalH = gmImg.height * scale
+
+          page.drawImage(gmImg, {
+            x: rightX + (maxSigW - finalW) / 2,
+            y: sigTargetY + (maxSigH - finalH) / 2,
+            width: finalW,
+            height: finalH,
+          })
         } catch (e) {}
       }
     }
 
-    // Signature line & title
+    // Signature underline & Title
     page.drawLine({
-      start: { x: sigX - 4, y: sigY - 2 },
-      end: { x: cardWidth - 8, y: sigY - 2 },
+      start: { x: rightX - 2, y: sigTargetY - 1 },
+      end: { x: cardWidth - 8, y: sigTargetY - 1 },
       thickness: 0.5,
       color: slateGray,
     })
 
-    page.drawText(areaAdminName.length > 18 ? `${areaAdminName.slice(0, 18)}..` : areaAdminName, {
-      x: sigX - 4,
-      y: sigY - 7,
+    page.drawText(areaAdminName.length > 16 ? `${areaAdminName.slice(0, 16)}..` : areaAdminName, {
+      x: rightX - 2,
+      y: sigTargetY - 7,
       size: 4.5,
       font: boldFont,
       color: textDark,
     })
-    page.drawText('Area Training Officer, MCL', {
-      x: sigX - 4,
-      y: sigY - 12,
+    page.drawText('Area Training Officer', {
+      x: rightX - 2,
+      y: sigTargetY - 12,
       size: 4,
       font: regularFont,
       color: slateGray,
@@ -442,13 +434,13 @@ export async function GET(req: NextRequest) {
       x: 0,
       y: 0,
       width: cardWidth,
-      height: 10,
+      height: 11,
       color: darkBg,
     })
     page.drawText('System Generated Official Trainee ID • Property of MCL HRD', {
-      x: 8,
-      y: 3,
-      size: 3.8,
+      x: 12,
+      y: 3.5,
+      size: 4.2,
       font: monoFont,
       color: rgb(0.7, 0.75, 0.8),
     })
