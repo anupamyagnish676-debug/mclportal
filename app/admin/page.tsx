@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AdminDashboardClient from './AdminDashboardClient'
+import AdminAnalyticsAndExportSuite from '@/components/AdminAnalyticsAndExportSuite'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -275,6 +276,11 @@ export default async function AdminDashboard({
     },
   ]
 
+  // 4. Fetch all internships for Master Analytics Suite
+  const { data: allInternshipsForAnalytics } = await adminDb
+    .from('internships')
+    .select('id, is_active, is_paid, area:areas!internships_area_id_fkey(name)')
+
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -308,6 +314,9 @@ export default async function AdminDashboard({
           </div>
         ))}
       </div>
+
+      {/* Master Analytics & One-Click Export Suite */}
+      <AdminAnalyticsAndExportSuite internships={allInternshipsForAnalytics || []} areas={areas} />
 
       {/* Feature Hub */}
       <div>

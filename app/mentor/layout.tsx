@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import SessionGuard from '@/components/SessionGuard'
 
+import SiteAnnouncementBanner from '@/components/SiteAnnouncementBanner'
+
 export default async function MentorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,7 +23,10 @@ export default async function MentorLayout({ children }: { children: React.React
       {/* Top brand glow bar */}
       <div className="absolute top-0 left-56 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-600 to-amber-500 z-20 pointer-events-none" />
       <Sidebar role="mentor" userName={profile.full_name || user.email || 'Mentor'} />
-      <main className="flex-1 ml-56 p-8 relative z-10">{children}</main>
+      <main className="flex-1 ml-56 p-8 relative z-10">
+        <SiteAnnouncementBanner />
+        {children}
+      </main>
       <SessionGuard sessionNonce={profile.session_nonce || undefined} />
     </div>
   )

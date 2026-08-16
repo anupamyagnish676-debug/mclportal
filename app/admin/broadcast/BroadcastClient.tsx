@@ -4,6 +4,7 @@ import {
   Send, CheckCircle2, AlertCircle, Loader2,
   Users, Eye, EyeOff, RefreshCw, Lock
 } from 'lucide-react'
+import AnnouncementBannerControl from '@/components/AnnouncementBannerControl'
 
 const ALL_ROLES = [
   { value: 'student',  label: 'Interns / Students',  color: 'bg-blue-50 text-blue-700 border-blue-100' },
@@ -58,52 +59,80 @@ export default function BroadcastClient({ isHQ, adminArea }: Props) {
     if (role === 'all') {
       setSelectedRoles(['all'])
     } else {
-      const without = selectedRoles.filter(r => r !== 'all' && r !== role)
-      const adding  = !selectedRoles.includes(role)
-      const next    = adding ? [...without, role] : without
-      setSelectedRoles(next.length ? next : ['all'])
+      const current = selectedRoles.filter(r => r !== 'all')
+      if (current.includes(role)) {
+        const next = current.filter(r => r !== role)
+        setSelectedRoles(next.length === 0 ? ['all'] : next)
+      } else {
+        setSelectedRoles([...current, role])
+      }
     }
   }
 
   function toggleArea(area: string) {
+    if (!isHQ) return // locked for non-HQ
     if (area === 'all') {
       setSelectedAreas(['all'])
     } else {
-      const without = selectedAreas.filter(a => a !== 'all' && a !== area)
-      const adding  = !selectedAreas.includes(area)
-      const next    = adding ? [...without, area] : without
-      setSelectedAreas(next.length ? next : ['all'])
+      const current = selectedAreas.filter(a => a !== 'all')
+      if (current.includes(area)) {
+        const next = current.filter(a => a !== area)
+        setSelectedAreas(next.length === 0 ? ['all'] : next)
+      } else {
+        setSelectedAreas([...current, area])
+      }
     }
   }
 
-  async function handleSend() {
+  const canSend = Boolean(subject.trim() && message.trim() && confirmed && !loading)
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    if (!subject.trim() || !message.trim()) {
+      setError('Please fill in both subject and message.')
+      return
+    }
+    if (!confirmed) {
+      setError('Please check the confirmation box before sending.')
+      return
+    }
+
     setLoading(true)
     setError('')
-    setResult(null)
+
     try {
       const res = await fetch('/api/admin/broadcast-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message, roles: selectedRoles, areas: selectedAreas }),
+        body: JSON.stringify({
+          subject,
+          message,
+          roles: selectedRoles,
+          areas: selectedAreas,
+        }),
       })
+
       const data = await res.json()
-      if (!res.ok || data.error) setError(data.error || 'Failed to send emails')
-      else setResult(data)
-    } catch (e: any) {
-      setError(e.message || 'Network error')
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send broadcast.')
+      }
+
+      setResult(data)
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while broadcasting.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  const canSend = subject.trim() && message.trim() && confirmed && !loading
-
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Compose & Broadcast Email</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Broadcast Communications & Alerts</h1>
         <p className="text-gray-500 text-sm">
-          Write a custom message and send it to selected users
+          Publish site-wide urgent announcement banners or send mass email broadcasts.
           {!isHQ && (
             <span className="ml-2 inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold px-2 py-0.5 rounded-full">
               <Lock className="w-2.5 h-2.5" />
@@ -112,6 +141,8 @@ export default function BroadcastClient({ isHQ, adminArea }: Props) {
           )}
         </p>
       </div>
+
+      {isHQ && <AnnouncementBannerControl />}
 
       {!result ? (
         <div className="space-y-4">
