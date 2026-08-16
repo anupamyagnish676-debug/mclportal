@@ -134,35 +134,13 @@ function MFAVerifyContent() {
           </div>
         </div>
 
-        <div className="text-center mb-5">
-          <h1 className="text-lg font-bold text-white tracking-tight flex items-center justify-center gap-2">
-            Google Authenticator 2FA
+        <div className="text-center mb-6">
+          <h1 className="text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+            Two-Factor Authentication
           </h1>
-          <p className="text-slate-300 text-xs mt-1.5 leading-relaxed">
-            Enter the 6-digit code from your <strong className="text-emerald-400 font-semibold">Google Authenticator App</strong> or Email OTP.
+          <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+            Open your <strong className="text-emerald-400 font-semibold">Google Authenticator App</strong> on your phone and enter the active 6-digit code.
           </p>
-        </div>
-
-        {/* Toggle QR Code Setup */}
-        <div className="mb-4 text-center">
-          <button
-            type="button"
-            onClick={loadQRCode}
-            className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition-all shadow-sm"
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            {showQR ? 'Hide Setup QR Code' : '📱 Setup Google Authenticator App'}
-          </button>
-
-          {showQR && qrCodeUrl && (
-            <div className="mt-3 bg-slate-900/90 border border-emerald-500/30 p-4 rounded-2xl space-y-2 animate-fadeIn">
-              <p className="text-[10px] text-slate-300 font-semibold">Scan this QR code using Google Authenticator:</p>
-              <img src={qrCodeUrl} alt="Google Authenticator QR Code" className="w-36 h-36 mx-auto rounded-xl bg-white p-2 border border-slate-700" />
-              <p className="text-[10px] text-slate-400 font-mono tracking-wider break-all select-all pt-1">
-                Secret: <span className="text-emerald-300 font-bold">{totpSecret}</span>
-              </p>
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">
