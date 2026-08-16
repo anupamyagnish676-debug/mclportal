@@ -279,7 +279,7 @@ export default async function AdminDashboard({
   // 4. Fetch all internships for Master Analytics Suite
   const { data: allInternshipsForAnalytics } = await adminDb
     .from('internships')
-    .select('id, is_active, is_paid, area:areas!internships_area_id_fkey(name)')
+    .select('id, is_active, is_paid, area, student:profiles!internships_student_id_fkey(area)')
 
   return (
     <div className="space-y-6 max-w-6xl">

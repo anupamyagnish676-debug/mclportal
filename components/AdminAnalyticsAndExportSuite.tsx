@@ -52,7 +52,7 @@ export default function AdminAnalyticsAndExportSuite({
   }
 
   internships.forEach(item => {
-    const areaName = item.area?.name || 'Headquarters'
+    const areaName = typeof item.area === 'string' ? item.area : (item.area?.name || item.student?.area || 'Headquarters')
     if (!areaStatsMap[areaName]) {
       areaStatsMap[areaName] = { total: 0, active: 0, completed: 0, paid: 0, unpaid: 0 }
     }

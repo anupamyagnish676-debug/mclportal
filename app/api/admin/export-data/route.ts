@@ -24,25 +24,22 @@ export async function GET(req: NextRequest) {
     const format = req.nextUrl.searchParams.get('format') || 'xlsx'
     const targetArea = req.nextUrl.searchParams.get('area') || 'all'
 
-    // Query internships with profile & area details
+    // Query internships with profile details
     let query = adminClient
       .from('internships')
       .select(`
         id,
         student_id,
         mentor_id,
-        area_id,
-        department_id,
         start_date,
         end_date,
         is_active,
         is_paid,
         stipend_amount,
-        serial_number,
-        student:profiles!internships_student_id_fkey(full_name, email, phone, role),
-        mentor:profiles!internships_mentor_id_fkey(full_name, email),
-        area:areas!internships_area_id_fkey(name),
-        department:departments!internships_department_id_fkey(name)
+        serial_no,
+        area,
+        student:profiles!internships_student_id_fkey(full_name, email, phone, role, area, wing),
+        mentor:profiles!internships_mentor_id_fkey(full_name, email)
       `)
       .order('id', { ascending: false })
 
@@ -57,7 +54,7 @@ export async function GET(req: NextRequest) {
 
     if (targetArea !== 'all' && targetArea !== 'All Areas') {
       internships = internships.filter((item: any) => {
-        const areaName = item.area?.name || 'Headquarters'
+        const areaName = item.area || item.student?.area || 'Headquarters'
         return areaName.toLowerCase() === targetArea.toLowerCase()
       })
     }
@@ -66,15 +63,16 @@ export async function GET(req: NextRequest) {
     const exportRows = internships.map((item: any, index: number) => {
       const studentName = item.student?.full_name || 'N/A'
       const studentEmail = item.student?.email || 'N/A'
-      const areaName = item.area?.name === 'Headquarters' ? 'Headquarters (Central)' : (item.area?.name || 'N/A')
-      const deptName = item.department?.name || 'General'
+      const rawArea = item.area || item.student?.area || 'Headquarters'
+      const areaName = rawArea === 'Headquarters' ? 'Headquarters (Central)' : (rawArea.endsWith(' Area') ? rawArea : `${rawArea} Area`)
+      const deptName = item.student?.wing || 'General'
       const mentorName = item.mentor?.full_name || 'Unassigned'
       const isPaidText = item.is_paid ? `Paid (₹${item.stipend_amount || 0})` : 'Unpaid'
       const statusText = item.is_active ? 'Active' : 'Completed'
 
       return {
         'S.No': index + 1,
-        'Serial / Registration ID': item.serial_number || item.id,
+        'Serial / Registration ID': item.serial_no || item.id,
         'Intern Name': studentName,
         'Email Address': studentEmail,
         'Area Location': areaName,
