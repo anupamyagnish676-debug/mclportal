@@ -143,32 +143,12 @@ export async function POST(request: NextRequest) {
     return response
   }
 
-  // ── Email OTP check for ALL user roles when ENABLE_2FA=true ──
-  const otpCode = generate6DigitOTP()
-  const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
-  const hash = generateOTPHash(email, otpCode, expiresAt)
-
-  // Send Email OTP via Nodemailer
-  await sendOTPEmail({
-    email,
-    fullName: profile.full_name,
-    otpCode,
-    role,
-  })
-
-  const cookieData = encodeURIComponent(JSON.stringify({
-    email,
-    hash,
-    expiresAt,
-    role,
-    redirect: dashboardUrl,
-  }))
-
+  // ── Pure Google Authenticator TOTP 2FA Redirection (NO EMAIL CODES) ──
   const responseData = {
     role,
     redirect: dashboardUrl,
     requires_mfa: true,
-    mfa_type: 'email',
+    mfa_type: 'totp',
     mfa_redirect: `/mfa-verify?email=${encodeURIComponent(email)}&next=${dashboardUrl}`,
     email,
     session: { access_token: data.session!.access_token, refresh_token: data.session!.refresh_token },
@@ -180,16 +160,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(name, value, { ...options, path: '/', httpOnly: false, secure: false, sameSite: 'lax' })
   })
 
-  // Store temporary OTP session cookie
-  response.cookies.set('mcl-otp-data', cookieData, {
-    path: '/',
-    httpOnly: false,
-    secure: false,
-    sameSite: 'lax',
-    maxAge: 60 * 5, // 5 minutes
-  })
-
-  // Store standard session cookies so user is authenticated upon OTP verification
+  // Store standard session cookies so user is authenticated for TOTP verification
   response.cookies.set('mcl-session', JSON.stringify({
     access_token: data.session!.access_token,
     refresh_token: data.session!.refresh_token,

@@ -55,24 +55,39 @@ function MFAVerifyContent() {
 
     setLoading(true)
     setError('')
-    setStatus('Verifying authenticator code...')
+    setStatus('Verifying Google Authenticator code...')
 
     try {
-      const res = await fetch('/api/auth/verify-email-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      })
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: factorsData } = await supabase.auth.mfa.listFactors()
+      const totpFactor = factorsData?.totp?.find((f: any) => f.status === 'verified')
 
-      const data = await res.json()
+      if (totpFactor) {
+        const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id })
+        if (challengeErr) throw challengeErr
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Verification failed')
+        const { error: verifyErr } = await supabase.auth.mfa.verify({
+          factorId: totpFactor.id,
+          challengeId: challengeData.id,
+          code,
+        })
+        if (verifyErr) throw verifyErr
+
+        document.cookie = `mcl-email-mfa-verified=true; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+      } else {
+        const res = await fetch('/api/auth/verify-email-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Verification failed')
       }
 
       setStatus('Authenticated! Redirecting...')
       await new Promise(r => setTimeout(r, 400))
-      window.location.href = data.redirect || next
+      window.location.href = next
     } catch (err: any) {
       setError(err.message || 'Invalid 6-digit code. Check your Google Authenticator App.')
       setCode('')
@@ -192,19 +207,11 @@ function MFAVerifyContent() {
           </button>
         </form>
 
-        {/* Resend email backup code button */}
-        <div className="mt-5 text-center flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-white/5">
-          <a href="/login" className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors">
+        {/* Back to login */}
+        <div className="mt-6 text-center pt-4 border-t border-white/5">
+          <a href="/login" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to login
           </a>
-          <button
-            onClick={handleResend}
-            disabled={resendTimer > 0}
-            className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 disabled:text-slate-500 font-medium transition-colors disabled:cursor-not-allowed text-[11px]"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${resendTimer === 0 ? 'animate-spin-slow' : ''}`} />
-            {resendTimer > 0 ? `Email Code (${resendTimer}s)` : 'Send Email Backup Code'}
-          </button>
         </div>
 
         <p className="text-center text-[10px] text-slate-500 mt-5 leading-normal">
