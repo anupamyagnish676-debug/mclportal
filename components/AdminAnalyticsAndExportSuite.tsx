@@ -14,18 +14,29 @@ export default function AdminAnalyticsAndExportSuite({
   async function handleDownload(format: 'xlsx' | 'pdf') {
     try {
       setDownloading(format)
-      const url = `/api/admin/export-data?format=${format}&area=${encodeURIComponent(selectedExportArea)}`
-      
+      const res = await fetch(`/api/admin/export-data?format=${format}&area=${encodeURIComponent(selectedExportArea)}`)
+      if (!res.ok) {
+        const errData = await res.json()
+        alert(errData.error || 'Failed to download file')
+        return
+      }
+
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const fileName = format === 'xlsx' ? `MCL_Master_Interns_Register_${Date.now()}.xlsx` : `MCL_Master_Interns_Report_${Date.now()}.pdf`
+
       const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', '')
+      link.href = blobUrl
+      link.download = fileName
       document.body.appendChild(link)
       link.click()
       link.remove()
-    } catch (e) {
+      URL.revokeObjectURL(blobUrl)
+    } catch (e: any) {
       console.error('Download error:', e)
+      alert('Download error: ' + (e.message || 'Server connection issue'))
     } finally {
-      setTimeout(() => setDownloading(null), 1500)
+      setDownloading(null)
     }
   }
 
