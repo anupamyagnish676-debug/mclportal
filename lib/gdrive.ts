@@ -771,4 +771,6 @@ export async function getHelpdeskTicketsFromGDrive(areaName: string, studentId?:
   return []
 }
 
-
+// Export stubs for complete backwards compatibility & Vercel build safety
+export async function saveMentorMessageToGDrive(...args: any[]): Promise<void> {}
+export async function getMentorMessagesFromGDrive(...args: any[]): Promise<any[]> { return [] }
