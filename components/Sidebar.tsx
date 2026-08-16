@@ -56,7 +56,6 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   mentor: [
     { label: 'Dashboard',      href: '/mentor',                    icon: Home },
-    { label: 'Direct Chat',    href: '/mentor/chat',               icon: MessageSquare },
     { label: 'Attendance',     href: '/mentor/attendance',         icon: Calendar },
     { label: 'Assignments',    href: '/mentor/assignments',        icon: ClipboardList },
     { label: 'Materials',      href: '/mentor/materials',           icon: FolderOpen },
@@ -71,7 +70,6 @@ const navByRole: Record<string, NavItem[]> = {
   student: [
     { label: 'Dashboard',      href: '/student',                icon: Home },
     { label: 'My ID Card',     href: '/student/id-card',        icon: CreditCard },
-    { label: 'Mentor Chat',    href: '/student/chat',           icon: MessageSquare },
     { label: 'Help & Support', href: '/student/support',        icon: LifeBuoy },
     { label: 'Attendance',     href: '/student/attendance',     icon: Calendar },
     { label: 'Daily Logbook',  href: '/student/logbook',        icon: BookOpen },
