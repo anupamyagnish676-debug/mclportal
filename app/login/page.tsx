@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import PublicCertificateLookupWidget from '@/components/PublicCertificateLookupWidget'
 
 export default function LoginPage() {
   const [email, setEmail]             = useState('')
@@ -136,6 +137,10 @@ export default function LoginPage() {
           <p className="text-slate-300 text-sm leading-relaxed max-w-md">
             Connecting aspiring professionals with industrial excellence. Manage your attendance, logbooks, materials, and certificates securely in one unified hub.
           </p>
+
+          <div className="pt-2 max-w-md">
+            <PublicCertificateLookupWidget />
+          </div>
         </div>
 
         {/* Footer Info */}
