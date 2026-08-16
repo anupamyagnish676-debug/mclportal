@@ -29,19 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email mismatch. Please login again.' }, { status: 400 })
     }
 
-    // Verify HMAC hash and expiry
-    const result = verifyOTPHash(email, code, parsedCookie.expiresAt, parsedCookie.hash)
-    if (!result.valid) {
-      await logAudit({
-        userEmail: email,
-        action: 'LOGIN_FAILED',
-        details: { reason: 'Invalid Email OTP', ip },
-        ip,
-      })
-      return NextResponse.json({ error: result.reason || 'Invalid OTP code' }, { status: 400 })
-    }
-
-    // OTP Verified! Log audit event
+    // Fetch profile for user ID to derive Google Authenticator secret
     const admin = createAdminClient()
     const { data: profile } = await admin
       .from('profiles')
@@ -49,12 +37,31 @@ export async function POST(req: NextRequest) {
       .eq('email', email)
       .maybeSingle()
 
+    const { getUserTOTPSecret, verifyGoogleAuthToken } = await import('@/lib/totp')
+    const totpSecret = getUserTOTPSecret(profile?.id || email)
+    const isTotpValid = verifyGoogleAuthToken(code, totpSecret)
+
+    // Verify HMAC hash if TOTP did not match
+    const emailResult = verifyOTPHash(email, code, parsedCookie.expiresAt, parsedCookie.hash)
+
+    if (!isTotpValid && !emailResult.valid) {
+      await logAudit({
+        userEmail: email,
+        action: 'LOGIN_FAILED',
+        details: { reason: 'Invalid Google Authenticator / Email OTP', ip },
+        ip,
+      })
+      return NextResponse.json({ error: 'Invalid 6-digit Google Authenticator code or Email OTP' }, { status: 400 })
+    }
+
+    const verificationMethod = isTotpValid ? 'GOOGLE_AUTHENTICATOR_TOTP' : 'EMAIL_OTP'
+
     await logAudit({
       userId: profile?.id,
       userEmail: email,
       role: parsedCookie.role || profile?.role,
       action: 'MFA_VERIFIED',
-      details: { method: 'EMAIL_OTP', ip },
+      details: { method: verificationMethod, ip },
       ip,
     })
 

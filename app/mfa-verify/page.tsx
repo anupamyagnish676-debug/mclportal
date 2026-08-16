@@ -1,19 +1,22 @@
 'use client'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Mail, RefreshCw, ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react'
+import { ShieldCheck, RefreshCw, ArrowLeft, QrCode, Smartphone, AlertCircle } from 'lucide-react'
 
 function MFAVerifyContent() {
   const searchParams = useSearchParams()
   const next  = searchParams?.get('next') || '/admin'
   const email = searchParams?.get('email') || ''
 
-  const [code, setCode]           = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-  const [status, setStatus]       = useState('')
+  const [code, setCode]               = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState('')
+  const [status, setStatus]           = useState('')
   const [resendTimer, setResendTimer] = useState(30)
   const [resendMsg, setResendMsg]     = useState('')
+  const [showQR, setShowQR]           = useState(false)
+  const [qrCodeUrl, setQrCodeUrl]     = useState('')
+  const [totpSecret, setTotpSecret]   = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -28,13 +31,31 @@ function MFAVerifyContent() {
     }
   }, [resendTimer])
 
+  async function loadQRCode() {
+    if (qrCodeUrl) {
+      setShowQR(!showQR)
+      return
+    }
+    try {
+      const res = await fetch(`/api/auth/totp-setup?email=${encodeURIComponent(email)}`)
+      const data = await res.json()
+      if (res.ok) {
+        setQrCodeUrl(data.qrCodeUrl)
+        setTotpSecret(data.secret)
+        setShowQR(true)
+      }
+    } catch {
+      console.error('Failed to load TOTP QR code')
+    }
+  }
+
   async function handleVerify(e?: React.FormEvent) {
     if (e) e.preventDefault()
     if (code.length !== 6) return
 
     setLoading(true)
     setError('')
-    setStatus('Verifying code...')
+    setStatus('Verifying authenticator code...')
 
     try {
       const res = await fetch('/api/auth/verify-email-otp', {
@@ -49,11 +70,11 @@ function MFAVerifyContent() {
         throw new Error(data.error || 'Verification failed')
       }
 
-      setStatus('Verified! Redirecting...')
+      setStatus('Authenticated! Redirecting...')
       await new Promise(r => setTimeout(r, 400))
       window.location.href = data.redirect || next
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired OTP code.')
+      setError(err.message || 'Invalid 6-digit code. Check your Google Authenticator App.')
       setCode('')
       setStatus('')
       setLoading(false)
@@ -75,7 +96,7 @@ function MFAVerifyContent() {
       if (!res.ok) {
         setError(data.error || 'Failed to resend code')
       } else {
-        setResendMsg('New 6-digit code sent to your email!')
+        setResendMsg('Backup 6-digit code sent to your email!')
         setResendTimer(30)
       }
     } catch {
@@ -107,26 +128,47 @@ function MFAVerifyContent() {
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
         {/* Icon */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-5">
           <div className="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center backdrop-blur-sm shadow-inner">
-            <Mail className="w-8 h-8 text-emerald-400" />
+            <Smartphone className="w-8 h-8 text-emerald-400" />
           </div>
         </div>
 
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-            Email OTP Verification
+        <div className="text-center mb-5">
+          <h1 className="text-lg font-bold text-white tracking-tight flex items-center justify-center gap-2">
+            Google Authenticator 2FA
           </h1>
-          <p className="text-slate-300 text-xs mt-2 leading-relaxed">
-            We sent a 6-digit verification code to
-            {email ? <strong className="block text-emerald-400 font-semibold mt-0.5">{email}</strong> : ' your email inbox'}.
+          <p className="text-slate-300 text-xs mt-1.5 leading-relaxed">
+            Enter the 6-digit code from your <strong className="text-emerald-400 font-semibold">Google Authenticator App</strong> or Email OTP.
           </p>
+        </div>
+
+        {/* Toggle QR Code Setup */}
+        <div className="mb-4 text-center">
+          <button
+            type="button"
+            onClick={loadQRCode}
+            className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            {showQR ? 'Hide Setup QR Code' : '📱 Setup Google Authenticator App'}
+          </button>
+
+          {showQR && qrCodeUrl && (
+            <div className="mt-3 bg-slate-900/90 border border-emerald-500/30 p-4 rounded-2xl space-y-2 animate-fadeIn">
+              <p className="text-[10px] text-slate-300 font-semibold">Scan this QR code using Google Authenticator:</p>
+              <img src={qrCodeUrl} alt="Google Authenticator QR Code" className="w-36 h-36 mx-auto rounded-xl bg-white p-2 border border-slate-700" />
+              <p className="text-[10px] text-slate-400 font-mono tracking-wider break-all select-all pt-1">
+                Secret: <span className="text-emerald-300 font-bold">{totpSecret}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">
           <div>
             <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2 text-center">
-              Enter 6-Digit Code
+              Enter 6-Digit Authenticator Code
             </label>
             <input
               ref={inputRef}
@@ -168,11 +210,11 @@ function MFAVerifyContent() {
             disabled={loading || code.length !== 6}
             className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(16,185,129,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading ? 'Verifying...' : 'Verify OTP →'}
+            {loading ? 'Verifying Code...' : 'Verify Authenticator →'}
           </button>
         </form>
 
-        {/* Resend button */}
+        {/* Resend email backup code button */}
         <div className="mt-5 text-center flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-white/5">
           <a href="/login" className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to login
@@ -180,14 +222,14 @@ function MFAVerifyContent() {
           <button
             onClick={handleResend}
             disabled={resendTimer > 0}
-            className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 disabled:text-slate-500 font-medium transition-colors disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 disabled:text-slate-500 font-medium transition-colors disabled:cursor-not-allowed text-[11px]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${resendTimer === 0 ? 'animate-spin-slow' : ''}`} />
-            {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+            {resendTimer > 0 ? `Email Code (${resendTimer}s)` : 'Send Email Backup Code'}
           </button>
         </div>
 
-        <p className="text-center text-[10px] text-slate-500 mt-6 leading-normal">
+        <p className="text-center text-[10px] text-slate-500 mt-5 leading-normal">
           Training &amp; Development Department, MCL
         </p>
       </div>
