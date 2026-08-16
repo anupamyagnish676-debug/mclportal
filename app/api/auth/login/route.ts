@@ -105,8 +105,17 @@ export async function POST(request: NextRequest) {
 
 
 
-  const isMfaRole = role === 'admin' || role === 'finance'
-  const ENABLE_2FA = process.env.ENABLE_2FA === 'true' || isMfaRole
+  // Check if user has enrolled and verified a 2FA TOTP factor in Settings
+  let hasUserEnabled2FA = false
+  try {
+    const { data: factorsData } = await adminClient.auth.admin.mfa.listFactors({ userId: data.user.id })
+    const verifiedFactors = (factorsData?.factors || []).filter((f: any) => f.status === 'verified')
+    hasUserEnabled2FA = verifiedFactors.length > 0
+  } catch (err: any) {
+    console.warn('[LOGIN] MFA factor list check warning:', err?.message)
+  }
+
+  const ENABLE_2FA = process.env.ENABLE_2FA === 'true' || hasUserEnabled2FA
 
   if (!ENABLE_2FA) {
     // Direct instant login without 2FA OTP requirement
