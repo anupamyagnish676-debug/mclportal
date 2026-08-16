@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
 
 
 
-  const ENABLE_2FA = process.env.ENABLE_2FA === 'true'
+  const isMfaRole = role === 'admin' || role === 'finance'
+  const ENABLE_2FA = process.env.ENABLE_2FA === 'true' || isMfaRole
 
   if (!ENABLE_2FA) {
     // Direct instant login without 2FA OTP requirement
