@@ -95,7 +95,8 @@ export default function HelpAndSupportSection({ role = 'student' }: { role?: str
 
       const data = await res.json()
       if (res.ok) {
-        setMsg('Support request submitted successfully to your Area Admin (Saved to Google Drive)!')
+        const targetDesc = role === 'admin' ? 'Headquarters (Central Admin)' : 'your Area Admin'
+        setMsg(`Support request submitted successfully to ${targetDesc} (Saved to Google Drive)!`)
         setSubject('')
         setDescription('')
       } else {

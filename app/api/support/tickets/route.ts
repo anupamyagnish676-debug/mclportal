@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const adminClient = createAdminClient()
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('full_name, area')
+      .select('role, full_name, area')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Subject and description are required' }, { status: 400 })
     }
 
-    const areaName = profile.area || 'Headquarters'
+    // Tickets raised by Admins or non-students go directly to Headquarters Central Admin queue
+    const areaName = profile.role === 'admin' ? 'Headquarters' : (profile.area || 'Headquarters')
     const ticketId = `TCK-${Date.now().toString().slice(-6)}`
     let attachmentUrl: string | null = null
 
