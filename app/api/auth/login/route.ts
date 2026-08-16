@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
 
   // ── Feature 8: Single session — generate new nonce, invalidate old ones ──
   const sessionNonce = crypto.randomBytes(24).toString('hex')
+  const adminClient = createAdminClient()
   try {
-    const adminClient = createAdminClient()
     await adminClient
       .from('profiles')
       .update({ session_nonce: sessionNonce })
@@ -102,8 +102,6 @@ export async function POST(request: NextRequest) {
     details: { area: profile.area || null, ip },
     ip,
   })
-
-
 
   // Check if user has enrolled and verified a 2FA TOTP factor in Settings
   let hasUserEnabled2FA = false
