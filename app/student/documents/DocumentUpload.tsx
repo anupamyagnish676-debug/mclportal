@@ -69,8 +69,10 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
     setAiMessage('Analyzing faces...')
 
     try {
-      const aadhaarImg = await faceapi.fetchImage(aadhaarDoc.file_url)
-      const photoImg = await faceapi.fetchImage(photoDoc.file_url)
+      // Proxy images through our server to bypass CORS for canvas operations
+      const proxyUrl = (url: string) => `/api/image-proxy?url=${encodeURIComponent(url)}`
+      const aadhaarImg = await faceapi.fetchImage(proxyUrl(aadhaarDoc.file_url))
+      const photoImg = await faceapi.fetchImage(proxyUrl(photoDoc.file_url))
 
       const aadhaarFace = await faceapi.detectSingleFace(aadhaarImg).withFaceLandmarks().withFaceDescriptor()
       const photoFace = await faceapi.detectSingleFace(photoImg).withFaceLandmarks().withFaceDescriptor()
