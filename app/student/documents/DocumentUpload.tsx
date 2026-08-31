@@ -182,59 +182,64 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
 
   return (
     <div className="space-y-6">
-      {/* AI KYC Widget */}
+      {/* Identity Verification Status */}
       {documents.find(d => d.doc_type === 'aadhaar') && documents.find(d => d.doc_type === 'photo') && (
-        <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+        <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
           aiStatus === 'matched' ? 'bg-green-50 border-green-200' :
-          aiStatus === 'mismatch' ? 'bg-red-50 border-red-200' :
+          aiStatus === 'mismatch' ? 'bg-amber-50 border-amber-200' :
           aiStatus === 'manual_requested' ? 'bg-blue-50 border-blue-200' :
           aiStatus === 'error' ? 'bg-amber-50 border-amber-200' :
           'bg-gray-50 border-gray-200'
         }`}>
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
-            aiStatus === 'matched' ? 'bg-green-100' :
-            aiStatus === 'mismatch' ? 'bg-red-100' :
-            aiStatus === 'manual_requested' ? 'bg-blue-100' :
-            'bg-gray-100'
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+            aiStatus === 'matched' ? 'bg-green-100 text-green-600' :
+            aiStatus === 'mismatch' ? 'bg-amber-100 text-amber-600' :
+            aiStatus === 'manual_requested' ? 'bg-blue-100 text-blue-600' :
+            'bg-gray-100 text-gray-400'
           }`}>
-            🤖
+            {aiStatus === 'matched' ? '✓' :
+             aiStatus === 'mismatch' || aiStatus === 'error' ? '!' :
+             aiStatus === 'manual_requested' ? '✓' : '⋯'}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm text-gray-900">AI Identity Screening</h3>
+            <h3 className={`font-bold text-sm ${
+              aiStatus === 'matched' ? 'text-green-800' :
+              aiStatus === 'mismatch' || aiStatus === 'error' ? 'text-amber-800' :
+              aiStatus === 'manual_requested' ? 'text-blue-800' :
+              'text-gray-700'
+            }`}>
+              {aiStatus === 'matched' ? 'Identity Verified' :
+               aiStatus === 'mismatch' ? 'Photo Verification Pending' :
+               aiStatus === 'manual_requested' ? 'Sent for Manual Review' :
+               aiStatus === 'error' ? 'Photo Verification Pending' :
+               aiStatus === 'analyzing' ? 'Verifying Identity...' :
+               'Verifying...'}
+            </h3>
             <p className={`text-xs mt-0.5 ${
               aiStatus === 'matched' ? 'text-green-700' :
-              aiStatus === 'mismatch' ? 'text-red-600' :
+              aiStatus === 'mismatch' || aiStatus === 'error' ? 'text-amber-700' :
               aiStatus === 'manual_requested' ? 'text-blue-700' :
-              aiStatus === 'error' ? 'text-amber-700' :
               'text-gray-500'
             }`}>
-              {aiStatus === 'idle' || aiStatus === 'loading' ? 'Waiting for Aadhaar & Passport Photo uploads...' :
-               aiStatus === 'analyzing' ? '⏳ Analyzing faces... Please wait.' :
-               aiStatus === 'manual_requested' ? '📋 Manual verification requested. Admin will review your documents.' :
-               aiMessage}
+              {aiStatus === 'matched' ? 'Your Aadhaar photo and passport photo have been verified successfully.' :
+               aiStatus === 'mismatch' ? 'We could not automatically verify your photos. Please ensure both photos are clear and belong to you, or request a manual review.' :
+               aiStatus === 'manual_requested' ? 'Your documents have been forwarded to HRD for manual verification.' :
+               aiStatus === 'error' ? 'Automatic verification was not possible. Please ensure uploaded images are clear, or request manual review.' :
+               aiStatus === 'analyzing' ? 'Please wait while we verify your uploaded photos.' :
+               'Processing your uploads...'}
             </p>
-            {aiScore !== null && (aiStatus === 'matched' || aiStatus === 'mismatch') && (
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-500 ${aiScore >= 60 ? 'bg-green-500' : aiScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-                    style={{ width: `${aiScore}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-gray-400 mt-1">Confidence: {aiScore}%</p>
-              </div>
-            )}
-            {/* Manual Verification Button */}
             {(aiStatus === 'mismatch' || aiStatus === 'error') && (
-              <button
-                onClick={() => {
-                  setAiStatus('manual_requested')
-                  setAiMessage('Manual verification requested.')
-                }}
-                className="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
-              >
-                My photos are correct — Request Manual Admin Verification
-              </button>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    setAiStatus('manual_requested')
+                    setAiMessage('Manual verification requested.')
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                >
+                  Request Manual Review
+                </button>
+              </div>
             )}
           </div>
         </div>
