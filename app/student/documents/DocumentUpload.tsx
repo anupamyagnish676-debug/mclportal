@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 interface DocumentRecord {
   id: string
@@ -22,10 +22,93 @@ const DOC_TYPES = [
   { key: 'photo', label: 'Passport Photo', desc: 'Recent professional passport size colour photograph.' }
 ]
 
+type AiStatus = 'idle' | 'loading' | 'analyzing' | 'matched' | 'mismatch' | 'error' | 'manual_requested'
+
 export default function DocumentUpload({ initialDocuments }: DocumentUploadProps) {
   const [documents, setDocuments] = useState<DocumentRecord[]>(initialDocuments)
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string>('')
+
+  // AI KYC State
+  const [aiStatus, setAiStatus] = useState<AiStatus>('idle')
+  const [aiScore, setAiScore] = useState<number | null>(null)
+  const [aiMessage, setAiMessage] = useState<string>('')
+  const faceapiRef = useRef<any>(null)
+  const [aiLoaded, setAiLoaded] = useState(false)
+
+  // Load face-api.js models on mount
+  useEffect(() => {
+    async function loadModels() {
+      try {
+        const faceapi = await import('face-api.js')
+        faceapiRef.current = faceapi
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ])
+        setAiLoaded(true)
+      } catch (err) {
+        console.error('AI Models failed to load:', err)
+      }
+    }
+    loadModels()
+  }, [])
+
+  // Run AI face match whenever both aadhaar and photo documents are uploaded
+  const runAiMatch = useCallback(async (docs: DocumentRecord[]) => {
+    if (!aiLoaded || !faceapiRef.current) return
+
+    const aadhaarDoc = docs.find(d => d.doc_type === 'aadhaar' && d.file_url)
+    const photoDoc = docs.find(d => d.doc_type === 'photo' && d.file_url)
+
+    if (!aadhaarDoc || !photoDoc) return
+
+    const faceapi = faceapiRef.current
+    setAiStatus('analyzing')
+    setAiMessage('Analyzing faces...')
+
+    try {
+      const aadhaarImg = await faceapi.fetchImage(aadhaarDoc.file_url)
+      const photoImg = await faceapi.fetchImage(photoDoc.file_url)
+
+      const aadhaarFace = await faceapi.detectSingleFace(aadhaarImg).withFaceLandmarks().withFaceDescriptor()
+      const photoFace = await faceapi.detectSingleFace(photoImg).withFaceLandmarks().withFaceDescriptor()
+
+      if (!aadhaarFace || !photoFace) {
+        setAiStatus('error')
+        setAiMessage('Could not detect a clear face in one of your uploads. The Admin will verify manually.')
+        setAiScore(null)
+        return
+      }
+
+      const distance = faceapi.euclideanDistance(aadhaarFace.descriptor, photoFace.descriptor)
+      const confidence = Math.max(0, Math.round((1 - distance) * 100))
+      setAiScore(confidence)
+
+      if (distance < 0.6) {
+        setAiStatus('matched')
+        setAiMessage(`Identity Verified (${confidence}% confidence)`)
+      } else {
+        setAiStatus('mismatch')
+        setAiMessage(`Faces may not match (${confidence}% confidence). You can request manual verification below.`)
+      }
+    } catch (err) {
+      console.error('AI KYC Error:', err)
+      setAiStatus('error')
+      setAiMessage('AI could not process the images. The Admin will verify manually.')
+      setAiScore(null)
+    }
+  }, [aiLoaded])
+
+  // Auto-run AI when documents update and both aadhaar + photo exist
+  useEffect(() => {
+    const aadhaarDoc = documents.find(d => d.doc_type === 'aadhaar' && d.file_url)
+    const photoDoc = documents.find(d => d.doc_type === 'photo' && d.file_url)
+    if (aadhaarDoc && photoDoc && aiStatus === 'idle') {
+      runAiMatch(documents)
+    }
+  }, [documents, aiStatus, runAiMatch])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, docType: string) {
     const file = e.target.files?.[0]
@@ -75,6 +158,11 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
           const listData = await listRes.json()
           if (listData.documents) {
             setDocuments(listData.documents)
+            // If aadhaar or photo was just uploaded, re-run AI
+            if (docType === 'aadhaar' || docType === 'photo') {
+              setAiStatus('idle') // Reset so useEffect triggers re-run
+              setAiScore(null)
+            }
           }
         }
       }
@@ -92,6 +180,64 @@ export default function DocumentUpload({ initialDocuments }: DocumentUploadProps
 
   return (
     <div className="space-y-6">
+      {/* AI KYC Widget */}
+      {documents.find(d => d.doc_type === 'aadhaar') && documents.find(d => d.doc_type === 'photo') && (
+        <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+          aiStatus === 'matched' ? 'bg-green-50 border-green-200' :
+          aiStatus === 'mismatch' ? 'bg-red-50 border-red-200' :
+          aiStatus === 'manual_requested' ? 'bg-blue-50 border-blue-200' :
+          aiStatus === 'error' ? 'bg-amber-50 border-amber-200' :
+          'bg-gray-50 border-gray-200'
+        }`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
+            aiStatus === 'matched' ? 'bg-green-100' :
+            aiStatus === 'mismatch' ? 'bg-red-100' :
+            aiStatus === 'manual_requested' ? 'bg-blue-100' :
+            'bg-gray-100'
+          }`}>
+            🤖
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-sm text-gray-900">AI Identity Screening</h3>
+            <p className={`text-xs mt-0.5 ${
+              aiStatus === 'matched' ? 'text-green-700' :
+              aiStatus === 'mismatch' ? 'text-red-600' :
+              aiStatus === 'manual_requested' ? 'text-blue-700' :
+              aiStatus === 'error' ? 'text-amber-700' :
+              'text-gray-500'
+            }`}>
+              {aiStatus === 'idle' || aiStatus === 'loading' ? 'Waiting for Aadhaar & Passport Photo uploads...' :
+               aiStatus === 'analyzing' ? '⏳ Analyzing faces... Please wait.' :
+               aiStatus === 'manual_requested' ? '📋 Manual verification requested. Admin will review your documents.' :
+               aiMessage}
+            </p>
+            {aiScore !== null && (aiStatus === 'matched' || aiStatus === 'mismatch') && (
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${aiScore >= 60 ? 'bg-green-500' : aiScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${aiScore}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Confidence: {aiScore}%</p>
+              </div>
+            )}
+            {/* Manual Verification Button */}
+            {(aiStatus === 'mismatch' || aiStatus === 'error') && (
+              <button
+                onClick={() => {
+                  setAiStatus('manual_requested')
+                  setAiMessage('Manual verification requested.')
+                }}
+                className="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
+              >
+                My photos are correct — Request Manual Admin Verification
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Banner */}
       {allVerified ? (
         <div className="bg-green-50 border border-green-150 p-4 rounded-2xl flex items-center gap-3">
