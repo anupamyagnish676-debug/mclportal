@@ -15,19 +15,19 @@ export async function GET() {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('areas')
-      .select('id, name, created_at, gdrive_folder_id')
+      .select('id, name, created_at, gdrive_folder_id, owner_email')
       .order('name', { ascending: true })
 
     if (error) {
       console.warn('[GET-AREAS] Table not found or error, using defaults:', error.message)
       // Map to same object structure
-      return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null })) })
+      return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null, owner_email: null })) })
     }
 
     return NextResponse.json({ areas: data || [] })
   } catch (err: any) {
     console.error('[GET-AREAS] Unexpected error:', err.message)
-    return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null })) })
+    return NextResponse.json({ areas: DEFAULT_AREAS.map((a, i) => ({ id: `default-${i}`, name: a.name, created_at: new Date().toISOString(), gdrive_folder_id: null, owner_email: null })) })
   }
 }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { name, gdrive_folder_id } = await req.json()
+    const { name, gdrive_folder_id, owner_email } = await req.json()
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Area name is required' }, { status: 400 })
     }
@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
       .from('areas')
       .insert({
         name: name.trim(),
-        gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null
+        gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null,
+        owner_email: owner_email ? owner_email.trim().toLowerCase() : null
       })
 
     if (insertError) {
@@ -72,7 +73,7 @@ export async function PATCH(req: NextRequest) {
     const { data: profile } = await supabase.from('profiles').select('role, area').eq('id', user.id).maybeSingle()
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    const { areaName, gdrive_folder_id } = await req.json()
+    const { areaName, gdrive_folder_id, owner_email } = await req.json()
     if (!areaName) {
       return NextResponse.json({ error: 'Area name is required' }, { status: 400 })
     }
@@ -91,10 +92,15 @@ export async function PATCH(req: NextRequest) {
       .eq('name', areaName)
       .maybeSingle()
 
+    const updatePayload: Record<string, any> = {
+      gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null,
+      owner_email: owner_email ? owner_email.trim().toLowerCase() : null,
+    }
+
     if (existing) {
       const { error: updateError } = await adminClient
         .from('areas')
-        .update({ gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null })
+        .update(updatePayload)
         .eq('id', existing.id)
 
       if (updateError) throw updateError
@@ -104,7 +110,7 @@ export async function PATCH(req: NextRequest) {
         .from('areas')
         .insert({
           name: areaName,
-          gdrive_folder_id: gdrive_folder_id ? gdrive_folder_id.trim() : null
+          ...updatePayload,
         })
 
       if (insertError) throw insertError

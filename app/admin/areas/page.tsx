@@ -36,13 +36,12 @@ export default function AdminAreasPage() {
 
       if (!profile || profile.role !== 'admin') {
         setIsAuthorized(false)
-        setAuthLoading(false)
-        setLoading(false)
-        return
-      }
+      const res = await fetch('/api/admin/profile')
+      const profileData = await res.json()
 
-      const userAreaName = profile.area || ''
-      const isHq = userAreaName === 'Headquarters'
+      const userAreaName = profileData?.area || ''
+      const isHq = userAreaName === 'Headquarters' || (profileData?.role === 'admin' && (!userAreaName || userAreaName === 'Headquarters'))
+
       setUserArea(userAreaName)
       setIsHqAdmin(isHq)
 
@@ -73,10 +72,13 @@ export default function AdminAreasPage() {
 
         setAreas(allAreas)
         const initMap: Record<string, string> = {}
+        const initEmailMap: Record<string, string> = {}
         allAreas.forEach((a: any) => {
           initMap[a.name] = a.gdrive_folder_id || ''
+          initEmailMap[a.name] = a.owner_email || ''
         })
         setEditingFolderId(initMap)
+        setEditingOwnerEmail(initEmailMap)
       } else {
         setError(data.error || 'Failed to load areas')
       }
@@ -93,15 +95,16 @@ export default function AdminAreasPage() {
 
     try {
       const folderId = editingFolderId[areaName] || ''
+      const ownerEmail = editingOwnerEmail[areaName] || ''
       const res = await fetch('/api/areas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ areaName, gdrive_folder_id: folderId })
+        body: JSON.stringify({ areaName, gdrive_folder_id: folderId, owner_email: ownerEmail })
       })
       const data = await res.json()
 
       if (res.ok) {
-        setSuccess(`Google Drive storage updated for ${areaName} Area!`)
+        setSuccess(`Google Drive storage and owner email updated for ${areaName} Area!`)
         await loadAreas()
       } else {
         setError(data.error || 'Failed to update Google Drive settings')
@@ -265,6 +268,7 @@ export default function AdminAreasPage() {
               <div className="space-y-4">
                 {areas.map(area => {
                   const currentFolderId = editingFolderId[area.name] ?? (area.gdrive_folder_id || '')
+                  const currentOwnerEmail = editingOwnerEmail[area.name] ?? (area.owner_email || '')
                   const isUpdating = updatingArea === area.name
                   const hasCustomDrive = Boolean(area.gdrive_folder_id)
 
@@ -275,35 +279,55 @@ export default function AdminAreasPage() {
                           <p className="text-sm font-bold text-gray-900">
                             {area.name === 'Headquarters' ? 'Headquarters (Central)' : `${area.name} Area`}
                           </p>
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-0.5 border ${
-                            hasCustomDrive 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}>
-                            {hasCustomDrive ? '✓ Area Google Drive Connected' : '⚡ Using Fallback HQ Drive'}
-                          </span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              hasCustomDrive 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {hasCustomDrive ? '✓ Area Google Drive Connected' : '⚡ Using Fallback HQ Drive'}
+                            </span>
+                            {area.owner_email && (
+                              <span className="text-[10px] text-gray-500 font-mono">
+                                👤 {area.owner_email}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleSaveDriveFolder(area.name)}
+                          disabled={isUpdating}
+                          className="bg-green-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50 transition-colors flex-shrink-0 shadow-sm"
+                        >
+                          {isUpdating ? 'Saving...' : 'Save Settings'}
+                        </button>
                       </div>
 
-                      <div className="space-y-1.5 pt-1">
-                        <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                          Google Drive Folder ID ({area.name === 'Headquarters' ? 'Headquarters (Central)' : `${area.name} Area`})
-                        </label>
-                        <div className="flex items-center gap-2">
+                      <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            Google Drive Folder ID
+                          </label>
                           <input
                             type="text"
                             value={currentFolderId}
                             onChange={e => setEditingFolderId(prev => ({ ...prev, [area.name]: e.target.value }))}
                             placeholder="e.g. 1A2b3C4d5e6F7g8H9i..."
-                            className="flex-1 font-mono text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full font-mono text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                           />
-                          <button
-                            onClick={() => handleSaveDriveFolder(area.name)}
-                            disabled={isUpdating}
-                            className="bg-green-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50 transition-colors flex-shrink-0"
-                          >
-                            {isUpdating ? 'Saving...' : 'Save Storage'}
-                          </button>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            Owner Google Account (for 15 GB Quota)
+                          </label>
+                          <input
+                            type="email"
+                            value={currentOwnerEmail}
+                            onChange={e => setEditingOwnerEmail(prev => ({ ...prev, [area.name]: e.target.value }))}
+                            placeholder="e.g. talcher.area.mcl@gmail.com"
+                            className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
                         </div>
                       </div>
                     </div>
