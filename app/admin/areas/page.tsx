@@ -18,6 +18,7 @@ export default function AdminAreasPage() {
   const [userArea, setUserArea] = useState<string>('')
   const [isHqAdmin, setIsHqAdmin] = useState(false)
   const [editingFolderId, setEditingFolderId] = useState<Record<string, string>>({})
+  const [editingOwnerEmail, setEditingOwnerEmail] = useState<Record<string, string>>({})
   const [updatingArea, setUpdatingArea] = useState<string | null>(null)
 
   async function checkAuthAndLoad() {
@@ -36,17 +37,19 @@ export default function AdminAreasPage() {
 
       if (!profile || profile.role !== 'admin') {
         setIsAuthorized(false)
-      const res = await fetch('/api/admin/profile')
-      const profileData = await res.json()
+        setAuthLoading(false)
+        setLoading(false)
+        return
+      }
 
-      const userAreaName = profileData?.area || ''
-      const isHq = userAreaName === 'Headquarters' || (profileData?.role === 'admin' && (!userAreaName || userAreaName === 'Headquarters'))
+      const userAreaName = profile.area || ''
+      const isHq = userAreaName === 'Headquarters' || (!userAreaName)
 
       setUserArea(userAreaName)
       setIsHqAdmin(isHq)
-
       setIsAuthorized(true)
       setAuthLoading(false)
+
       await loadAreas(userAreaName, isHq)
     } catch (err: any) {
       setError(err.message)
