@@ -75,6 +75,52 @@ export async function getAreaDriveFolderId(areaName?: string | null): Promise<st
 }
 
 /**
+ * Helper to fetch area owner email from Supabase for ownership transfer
+ */
+export async function getAreaOwnerEmail(areaName?: string | null): Promise<string | undefined> {
+  if (!areaName) return undefined
+  try {
+    const adminClient = createAdminClient()
+    const { data } = await adminClient
+      .from('areas')
+      .select('owner_email')
+      .eq('name', areaName.trim())
+      .maybeSingle()
+
+    if (data?.owner_email && data.owner_email.trim()) {
+      return data.owner_email.trim()
+    }
+  } catch (err) {
+    console.error('[GDRIVE] Error fetching area owner email from DB:', err)
+  }
+  return undefined
+}
+
+/**
+ * Helper to fetch both Google Drive Folder ID and Area Owner Email
+ */
+export async function getAreaDriveInfo(areaName?: string | null): Promise<{ folderId?: string; ownerEmail?: string }> {
+  if (!areaName) return { folderId: process.env.GDRIVE_FOLDER_ID }
+  try {
+    const adminClient = createAdminClient()
+    const { data } = await adminClient
+      .from('areas')
+      .select('gdrive_folder_id, owner_email')
+      .eq('name', areaName.trim())
+      .maybeSingle()
+
+    return {
+      folderId: data?.gdrive_folder_id?.trim() || process.env.GDRIVE_FOLDER_ID,
+      ownerEmail: data?.owner_email?.trim() || undefined,
+    }
+  } catch (err) {
+    console.error('[GDRIVE] Error fetching area info from DB:', err)
+    return { folderId: process.env.GDRIVE_FOLDER_ID }
+  }
+}
+
+
+/**
  * Find or create a dedicated subfolder for a student in Google Drive.
  * Structure: Area -> StudentName_Area_INT_SerialNo
  * Example: "Talcher/Rahul_Sharma_Talcher_INT_5"
@@ -397,6 +443,8 @@ export async function uploadFileToGDrive(params: {
   fileName: string
   mimeType: string
   folderId?: string
+  area?: string | null
+  ownerEmail?: string
 }): Promise<{ fileId: string; webViewLink: string; webContentLink: string; directViewUrl: string }> {
   const drive = getGDriveClient()
   const parentFolder = params.folderId || process.env.GDRIVE_FOLDER_ID
@@ -432,6 +480,27 @@ export async function uploadFileToGDrive(params: {
   } catch (err: any) {
     console.error('[GDRIVE] Failed to set public permission:', err.message)
   }
+
+  // Automatic Ownership Transfer to Area's Google/Gmail account
+  const targetOwner = params.ownerEmail || (params.area ? await getAreaOwnerEmail(params.area) : undefined)
+  if (targetOwner) {
+    try {
+      await drive.permissions.create({
+        fileId,
+        transferOwnership: true,
+        supportsAllDrives: true,
+        requestBody: {
+          role: 'owner',
+          type: 'user',
+          emailAddress: targetOwner,
+        },
+      })
+      console.log(`[GDRIVE] ✅ Ownership of ${params.fileName} successfully transferred to ${targetOwner}`)
+    } catch (err: any) {
+      console.warn(`[GDRIVE] Ownership transfer notice for ${targetOwner}:`, err.message)
+    }
+  }
+
 
   const directViewUrl = `https://drive.google.com/uc?id=${fileId}&export=view`
   const webViewLink = res.data.webViewLink || directViewUrl

@@ -77,11 +77,13 @@ export async function POST(req: NextRequest) {
           area: stuProfile?.area || stuInternship?.area || 'Headquarters',
         })
 
+        const studentArea = stuProfile?.area || stuInternship?.area || 'Headquarters'
         const gdriveRes = await uploadFileToGDrive({
           buffer,
           fileName: `${doc_type}_${timestamp}${ext}`,
           mimeType: file.type || 'application/octet-stream',
           folderId: studentFolderId,
+          area: studentArea,
         })
         fileUrl = gdriveRes.directViewUrl || gdriveRes.webViewLink
         storagePath = `gdrive:${gdriveRes.fileId}`
