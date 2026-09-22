@@ -85,14 +85,16 @@ export default async function AssignMentorPage({
     mentor: Array.isArray(i.mentor) ? i.mentor[0] : i.mentor,
   }))
 
-  // 4. Build mentors query (scoped to the same area as internships to prevent cross-assignment)
+  // 4. Build mentors query
+  // For HQ Admin, fetch all mentors so each intern row can strictly filter mentors from that intern's registered area.
+  // For Area Admin, restrict to their assigned area.
   let mentorsQuery = supabase
     .from('profiles')
     .select('id, full_name, email, area')
     .eq('role', 'mentor')
 
-  if (selectedArea) {
-    mentorsQuery = mentorsQuery.eq('area', selectedArea)
+  if (!isAdminGlobal && adminArea) {
+    mentorsQuery = mentorsQuery.eq('area', adminArea)
   }
 
   const { data: mentors } = await mentorsQuery
